@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reflexmesh"
+version = "0.1.0"
+description = "Routing contracts and explicit stub CLI for ReflexMesh"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+reflexmesh = "reflexmesh.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

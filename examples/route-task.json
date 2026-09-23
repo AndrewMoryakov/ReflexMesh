@@ -1,0 +1,7 @@
+{
+  "schema_version": "0.1",
+  "task_id": "browser-demo",
+  "goal": "Открыть раздел настроек на тестовом сайте",
+  "capabilities": ["CUA", "LLM"],
+  "allowed_routes": ["CUA", "LLM"]
+}
