@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "reflexmesh"
-version = "0.1.0"
-description = "Routing contracts and explicit stub CLI for ReflexMesh"
+version = "0.2.0"
+description = "Decision-only routing through a stub or local JevRouter"
 requires-python = ">=3.11"
 dependencies = []
 

@@ -1,4 +1,4 @@
-"""JSON CLI for routing-only V0.1. No executor or model is invoked."""
+"""JSON CLI for routing only. JevRouter is opt-in; no executor is invoked."""
 import argparse
 import json
 import sys
@@ -6,6 +6,7 @@ from pathlib import Path
 
 from reflexmesh.contracts.task import Task, ValidationError
 from reflexmesh.routing.stub import route_task
+from reflexmesh.routing.jev_router import route_task as jev_route, validate_config
 
 MAX_INPUT_BYTES = 64 * 1024
 
@@ -42,14 +43,24 @@ def read_task(path: str) -> Task:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = Parser(prog="reflexmesh", description="V0.1 routing stub; no task execution")
-    parser.add_argument("--version", action="version", version="reflexmesh 0.1.0")
+    parser = Parser(prog="reflexmesh", description="Routing only: explicit stub or local JevRouter")
+    parser.add_argument("--version", action="version", version="reflexmesh 0.2.0")
     sub = parser.add_subparsers(dest="command", required=True)
     route = sub.add_parser("route", help="select a route using an explicit fixed-order stub")
     route.add_argument("--input", default="-", metavar="FILE", help="JSON file or - for stdin")
+    route.add_argument("--provider", choices=("stub", "jevrouter"), default="stub")
+    route.add_argument("--jev-url", default="http://127.0.0.1:8787")
+    route.add_argument("--timeout", type=float, default=30.0, help="socket I/O timeout in seconds")
+    route.add_argument("--allow-demo", action="store_true", help="explicitly accept upstream demo responses")
     try:
         args = parser.parse_args(argv)
-        decision = route_task(read_task(args.input))
+        if args.provider == "stub" and (args.allow_demo or args.jev_url != "http://127.0.0.1:8787" or args.timeout != 30.0):
+            raise ValidationError("JevRouter options require --provider jevrouter")
+        if args.provider == "jevrouter":
+            validate_config(args.jev_url, args.timeout)
+        task = read_task(args.input)
+        decision = (jev_route(task, endpoint=args.jev_url, timeout=args.timeout, allow_demo=args.allow_demo)
+                    if args.provider == "jevrouter" else route_task(task).to_dict())
     except OSError:
         error = {"code": "input_read_error", "message": "Unable to read task input"}
     except (ValidationError, UnicodeError, json.JSONDecodeError, RecursionError) as exc:
@@ -58,7 +69,7 @@ def main(argv: list[str] | None = None) -> int:
         error = {"code": "invalid_input", "message": message}
     else:
         # ASCII escaping preserves all Unicode values even on non-UTF-8 terminals.
-        print(json.dumps(decision.to_dict(), ensure_ascii=True))
-        return 0 if decision.status == "selected" else 3
+        print(json.dumps(decision, ensure_ascii=True))
+        return {"selected": 0, "abstained": 3, "needs_confirmation": 4, "failed": 5}[decision["status"]]
     print(json.dumps({"error": error}, ensure_ascii=True), file=sys.stderr)
     return 2
