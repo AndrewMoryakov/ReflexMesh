@@ -1,0 +1,19 @@
+{
+  "reflexmesh_commit": "fd97e185b34dbcce54c7c204b3eb1b6abc7c72b1",
+  "reflexmesh_dirty": false,
+  "protocol_status": "frozen",
+  "python": "3.13.7",
+  "platform": "Linux-6.17.0-14-generic-x86_64-with-glibc2.42",
+  "comparators": [
+    "J0",
+    "J1",
+    "J2",
+    "J3",
+    "llm"
+  ],
+  "cases": 84,
+  "jev_url": "http://127.0.0.1:8797",
+  "llm": "openai-codex/gpt-5.5",
+  "started_at": "2026-09-24T18:28:24Z",
+  "finished_at": "2026-09-24T19:06:20Z"
+}
