@@ -1,17 +1,32 @@
 {
   "experiment": "V0.3b refusal",
-  "status": "draft",
+  "status": "frozen",
   "dataset": "experiments/v03b/dataset.jsonl",
   "label_version": 1,
   "repeats": 3,
   "timeout_seconds": 60,
   "retries": 0,
-  "budgets": {"jev_usd": 0.05, "llm_calls": 260},
-  "jev": {"jevrouter_commit": "f944acb6530621bced023352e2358a63218bf4d9",
-          "provider": "openrouter:~typesafe/jev-latest", "policy": "JevRouter default (min_confidence 0.55)"},
-  "jev_variants": ["J0", "J1", "J2", "J3"],
-  "llm_reference": {"provider": "openai-codex", "model": "gpt-5.5", "prompt": "experiments/v03/llm_prompt.md",
-                    "role": "reference only, not part of the decision"},
+  "budgets": {
+    "jev_usd": 0.05,
+    "llm_calls": 260
+  },
+  "jev": {
+    "jevrouter_commit": "f944acb6530621bced023352e2358a63218bf4d9",
+    "provider": "openrouter:~typesafe/jev-latest",
+    "policy": "JevRouter default (min_confidence 0.55)"
+  },
+  "jev_variants": [
+    "J0",
+    "J1",
+    "J2",
+    "J3"
+  ],
+  "llm_reference": {
+    "provider": "openai-codex",
+    "model": "gpt-5.5",
+    "prompt": "experiments/v03/llm_prompt.md",
+    "role": "reference only, not part of the decision"
+  },
   "thresholds": {
     "R1_refusal_abstention_min": 0.75,
     "R1_refusal_abstention_per_subtype_min": 0.6,
@@ -20,5 +35,7 @@
     "R4_stability_min": 0.95,
     "R5_error_rate_max": 0.02
   },
-  "decision": "recommended = variant passing R1-R5 with the highest refusal abstention; ties -> earlier in J0..J3 (fewer candidate changes). None passing -> refusal remains unsolved."
+  "decision": "recommended = variant passing R1-R5 with the highest refusal abstention; ties -> earlier in J0..J3 (fewer candidate changes). None passing -> refusal remains unsolved.",
+  "approved_by": "project owner",
+  "approved_at": "2026-09-24"
 }
