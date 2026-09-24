@@ -2,7 +2,7 @@
 
 Дата проверки: 2026-09-24. Проверенная база кода:
 [62ccf0d](https://github.com/AndrewMoryakov/ReflexMesh/commit/62ccf0d29c5d0e599f92561b4d8da3f980d63719).
-Обновление документации не добавляет execution-функций и не закрывает live gate.
+Live gate V0.2 закрыт 2026-09-24 для `openrouter:~typesafe/jev-latest` на коммите 7c03412 ([отчёт](research/V0.2-live-openrouter.md)).
 
 Концепция уточнена: ReflexMesh — универсальное ядро решений и координации,
 браузер — первый execution-сценарий V1.0, desktop — последующее расширение.
@@ -17,8 +17,9 @@
 |---|---|---|
 | V0.1 | Task 0.1, stub RoutingDecision 0.1, CLI, валидация | [Отчёт V0.1](research/V0.1-validation.md): 10 тестов, включая 64 сочетания маршрутов |
 | V0.2 | HTTP-клиент JevRouter; решение 0.2; фильтрация, отказы и trace | [Отчёт V0.2](research/V0.2-validation.md): всего 21 тест; настоящий upstream server в demo |
-| Upstream | JevRouter на закреплённом commit f944acb | Проверено HTTP/contract; модель облачного Jev не проверена |
-| Платформы | Прогоны на Linux/Python 3.12.14/Node 24.19.0 | Python 3.11 и Windows отдельно не проверялись |
+| V0.2 live | ReflexMesh → JevRouter → OpenRouter → `typesafe/jev-1.13-20260917` | [Live-отчёт](research/V0.2-live-openrouter.md): 5/5 пунктов pass, вызовы подтверждены ledger OpenRouter; typesafe напрямую не проверен |
+| Upstream | JevRouter на закреплённом commit f944acb | Проверено HTTP/contract и live через OpenRouter |
+| Платформы | Linux/Python 3.12.14/Node 24.19.0; Windows 11/Python 3.13.15/Node 24.15.0 | На Windows 1 тест падает (`test_timeout_and_unreachable`: timeout вместо transport_error), см. live-отчёт |
 
 Числа тестов взяты из сохранённых отчётов предыдущего изменения кода;
 актуализация документации не является новым runtime-прогоном.
@@ -27,7 +28,7 @@ HTTP-пути; выбранный маршрут никогда не означ�
 
 ## Пока отсутствует
 
-- Live-подтверждение typesafe/openrouter и сравнительная оценка routing V0.3.
+- Live-подтверждение прямого провайдера typesafe и сравнительная оценка routing V0.3.
 - Execution runtime, общий deadline, управление сессией, отмена и recovery.
 - SystemOneHarness/Cua, браузерные и desktop-действия.
 - TextSlots, verifier, собственное хранилище execution receipts.
@@ -39,9 +40,8 @@ HTTP-пути; выбранный маршрут никогда не означ�
 
 ## Ближайший незакрытый gate
 
-Реальный вызов облачной модели через JevRouter с сохранённым результатом.
-В предыдущей среде ключи отсутствовали; это причина отсутствия live-свидетельств,
-а не установленная неисправность адаптера. Подробности — [V0.2](specs/V0.2.md).
+Live gate V0.2 закрыт для OpenRouter ([отчёт](research/V0.2-live-openrouter.md));
+typesafe требует отдельного прогона. Подробности — [V0.2](specs/V0.2.md).
 Следующий исследовательский этап — протокол и сравнение V0.3 по [плану](ROADMAP.md).
 После ревью уточнены live-критерии V0.2, проверка границ управления V0.4 и
 [рубрика V0.3](specs/V0.3-routing-rubric.md). Это подготовка требований:
