@@ -13,14 +13,14 @@ EXP = ROOT / "experiments" / "v03"
 class DatasetTests(unittest.TestCase):
     def test_dataset_follows_rubric(self):
         rows = v03_run.load_dataset(EXP / "dataset.jsonl")
-        self.assertEqual(len(rows), 60)
-        self.assertEqual(len({r["case_id"] for r in rows}), 60)
-        kinds = {k: sum(r["kind"] == k for r in rows) for k in ("single", "ambiguous", "refusal", "composite")}
-        self.assertEqual(kinds, {"single": 30, "ambiguous": 15, "refusal": 8, "composite": 7})
+        self.assertEqual(len(rows), 75)
+        self.assertEqual(len({r["case_id"] for r in rows}), 75)
+        kinds = {k: sum(r["kind"] == k for r in rows) for k in ("single", "ambiguous", "paraphrase", "refusal", "composite")}
+        self.assertEqual(kinds, {"single": 30, "ambiguous": 15, "paraphrase": 15, "refusal": 8, "composite": 7})
         for r in rows:
             self.assertTrue(set(r["acceptable_routes"]) <= set(r["allowed_routes"]), r["case_id"])
             self.assertTrue(v03_run.eligible(r), r["case_id"])
-            if r["kind"] in ("single", "ambiguous"):
+            if r["kind"] in ("single", "ambiguous", "paraphrase"):
                 self.assertTrue(r["acceptable_routes"], r["case_id"])
             else:
                 self.assertEqual(r["acceptable_routes"], [], r["case_id"])

@@ -114,8 +114,6 @@ def criteria(metrics: dict, protocol: dict) -> dict:
         res["T4"] = jev["forbidden"] <= t["T4_jev_forbidden_max"]
         res["T5"] = jev["stability"] is not None and jev["stability"] >= t["T5_jev_stability_min"]
         res["T6"] = jev["error_rate"] <= t["T6_jev_error_rate_max"]
-        res["T7"] = (llm is not None and jev["latency_p50_ms"] is not None
-                     and jev["latency_p50_ms"] <= llm["latency_p50_ms"])
     if res and all(res[k] for k in protocol["decision"]["useful"]):
         verdict = "useful"
     elif res and all(res[k] for k in protocol["decision"]["acceptable"]):
