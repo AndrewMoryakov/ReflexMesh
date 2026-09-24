@@ -1,0 +1,32 @@
+{
+  "experiment": "V0.3 routing",
+  "status": "draft",
+  "dataset": "experiments/v03/dataset.jsonl",
+  "label_version": 1,
+  "repeats": {"rules": 1, "jev": 3, "llm": 3},
+  "timeout_seconds": 60,
+  "retries": 0,
+  "budgets": {"jev_usd": 0.05, "llm_calls": 200},
+  "comparators": {
+    "rules": {"impl": "experiments/v03/rules.py"},
+    "jev": {"jevrouter_commit": "f944acb6530621bced023352e2358a63218bf4d9",
+            "provider": "openrouter:~typesafe/jev-latest", "policy": "JevRouter default (min_confidence 0.55)"},
+    "llm": {"harness": "pi -p --mode json --no-tools --no-extensions --no-skills --no-context-files --no-session",
+            "provider": "openai-codex", "model": "gpt-5.5", "thinking": "pi default",
+            "prompt": "experiments/v03/llm_prompt.md"}
+  },
+  "primary_kinds": ["single", "ambiguous"],
+  "thresholds": {
+    "T1_jev_accuracy_min": 0.85,
+    "T2_jev_minus_rules_min": 0.10,
+    "T3_jev_minus_llm_min": -0.05,
+    "T4_jev_forbidden_max": 0,
+    "T5_jev_stability_min": 0.95,
+    "T6_jev_error_rate_max": 0.02,
+    "T7_jev_p50_latency_le_llm": true
+  },
+  "decision": {
+    "useful": ["T1", "T2", "T3", "T4", "T5", "T6", "T7"],
+    "acceptable": ["T1", "T2", "T4", "T5", "T6"]
+  }
+}
