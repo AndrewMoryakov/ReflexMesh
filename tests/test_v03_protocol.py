@@ -45,8 +45,8 @@ class ScoreTests(unittest.TestCase):
     def setUp(self):
         self.protocol = json.loads((EXP / "protocol.json").read_text(encoding="utf-8"))
         base = {"capabilities": ["CUA", "LLM", "PERCEPTION"], "allowed_routes": ["LLM", "CUA"]}
-        self.dataset = [dict(base, case_id=f"s{i}", kind="single", lang="en", acceptable_routes=["LLM"])
-                        for i in range(10)]
+        self.dataset = [dict(base, case_id=f"s{i}", kind="single" if i < 5 else "paraphrase", lang="en",
+                             acceptable_routes=["LLM"]) for i in range(10)]
         self.dataset.append(dict(base, case_id="r", kind="refusal", lang="en", acceptable_routes=[]))
 
     def rec(self, comp, cid, route, run=1, status="selected", latency=100.0):

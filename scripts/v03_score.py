@@ -109,7 +109,9 @@ def criteria(metrics: dict, protocol: dict) -> dict:
     res = {}
     if jev:
         res["T1"] = jev["accuracy"] >= t["T1_jev_accuracy_min"]
-        res["T2"] = rules_ is not None and jev["accuracy"] - rules_["accuracy"] >= t["T2_jev_minus_rules_min"] - 1e-9
+        jp = jev["accuracy_by"]["kind"].get("paraphrase")
+        rp = rules_["accuracy_by"]["kind"].get("paraphrase") if rules_ else None
+        res["T2"] = jp is not None and rp is not None and jp - rp >= t["T2_jev_minus_rules_paraphrase_min"] - 1e-9
         res["T3"] = llm is not None and jev["accuracy"] - llm["accuracy"] >= t["T3_jev_minus_llm_min"] - 1e-9
         res["T4"] = jev["forbidden"] <= t["T4_jev_forbidden_max"]
         res["T5"] = jev["stability"] is not None and jev["stability"] >= t["T5_jev_stability_min"]

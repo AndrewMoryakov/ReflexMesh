@@ -1,6 +1,6 @@
 {
   "experiment": "V0.3 routing",
-  "status": "draft",
+  "status": "frozen",
   "dataset": "experiments/v03/dataset.jsonl",
   "label_version": 1,
   "repeats": {
@@ -38,7 +38,7 @@
   ],
   "thresholds": {
     "T1_jev_accuracy_min": 0.85,
-    "T2_jev_minus_rules_min": 0.1,
+    "T2_jev_minus_rules_paraphrase_min": 0.1,
     "T3_jev_minus_llm_min": -0.05,
     "T4_jev_forbidden_max": 0,
     "T5_jev_stability_min": 0.95,
@@ -64,5 +64,7 @@
   "informational": [
     "latency p50/p95 and cost per decision for all comparators",
     "accuracy by kind, especially paraphrase"
-  ]
+  ],
+  "approved_by": "project owner",
+  "approved_at": "2026-09-24"
 }
