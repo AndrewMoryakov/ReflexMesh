@@ -17,9 +17,9 @@ Live gate V0.2 закрыт 2026-09-24 для `openrouter:~typesafe/jev-latest` 
 |---|---|---|
 | V0.1 | Task 0.1, stub RoutingDecision 0.1, CLI, валидация | [Отчёт V0.1](research/V0.1-validation.md): 10 тестов, включая 64 сочетания маршрутов |
 | V0.2 | HTTP-клиент JevRouter; решение 0.2; фильтрация, отказы и trace | [Отчёт V0.2](research/V0.2-validation.md): всего 21 тест; настоящий upstream server в demo |
-| V0.2 live | ReflexMesh → JevRouter → OpenRouter → `typesafe/jev-1.13-20260917` | [Live-отчёт](research/V0.2-live-openrouter.md): 5/5 пунктов pass, вызовы подтверждены ledger OpenRouter; typesafe напрямую не проверен |
+| V0.2 live | ReflexMesh → JevRouter → OpenRouter → `typesafe/jev-1.13-20260917` | [Live-отчёт](research/V0.2-live-openrouter.md): 5/5 пунктов pass, вызовы подтверждены ledger OpenRouter; typesafe напрямую не проверен. [Расширенные сценарии](research/V0.2-live-extended-openrouter.md): все три маршрута, RU/EN, пары, 5 повторов, live-ошибка провайдера |
 | Upstream | JevRouter на закреплённом commit f944acb | Проверено HTTP/contract и live через OpenRouter |
-| Платформы | Linux/Python 3.12.14/Node 24.19.0; Windows 11/Python 3.13.15/Node 24.15.0 | На Windows 1 тест падает (`test_timeout_and_unreachable`: timeout вместо transport_error), см. live-отчёт |
+| Платформы | Linux/Python 3.12.14/Node 24.19.0; Windows 11/Python 3.13.15/Node 24.15.0 | 25 тестов проходят на обеих платформах (Windows-специфичный timeout в тесте исправлен в 599b58d) |
 
 Числа тестов взяты из сохранённых отчётов предыдущего изменения кода;
 актуализация документации не является новым runtime-прогоном.
