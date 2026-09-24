@@ -14,7 +14,7 @@
 ## Спецификации и свидетельства
 
 - [V0.1: контракты и CLI](specs/V0.1.md) · [проверка V0.1](research/V0.1-validation.md).
-- [V0.2: JevRouter HTTP](specs/V0.2.md) · [проверка V0.2](research/V0.2-validation.md).
+- [V0.2: JevRouter HTTP](specs/V0.2.md) · [проверка V0.2](research/V0.2-validation.md) · [инструкция live-прогона на Windows](guides/V0.2-live-run-windows.md).
 - [Рубрика V0.3: единица маршрутизации и допустимые ответы](specs/V0.3-routing-rubric.md) — подготовка эксперимента, не полный протокол.
 - [ADR-0001: уточнения инвариантов после ревью](architecture/ADR-0001-invariant-review.md).
 - [ADR-0002: эффекты routing и граница micro-loop](architecture/ADR-0002-routing-effects-and-loop-control.md).

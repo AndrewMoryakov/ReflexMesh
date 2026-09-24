@@ -131,4 +131,5 @@ python scripts/check_jevrouter_http.py --upstream-dir /path/to/JevRouter
 Скрипт сам запускает и завершает локальный demo server во временном каталоге.
 
 - [Спецификация V0.2](docs/specs/V0.2.md)
+- [Пошаговый live-прогон V0.2 на Windows](docs/guides/V0.2-live-run-windows.md)
 - [Отчёт проверки V0.2](docs/research/V0.2-validation.md)
