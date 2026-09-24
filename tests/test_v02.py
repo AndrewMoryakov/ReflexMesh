@@ -47,7 +47,7 @@ class Server:
                 self.end_headers()
                 try:
                     self.wfile.write(outer.body)
-                except (BrokenPipeError, ConnectionResetError):
+                except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
                     pass
             def log_message(self, *args):
                 pass
@@ -151,7 +151,9 @@ class JevTests(unittest.TestCase):
         with Server(delay=0.15) as server:
             result = route_task(task(), endpoint=server.url, timeout=0.02)
         self.assertEqual(result['reason_code'], 'transport_timeout')
-        result = route_task(task(), endpoint=server.url, timeout=0.1)
+        # Windows retries a refused loopback connect for ~2 s before failing, so a
+        # sub-second timeout would report transport_timeout instead of a refusal.
+        result = route_task(task(), endpoint=server.url, timeout=10)
         self.assertEqual(result['reason_code'], 'transport_error')
 
     def test_provider_error_is_not_fallback(self):
