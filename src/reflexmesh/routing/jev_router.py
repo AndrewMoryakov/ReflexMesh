@@ -14,6 +14,10 @@ DESCRIPTIONS = {
     Route.LLM: "Reason, analyze, plan or generate text/code. Return control to the calling reasoning agent.",
     Route.PERCEPTION: "Extract information from an existing screenshot or observation without interacting with the UI.",
 }
+# Refusal candidate measured in V0.3b (ADR-0003). Changing the text is a new experiment.
+NONE_ID = "NONE"
+NONE_DESCRIPTION = ("None of the other listed capabilities fits this request: it needs a capability "
+                    "that is not listed or is outside their scope. Choose this instead of a poor match.")
 
 
 class AdapterError(Exception):
@@ -76,7 +80,7 @@ def _post(host: str, port: int, payload: bytes, timeout: float) -> bytes:
         connection.close()
 
 
-def _parse(raw: bytes, eligible: tuple[Route, ...], allow_demo: bool) -> dict:
+def _parse(raw: bytes, eligible: tuple[Route, ...], allow_demo: bool, none_candidate: bool = False) -> dict:
     try:
         value = json.loads(raw.decode("utf-8"), object_pairs_hook=_object, parse_constant=_constant)
         if type(value) is not dict:
@@ -104,7 +108,7 @@ def _parse(raw: bytes, eligible: tuple[Route, ...], allow_demo: bool) -> dict:
         if decision["kind"] != "choice":
             raise ValueError()
         rows = decision["candidates"]
-        expected = {r.value for r in eligible}
+        expected = {r.value for r in eligible} | ({NONE_ID} if none_candidate else set())
         if type(rows) is not list or len(rows) != len(expected):
             raise ValueError()
         by_id = {}
@@ -156,11 +160,21 @@ def _parse(raw: bytes, eligible: tuple[Route, ...], allow_demo: bool) -> dict:
         raise AdapterError("invalid_response") from exc
 
 
+def _candidate(cid: str, description: str) -> dict:
+    return {"id": cid, "name": cid, "type": "subagent", "description": description,
+            "verification": {"status": "unverified", "source": "reflexmesh_declared"},
+            "availability": {"available": True},
+            "risk": {"level": "low", "categories": ["routing_only"]},
+            "execution": {"mode": "custom", "dry_run": True}}
+
+
 def route_task(task: Task, *, endpoint: str = "http://127.0.0.1:8787",
-               timeout: float = 30.0, allow_demo: bool = False) -> dict:
+               timeout: float = 30.0, allow_demo: bool = False, none_candidate: bool = True) -> dict:
     host, port = validate_config(endpoint, timeout)
     if type(allow_demo) is not bool:
         raise ValidationError("allow_demo must be boolean")
+    if type(none_candidate) is not bool:
+        raise ValidationError("none_candidate must be boolean")
     eligible = tuple(r for r in Route if r in task.capabilities and r in task.allowed_routes)
     result = {"schema_version": "0.2", "task_id": task.task_id, "status": "abstained",
               "route": None, "eligible_routes": [r.value for r in eligible],
@@ -171,14 +185,11 @@ def route_task(task: Task, *, endpoint: str = "http://127.0.0.1:8787",
                         "elapsed_ms": 0, "upstream": None}}
     if not eligible:
         return result
-    payload = json.dumps({"request": task.goal, "actor_permissions": [],
-                          "candidates": [{"id": r.value, "name": r.value, "type": "subagent",
-                                          "description": DESCRIPTIONS[r],
-                                          "verification": {"status": "unverified", "source": "reflexmesh_declared"},
-                                          "availability": {"available": True},
-                                          "risk": {"level": "low", "categories": ["routing_only"]},
-                                          "execution": {"mode": "custom", "dry_run": True}}
-                                         for r in eligible]}, ensure_ascii=True).encode()
+    candidates = [_candidate(r.value, DESCRIPTIONS[r]) for r in eligible]
+    if none_candidate:
+        candidates.append(_candidate(NONE_ID, NONE_DESCRIPTION))
+    payload = json.dumps({"request": task.goal, "actor_permissions": [], "candidates": candidates},
+                         ensure_ascii=True).encode()
     trace = result["trace"]
     trace["request_sha256"] = hashlib.sha256(payload).hexdigest()
     start = time.monotonic()
@@ -188,12 +199,15 @@ def route_task(task: Task, *, endpoint: str = "http://127.0.0.1:8787",
         raw = _post(host, port, payload, timeout)
         trace["response_received"] = True
         trace["response_sha256"] = hashlib.sha256(raw).hexdigest()
-        parsed = _parse(raw, eligible, allow_demo)
+        parsed = _parse(raw, eligible, allow_demo, none_candidate)
         trace["upstream"] = parsed
         result["is_stub"] = parsed["provider"] == "jevrouter-demo"
         result["confidence"] = parsed["confidence"]
         status = parsed["status"]
-        if status == "selected":
+        if status != "no_decision" and parsed["selected"] == NONE_ID:
+            # NONE is a refusal signal, never a route (ADR-0003).
+            result["reason_code"] = "upstream_no_fitting_route"
+        elif status == "selected":
             result.update(status="selected", route=parsed["selected"], reason_code="upstream_selected")
         elif status == "needs_confirmation":
             result.update(status="needs_confirmation", reason_code="upstream_confirmation_required")

@@ -159,7 +159,8 @@ def check(suite: str, exit_code: int | None, result: dict, allowed: list[str],
         checks["receipt_records_error"] = bool((saved.get("error") or {}).get("code"))
         checks["no_fallback_selection"] = decision.get("selected") in (None, "") and saved.get("status") != "selected"
     else:
-        checks["candidate_set_matches"] = len(ids) == len(allowed) and set(ids) == set(allowed)
+        offered = set(allowed) | {base.NONE_ID}  # ADR-0003
+        checks["candidate_set_matches"] = len(ids) == len(offered) and set(ids) == offered
         checks["routing_outcome"] = status in ("selected", "abstained", "needs_confirmation")
         if status == "selected":
             checks["selected_matches_receipt"] = (result.get("route") == decision.get("selected")

@@ -58,7 +58,9 @@ def run_jev(case: dict, args: argparse.Namespace, work: Path) -> dict:
     before = snapshot(decisions)
     start = time.monotonic()
     try:
+        # V0.3 was measured without the NONE candidate (ADR-0003); keep the frozen protocol reproducible.
         done = subprocess.run([sys.executable, "-m", "reflexmesh", "route", "--provider", "jevrouter",
+                               "--no-none-candidate",
                                "--jev-url", args.jev_url, "--timeout", str(args.timeout),
                                "--input", str(task_path)],
                               cwd=ROOT, env=env, capture_output=True, timeout=args.timeout + 10, check=False)

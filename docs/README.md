@@ -18,6 +18,7 @@
 - [V0.3: протокол](specs/V0.3.md) · [рубрика](specs/V0.3-routing-rubric.md) · [результаты](research/V0.3-routing.md) · [V0.3b: отказ](specs/V0.3b-refusal.md) · [результаты V0.3b](research/V0.3b-refusal.md).
 - [ADR-0001: уточнения инвариантов после ревью](architecture/ADR-0001-invariant-review.md).
 - [ADR-0002: эффекты routing и граница micro-loop](architecture/ADR-0002-routing-effects-and-loop-control.md).
+- [ADR-0003: смысловой отказ через кандидата NONE](architecture/ADR-0003-none-candidate-refusal.md).
 
 ## Как поддерживать документы согласованными
 

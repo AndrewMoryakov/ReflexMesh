@@ -84,7 +84,7 @@ class ExtendedLiveTests(unittest.TestCase):
         self.assertTrue(report["mechanical_checks_passed"])
         self.assertFalse(report["live_gate_closed"])
         self.assertEqual(len(calls), 13)
-        self.assertIn(["CUA", "PERCEPTION"], calls)
+        self.assertIn(["CUA", "PERCEPTION", "NONE"], calls)
         self.assertEqual(report["repeat_groups"]["repeat_llm_ru"]["repeats"], 5)
         self.assertTrue(report["repeat_groups"]["repeat_llm_ru"]["stable"])
         # First candidate is always CUA here, so hints mismatch without failing mechanics.

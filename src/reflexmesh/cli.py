@@ -52,14 +52,18 @@ def main(argv: list[str] | None = None) -> int:
     route.add_argument("--jev-url", default="http://127.0.0.1:8787")
     route.add_argument("--timeout", type=float, default=30.0, help="socket I/O timeout in seconds")
     route.add_argument("--allow-demo", action="store_true", help="explicitly accept upstream demo responses")
+    route.add_argument("--no-none-candidate", action="store_true",
+                       help="do not offer the NONE refusal candidate to JevRouter (pre-ADR-0003 behaviour)")
     try:
         args = parser.parse_args(argv)
-        if args.provider == "stub" and (args.allow_demo or args.jev_url != "http://127.0.0.1:8787" or args.timeout != 30.0):
+        if args.provider == "stub" and (args.allow_demo or args.no_none_candidate
+                                        or args.jev_url != "http://127.0.0.1:8787" or args.timeout != 30.0):
             raise ValidationError("JevRouter options require --provider jevrouter")
         if args.provider == "jevrouter":
             validate_config(args.jev_url, args.timeout)
         task = read_task(args.input)
-        decision = (jev_route(task, endpoint=args.jev_url, timeout=args.timeout, allow_demo=args.allow_demo)
+        decision = (jev_route(task, endpoint=args.jev_url, timeout=args.timeout, allow_demo=args.allow_demo,
+                              none_candidate=not args.no_none_candidate)
                     if args.provider == "jevrouter" else route_task(task).to_dict())
     except OSError:
         error = {"code": "input_read_error", "message": "Unable to read task input"}

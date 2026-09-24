@@ -40,12 +40,15 @@ class HarnessTests(unittest.TestCase):
         try:
             task = Task("0.1", "x", CASE["goal"], (Route.CUA, Route.LLM, Route.PERCEPTION),
                         (Route.LLM, Route.PERCEPTION))
+            route_task(task, endpoint=f"http://127.0.0.1:{server.server_port}", none_candidate=False)
             route_task(task, endpoint=f"http://127.0.0.1:{server.server_port}")
         finally:
             server.shutdown()
             server.server_close()
             thread.join()
         self.assertEqual(captured[0], v03b_run.payload(CASE, "J0"))
+        # ADR-0003: the adapter's default request is exactly the measured J1 request.
+        self.assertEqual(captured[1], v03b_run.payload(CASE, "J1"))
 
     def test_candidate_sets(self):
         self.assertEqual(v03b_run.candidate_ids(CASE, "J0"), ["LLM", "PERCEPTION"])

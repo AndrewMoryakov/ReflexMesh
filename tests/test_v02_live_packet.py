@@ -75,7 +75,7 @@ class LivePacketTests(unittest.TestCase):
             report = json.loads((evidence / "report.json").read_text(encoding="utf-8"))
             self.assertTrue(report["mechanical_checks_passed"])
             self.assertFalse(report["live_gate_closed"])
-            self.assertEqual(calls, [["CUA", "LLM", "PERCEPTION"], ["LLM", "PERCEPTION"]])
+            self.assertEqual(calls, [["CUA", "LLM", "PERCEPTION", "NONE"], ["LLM", "PERCEPTION", "NONE"]])
             self.assertTrue(report["cases"]["empty"]["checks"]["empty_is_local_abstention"])
             selected = json.loads((evidence / "multi.stdout.json").read_text(encoding="utf-8"))
             (evidence / "decisions" / "dec_1.json").write_bytes(b"altered receipt")

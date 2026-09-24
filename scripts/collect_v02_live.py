@@ -18,7 +18,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from reflexmesh.routing.jev_router import validate_config  # noqa: E402
+from reflexmesh.routing.jev_router import NONE_ID, validate_config  # noqa: E402
 
 PIN = "f944acb6530621bced023352e2358a63218bf4d9"
 PROVIDERS = {"typesafe": "typesafe", "openrouter": "openrouter:~typesafe/jev-latest"}
@@ -62,7 +62,8 @@ def checked_receipt(result: dict, decisions: Path, evidence: Path,
         saved = json.loads(raw)
         rows = saved["decision"]["candidates"]
         ids = [row["id"] for row in rows]
-        checks["candidate_set_matches"] = len(ids) == len(expected_ids) and set(ids) == expected_ids
+        offered = expected_ids | {NONE_ID}  # ADR-0003: the adapter always offers NONE
+        checks["candidate_set_matches"] = len(ids) == len(offered) and set(ids) == offered
         checks["decision_matches"] = (saved["decision_id"] == decision_id
                                        and saved["decision"]["selected"] == upstream.get("selected")
                                        and saved["provenance"]["jev_provider"] == upstream.get("provider"))

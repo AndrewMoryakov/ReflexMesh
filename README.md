@@ -119,7 +119,10 @@ node dist/cli.js serve --provider openrouter --port 8787
 
 Доступны `--jev-url http://127.0.0.1:8787` и `--timeout 30` (socket I/O,
 не общий deadline). При ошибке модель не заменяется заглушкой. При ответе
-`needs_confirmation` дальнейшие действия не выполняются.
+`needs_confirmation` дальнейшие действия не выполняются. Адаптер предлагает Jev
+кандидата `NONE`: если ни один разрешённый маршрут не подходит, ответ —
+`abstained` с `upstream_no_fitting_route` ([ADR-0003](docs/architecture/ADR-0003-none-candidate-refusal.md)).
+`--no-none-candidate` возвращает прежнее поведение.
 
 Без ключа можно запустить upstream с `--provider demo`, а клиент с
 `--allow-demo`. Ответ будет помечен `is_stub=true`. Без этого флага demo отклоняется.

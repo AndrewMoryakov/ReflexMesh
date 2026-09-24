@@ -26,6 +26,9 @@ def response():
             'decision': {'kind': 'choice', 'selected': 'LLM', 'jev_choice': 'LLM',
                          'candidates': [{'id': 'LLM', 'jev_probability': 1.0, 'jev_confidence': 0.9,
                                          'router': {'available': True, 'allowed': True, 'filtered': False,
+                                                    'requires_confirmation': False}},
+                                        {'id': 'NONE', 'jev_probability': 0.0, 'jev_confidence': 0.9,
+                                         'router': {'available': True, 'allowed': True, 'filtered': False,
                                                     'requires_confirmation': False}}]},
             'fallback': {'type': None, 'reason': None},
             'raw_jev': {'answers': {'tool': {'confidence': 0.9}}}}
@@ -74,7 +77,7 @@ class JevTests(unittest.TestCase):
         self.assertFalse(result['execution_performed'])
         self.assertEqual(len(server.requests), 1)
         self.assertEqual(server.requests[0][0], '/route')
-        self.assertEqual([c['id'] for c in server.requests[0][1]['candidates']], ['LLM'])
+        self.assertEqual([c['id'] for c in server.requests[0][1]['candidates']], ['LLM', 'NONE'])
         self.assertEqual(len(result['trace']['response_sha256']), 64)
 
     def test_empty_set_never_calls_transport(self):
@@ -172,6 +175,34 @@ class JevTests(unittest.TestCase):
         for timeout in [0, -1, float('nan'), float('inf'), True, 121]:
             with self.subTest(timeout=timeout), self.assertRaises(ValidationError):
                 route_task(task(), timeout=timeout)
+
+    def test_none_candidate_is_a_refusal_not_a_route(self):
+        for status in ('selected', 'needs_confirmation'):
+            data = response(); data['status'] = status
+            data['decision']['selected'] = data['decision']['jev_choice'] = 'NONE'
+            data['decision']['candidates'][1]['router']['requires_confirmation'] = status == 'needs_confirmation'
+            with Server(json.dumps(data).encode()) as server:
+                result = route_task(task(), endpoint=server.url)
+            self.assertEqual(result['status'], 'abstained')
+            self.assertIsNone(result['route'])
+            self.assertEqual(result['reason_code'], 'upstream_no_fitting_route')
+            self.assertEqual(result['trace']['upstream']['selected'], 'NONE')
+
+    def test_none_candidate_can_be_disabled(self):
+        legacy = response(); del legacy['decision']['candidates'][1]
+        with Server(json.dumps(legacy).encode()) as server:
+            result = route_task(task(), endpoint=server.url, none_candidate=False)
+        self.assertEqual(result['status'], 'selected')
+        self.assertEqual([c['id'] for c in server.requests[0][1]['candidates']], ['LLM'])
+        # A NONE row is foreign when NONE was not offered.
+        with Server() as server:
+            self.assertEqual(route_task(task(), endpoint=server.url, none_candidate=False)['reason_code'],
+                             'invalid_response')
+        # And a response without the offered NONE row is incomplete.
+        with Server(json.dumps(legacy).encode()) as server:
+            self.assertEqual(route_task(task(), endpoint=server.url)['reason_code'], 'invalid_response')
+        with self.assertRaises(ValidationError):
+            route_task(task(), none_candidate=1)
 
     def test_cli(self):
         task_dict = {'schema_version': '0.1', 'task_id': 't', 'goal': 'text',
