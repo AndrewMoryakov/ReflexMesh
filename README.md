@@ -96,12 +96,14 @@ cd JevRouter
 git checkout f944acb6530621bced023352e2358a63218bf4d9
 npm ci --ignore-scripts
 npm run build
-node dist/cli.js serve --provider typesafe --port 8787
+node dist/cli.js serve --provider openrouter --port 8787
 ```
 
-Перед запуском сервера задайте в его окружении `TYPESAFE_API_KEY` или
-`JEV_API_KEY`. Для OpenRouter задайте `OPENROUTER_API_KEY` и используйте
-`--provider openrouter`. Ключи не передаются в Task или CLI ReflexMesh.
+Перед запуском сервера задайте в его окружении `OPENROUTER_API_KEY`.
+Его можно создать на [странице ключей OpenRouter](https://openrouter.ai/settings/keys):
+отдельного ключа JevRouter нет. Если у вас уже есть прямой ключ TypeSafe,
+задайте `TYPESAFE_API_KEY` или `JEV_API_KEY` и используйте `--provider typesafe`.
+Ключи не передаются в Task или CLI ReflexMesh.
 Сервер использует собственную policy и сохраняет receipts в `.jevrouter/`
 своего рабочего каталога; учитывайте это при выборе каталога и содержимого задач.
 При настоящем провайдере goal передаётся облачной модели.
