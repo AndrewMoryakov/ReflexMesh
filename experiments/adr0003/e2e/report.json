@@ -1,0 +1,33 @@
+{
+  "decisions": 84,
+  "control_accuracy": 1.0,
+  "control_accuracy_ci95": [
+    0.9398,
+    1.0
+  ],
+  "control_false_abstention": 0.0,
+  "control_wrong_cases": [],
+  "refusal_abstention": 0.9583,
+  "refusal_abstention_ci95": [
+    0.7976,
+    0.9926
+  ],
+  "refusal_abstention_by_subtype": {
+    "disallowed": 1.0,
+    "out_of_catalog": 0.9167
+  },
+  "refusal_missed_cases": [
+    "R2-O-02"
+  ],
+  "abstain_reasons": {
+    "upstream_no_fitting_route": 18,
+    "upstream_no_decision": 5
+  },
+  "forbidden": 0,
+  "stability": null,
+  "unstable_cases": [],
+  "error_rate": 0.0,
+  "errors": {},
+  "latency_p50_ms": 616.1,
+  "cost_total": null
+}
