@@ -1,0 +1,70 @@
+[
+ {
+  "scenario": "veto",
+  "run": 1,
+  "provider": "jev",
+  "controller_status": "failed",
+  "controller_reason": "environment_error",
+  "runtime_status": "blocked",
+  "expected": "blocked",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 1,
+  "wall_s": 5.39,
+  "driver_actions": [],
+  "runtime_stops": [
+   [
+    "vetoed",
+    "button 'Delete account'"
+   ]
+  ]
+ },
+ {
+  "scenario": "cancel",
+  "run": 1,
+  "provider": "jev",
+  "controller_status": "failed",
+  "controller_reason": "environment_error",
+  "runtime_status": "cancelled",
+  "expected": "cancelled",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 2,
+  "wall_s": 10.09,
+  "driver_actions": [
+   [
+    "click",
+    "button 'Start export'"
+   ]
+  ],
+  "runtime_stops": [
+   [
+    "cancelled",
+    "button 'Start export'"
+   ]
+  ]
+ },
+ {
+  "scenario": "deadline",
+  "run": 1,
+  "provider": "jev",
+  "controller_status": "failed",
+  "controller_reason": "environment_error",
+  "runtime_status": "incomplete",
+  "expected": "incomplete",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 1,
+  "wall_s": 7.71,
+  "driver_actions": [],
+  "runtime_stops": [
+   [
+    "deadline",
+    "button 'Start export'"
+   ]
+  ]
+ }
+]

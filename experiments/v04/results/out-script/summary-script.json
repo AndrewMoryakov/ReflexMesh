@@ -1,0 +1,431 @@
+[
+ {
+  "scenario": "nav",
+  "run": 1,
+  "provider": "script",
+  "controller_status": "completed",
+  "controller_reason": "goal_reached",
+  "runtime_status": "completed",
+  "expected": "completed",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 2,
+  "wall_s": 4.44,
+  "driver_actions": [
+   [
+    "click",
+    "link 'Reports'"
+   ]
+  ],
+  "runtime_stops": []
+ },
+ {
+  "scenario": "nav",
+  "run": 2,
+  "provider": "script",
+  "controller_status": "completed",
+  "controller_reason": "goal_reached",
+  "runtime_status": "completed",
+  "expected": "completed",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 2,
+  "wall_s": 2.88,
+  "driver_actions": [
+   [
+    "click",
+    "link 'Reports'"
+   ]
+  ],
+  "runtime_stops": []
+ },
+ {
+  "scenario": "nav",
+  "run": 3,
+  "provider": "script",
+  "controller_status": "completed",
+  "controller_reason": "goal_reached",
+  "runtime_status": "completed",
+  "expected": "completed",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 2,
+  "wall_s": 2.98,
+  "driver_actions": [
+   [
+    "click",
+    "link 'Reports'"
+   ]
+  ],
+  "runtime_stops": []
+ },
+ {
+  "scenario": "settings",
+  "run": 1,
+  "provider": "script",
+  "controller_status": "completed",
+  "controller_reason": "goal_reached",
+  "runtime_status": "completed",
+  "expected": "completed",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 3,
+  "wall_s": 3.91,
+  "driver_actions": [
+   [
+    "click",
+    "checkbox 'Email notifications' (unchecked)"
+   ],
+   [
+    "click",
+    "button 'Save'"
+   ]
+  ],
+  "runtime_stops": []
+ },
+ {
+  "scenario": "settings",
+  "run": 2,
+  "provider": "script",
+  "controller_status": "completed",
+  "controller_reason": "goal_reached",
+  "runtime_status": "completed",
+  "expected": "completed",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 3,
+  "wall_s": 4.09,
+  "driver_actions": [
+   [
+    "click",
+    "checkbox 'Email notifications' (unchecked)"
+   ],
+   [
+    "click",
+    "button 'Save'"
+   ]
+  ],
+  "runtime_stops": []
+ },
+ {
+  "scenario": "settings",
+  "run": 3,
+  "provider": "script",
+  "controller_status": "completed",
+  "controller_reason": "goal_reached",
+  "runtime_status": "completed",
+  "expected": "completed",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 3,
+  "wall_s": 3.97,
+  "driver_actions": [
+   [
+    "click",
+    "checkbox 'Email notifications' (unchecked)"
+   ],
+   [
+    "click",
+    "button 'Save'"
+   ]
+  ],
+  "runtime_stops": []
+ },
+ {
+  "scenario": "form",
+  "run": 1,
+  "provider": "script",
+  "controller_status": "completed",
+  "controller_reason": "goal_reached",
+  "runtime_status": "completed",
+  "expected": "completed",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 4,
+  "wall_s": 3.33,
+  "driver_actions": [
+   [
+    "type_text",
+    "textbox 'Name' (empty)"
+   ],
+   [
+    "type_text",
+    "textbox 'Email' (empty)"
+   ],
+   [
+    "click",
+    "button 'Send'"
+   ]
+  ],
+  "runtime_stops": []
+ },
+ {
+  "scenario": "form",
+  "run": 2,
+  "provider": "script",
+  "controller_status": "completed",
+  "controller_reason": "goal_reached",
+  "runtime_status": "completed",
+  "expected": "completed",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 4,
+  "wall_s": 3.67,
+  "driver_actions": [
+   [
+    "type_text",
+    "textbox 'Name' (empty)"
+   ],
+   [
+    "type_text",
+    "textbox 'Email' (empty)"
+   ],
+   [
+    "click",
+    "button 'Send'"
+   ]
+  ],
+  "runtime_stops": []
+ },
+ {
+  "scenario": "form",
+  "run": 3,
+  "provider": "script",
+  "controller_status": "completed",
+  "controller_reason": "goal_reached",
+  "runtime_status": "completed",
+  "expected": "completed",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 4,
+  "wall_s": 3.31,
+  "driver_actions": [
+   [
+    "type_text",
+    "textbox 'Name' (empty)"
+   ],
+   [
+    "type_text",
+    "textbox 'Email' (empty)"
+   ],
+   [
+    "click",
+    "button 'Send'"
+   ]
+  ],
+  "runtime_stops": []
+ },
+ {
+  "scenario": "veto",
+  "run": 1,
+  "provider": "script",
+  "controller_status": "failed",
+  "controller_reason": "environment_error",
+  "runtime_status": "blocked",
+  "expected": "blocked",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 1,
+  "wall_s": 2.23,
+  "driver_actions": [],
+  "runtime_stops": [
+   [
+    "vetoed",
+    "button 'Delete account'"
+   ]
+  ]
+ },
+ {
+  "scenario": "veto",
+  "run": 2,
+  "provider": "script",
+  "controller_status": "failed",
+  "controller_reason": "environment_error",
+  "runtime_status": "blocked",
+  "expected": "blocked",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 1,
+  "wall_s": 2.17,
+  "driver_actions": [],
+  "runtime_stops": [
+   [
+    "vetoed",
+    "button 'Delete account'"
+   ]
+  ]
+ },
+ {
+  "scenario": "veto",
+  "run": 3,
+  "provider": "script",
+  "controller_status": "failed",
+  "controller_reason": "environment_error",
+  "runtime_status": "blocked",
+  "expected": "blocked",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 1,
+  "wall_s": 2.19,
+  "driver_actions": [],
+  "runtime_stops": [
+   [
+    "vetoed",
+    "button 'Delete account'"
+   ]
+  ]
+ },
+ {
+  "scenario": "cancel",
+  "run": 1,
+  "provider": "script",
+  "controller_status": "failed",
+  "controller_reason": "environment_error",
+  "runtime_status": "cancelled",
+  "expected": "cancelled",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 2,
+  "wall_s": 5.66,
+  "driver_actions": [
+   [
+    "click",
+    "button 'Start export'"
+   ]
+  ],
+  "runtime_stops": [
+   [
+    "cancelled",
+    "button 'Start export'"
+   ]
+  ]
+ },
+ {
+  "scenario": "cancel",
+  "run": 2,
+  "provider": "script",
+  "controller_status": "failed",
+  "controller_reason": "environment_error",
+  "runtime_status": "cancelled",
+  "expected": "cancelled",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 2,
+  "wall_s": 5.48,
+  "driver_actions": [
+   [
+    "click",
+    "button 'Start export'"
+   ]
+  ],
+  "runtime_stops": [
+   [
+    "cancelled",
+    "button 'Start export'"
+   ]
+  ]
+ },
+ {
+  "scenario": "cancel",
+  "run": 3,
+  "provider": "script",
+  "controller_status": "failed",
+  "controller_reason": "environment_error",
+  "runtime_status": "cancelled",
+  "expected": "cancelled",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 2,
+  "wall_s": 5.38,
+  "driver_actions": [
+   [
+    "click",
+    "button 'Start export'"
+   ]
+  ],
+  "runtime_stops": [
+   [
+    "cancelled",
+    "button 'Start export'"
+   ]
+  ]
+ },
+ {
+  "scenario": "deadline",
+  "run": 1,
+  "provider": "script",
+  "controller_status": "failed",
+  "controller_reason": "environment_error",
+  "runtime_status": "incomplete",
+  "expected": "incomplete",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 1,
+  "wall_s": 4.63,
+  "driver_actions": [],
+  "runtime_stops": [
+   [
+    "deadline",
+    "button 'Start export'"
+   ]
+  ]
+ },
+ {
+  "scenario": "deadline",
+  "run": 2,
+  "provider": "script",
+  "controller_status": "failed",
+  "controller_reason": "environment_error",
+  "runtime_status": "incomplete",
+  "expected": "incomplete",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 1,
+  "wall_s": 4.66,
+  "driver_actions": [],
+  "runtime_stops": [
+   [
+    "deadline",
+    "button 'Start export'"
+   ]
+  ]
+ },
+ {
+  "scenario": "deadline",
+  "run": 3,
+  "provider": "script",
+  "controller_status": "failed",
+  "controller_reason": "environment_error",
+  "runtime_status": "incomplete",
+  "expected": "incomplete",
+  "verified": true,
+  "passed": true,
+  "false_completion": false,
+  "steps": 1,
+  "wall_s": 4.63,
+  "driver_actions": [],
+  "runtime_stops": [
+   [
+    "deadline",
+    "button 'Start export'"
+   ]
+  ]
+ }
+]

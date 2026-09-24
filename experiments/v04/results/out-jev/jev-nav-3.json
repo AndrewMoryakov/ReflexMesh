@@ -1,0 +1,489 @@
+{
+ "scenario": "nav",
+ "run": 3,
+ "provider": "jev",
+ "cancel_t": null,
+ "goal": "Open the Reports page.",
+ "controller_status": "completed",
+ "controller_reason": "goal_reached",
+ "runtime_status": "completed",
+ "verified": true,
+ "expected": "completed",
+ "passed": true,
+ "false_completion": false,
+ "steps": 2,
+ "actions": [
+  {
+   "t": 1790280661.8594434,
+   "action": "click",
+   "params": {
+    "element": "20"
+   },
+   "label": "link 'Reports'",
+   "runtime": "allowed",
+   "result": {
+    "ok": true,
+    "text": "Clicked a \"Reports\"",
+    "fields": {},
+    "artifacts": [],
+    "terminal": false
+   }
+  }
+ ],
+ "stops": [],
+ "wall_s": 7.46,
+ "served_model": "typesafe/jev-1.13-20260917",
+ "usage": {
+  "input_tokens": 2911,
+  "output_tokens": 866
+ },
+ "site_log": [
+  {
+   "t": 1790280658.2727976,
+   "method": "GET",
+   "path": "/",
+   "data": null
+  },
+  {
+   "t": 1790280662.0807207,
+   "method": "GET",
+   "path": "/reports",
+   "data": null
+  }
+ ],
+ "trace": {
+  "goal": "Open the Reports page.",
+  "status": "completed",
+  "reason": "goal_reached",
+  "steps": [
+   {
+    "index": 0,
+    "started_at": 1790280661.859382,
+    "state": {
+     "goal": "Open the Reports page.",
+     "instructions": "You operate a web page toward a goal. Each step you see the page's visible text with its controls numbered, and you choose one action: click a control, type one of the supplied values into a field, pick a dropdown option, press or hold a key, scroll, switch tab, or go back. When several controls need changing, take them in the order they appear on the page, and submit only after every one is set. Finish when the page shows the goal is done. Escalate when nothing offered can move it forward.",
+     "observation": {
+      "summary": "URL: http://127.0.0.1:8765/\nTitle: 127.0.0.1:8765\n[11]<a />\n\tHome\n[14]<a />\n\tProfile\n[17]<a />\n\tSettings\n[20]<a />\n\tReports\n[23]<a />\n\tContact form\n[26]<a />\n\tDanger zone\n[29]<a />\n\tExport\nHome\nWelcome to the test site. Use the menu to open a section.",
+      "url": "http://127.0.0.1:8765/",
+      "title": "127.0.0.1:8765",
+      "controls": 7,
+      "tabs": 1,
+      "set": [],
+      "pixels_above": 0,
+      "pixels_below": 0
+     }
+    },
+    "state_tokens": 248,
+    "questions": {
+     "next_action": {
+      "type": "choice",
+      "instructions": "Given the goal, the observation and the history, choose the single best next action. Choose `finish` only when the goal is already achieved.",
+      "criteria": {
+       "click": "Click one numbered control: a link, button, checkbox, tab or option.",
+       "press_key": "Press one key once, on whatever has focus.",
+       "hold_key": "Hold one key down for a while, for a page that reacts to held keys.",
+       "scroll": "Scroll the page one screen.",
+       "go_back": "Go back to the previous page.",
+       "wait": "Wait a second for the page to settle.",
+       "finish": "The goal is fully achieved as far as the observation shows; stop here.",
+       "escalate": "No available action fits the situation; ask for help and stop."
+      }
+     },
+     "goal_reached": {
+      "type": "noul",
+      "instructions": "Is the goal already fully achieved according to the observation?"
+     },
+     "click__element": {
+      "type": "choice",
+      "instructions": "Which control to click?",
+      "criteria": {
+       "11": "link 'Home'",
+       "14": "link 'Profile'",
+       "17": "link 'Settings'",
+       "20": "link 'Reports'",
+       "23": "link 'Contact form'",
+       "26": "link 'Danger zone'",
+       "29": "link 'Export'"
+      }
+     },
+     "press_key__key": {
+      "type": "choice",
+      "instructions": "Which key?",
+      "criteria": {
+       "Enter": "Enter",
+       "Escape": "Escape",
+       "Tab": "Tab",
+       "Backspace": "Backspace",
+       "Space": "Space",
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "PageUp": "PageUp",
+       "PageDown": "PageDown",
+       "Home": "Home",
+       "End": "End"
+      }
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "instructions": "Which key to hold?",
+      "criteria": {
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "Space": "Space",
+       "Shift": "Shift"
+      }
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "instructions": "How long?",
+      "criteria": {
+       "short": "about 0.15 s",
+       "medium": "about 0.4 s",
+       "long": "about 0.8 s"
+      }
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "instructions": "Which way?",
+      "criteria": {
+       "down": "further down the page",
+       "up": "back up"
+      }
+     }
+    },
+    "answers": {
+     "next_action": {
+      "type": "choice",
+      "choice": "click",
+      "probabilities": {
+       "hold_key": 0,
+       "wait": 0,
+       "escalate": 0,
+       "click": 1,
+       "finish": 0,
+       "go_back": 0,
+       "press_key": 0,
+       "scroll": 0
+      },
+      "confidence": 1
+     },
+     "goal_reached": {
+      "type": "noul",
+      "noul": 0.02
+     },
+     "click__element": {
+      "type": "choice",
+      "choice": "20",
+      "probabilities": {
+       "11": 0,
+       "14": 0,
+       "17": 0,
+       "20": 1,
+       "23": 0,
+       "26": 0,
+       "29": 0
+      },
+      "confidence": 1
+     },
+     "press_key__key": {
+      "type": "choice",
+      "choice": "Enter",
+      "probabilities": {
+       "ArrowUp": 0.01,
+       "Tab": 0.32,
+       "PageDown": 0,
+       "ArrowDown": 0.03,
+       "ArrowRight": 0.04,
+       "Home": 0.19,
+       "ArrowLeft": 0.01,
+       "PageUp": 0,
+       "Escape": 0,
+       "Backspace": 0,
+       "Enter": 0.37,
+       "End": 0,
+       "Space": 0.03
+      },
+      "confidence": 0.31
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "choice": "Space",
+      "probabilities": {
+       "ArrowUp": 0.01,
+       "ArrowDown": 0.14,
+       "ArrowRight": 0.11,
+       "Shift": 0.22,
+       "ArrowLeft": 0.02,
+       "Space": 0.5
+      },
+      "confidence": 0.4
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "choice": "short",
+      "probabilities": {
+       "medium": 0.15,
+       "short": 0.82,
+       "long": 0.03
+      },
+      "confidence": 0.74
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "choice": "down",
+      "probabilities": {
+       "up": 0.33,
+       "down": 0.67
+      },
+      "confidence": 0.33
+     }
+    },
+    "action": "click",
+    "params": {
+     "element": "20"
+    },
+    "action_confidence": 1.0,
+    "weakest": 1.0,
+    "threshold": 0.7,
+    "verdict": "run",
+    "result": {
+     "ok": true,
+     "text": "Clicked a \"Reports\"",
+     "fields": {},
+     "artifacts": [],
+     "terminal": false
+    },
+    "latency_ms": 2505,
+    "usage": {
+     "input_tokens": 1438,
+     "output_tokens": 433
+    },
+    "served_model": "typesafe/jev-1.13-20260917",
+    "request_id": "gen-dec-1790280660-6hjGtH0266JhXkPqwesy",
+    "note": "not offered: type_text (no candidates for 'field' this step), select_option (no candidates for 'option' this step), switch_tab (no candidates for 'tab' this step)"
+   },
+   {
+    "index": 1,
+    "started_at": 1790280664.6188889,
+    "state": {
+     "goal": "Open the Reports page.",
+     "instructions": "You operate a web page toward a goal. Each step you see the page's visible text with its controls numbered, and you choose one action: click a control, type one of the supplied values into a field, pick a dropdown option, press or hold a key, scroll, switch tab, or go back. When several controls need changing, take them in the order they appear on the page, and submit only after every one is set. Finish when the page shows the goal is done. Escalate when nothing offered can move it forward.",
+     "observation": {
+      "summary": "URL: http://127.0.0.1:8765/reports\nTitle: 127.0.0.1:8765/reports\n*[49]<a />\n\tHome\n*[52]<a />\n\tProfile\n*[55]<a />\n\tSettings\n*[58]<a />\n\tReports\n*[61]<a />\n\tContact form\n*[64]<a />\n\tDanger zone\n*[67]<a />\n\tExport\nReports\nMonthly report for May: 120 orders, revenue 4,800.",
+      "url": "http://127.0.0.1:8765/reports",
+      "title": "127.0.0.1:8765/reports",
+      "controls": 7,
+      "tabs": 1,
+      "set": [],
+      "pixels_above": 0,
+      "pixels_below": 0
+     },
+     "history": [
+      "click(element='20') -> Clicked a \"Reports\""
+     ]
+    },
+    "state_tokens": 272,
+    "questions": {
+     "next_action": {
+      "type": "choice",
+      "instructions": "Given the goal, the observation and the history, choose the single best next action. Choose `finish` only when the goal is already achieved.",
+      "criteria": {
+       "click": "Click one numbered control: a link, button, checkbox, tab or option.",
+       "press_key": "Press one key once, on whatever has focus.",
+       "hold_key": "Hold one key down for a while, for a page that reacts to held keys.",
+       "scroll": "Scroll the page one screen.",
+       "go_back": "Go back to the previous page.",
+       "wait": "Wait a second for the page to settle.",
+       "finish": "The goal is fully achieved as far as the observation shows; stop here.",
+       "escalate": "No available action fits the situation; ask for help and stop."
+      }
+     },
+     "goal_reached": {
+      "type": "noul",
+      "instructions": "Is the goal already fully achieved according to the observation?"
+     },
+     "click__element": {
+      "type": "choice",
+      "instructions": "Which control to click?",
+      "criteria": {
+       "49": "link 'Home'",
+       "52": "link 'Profile'",
+       "55": "link 'Settings'",
+       "58": "link 'Reports'",
+       "61": "link 'Contact form'",
+       "64": "link 'Danger zone'",
+       "67": "link 'Export'"
+      }
+     },
+     "press_key__key": {
+      "type": "choice",
+      "instructions": "Which key?",
+      "criteria": {
+       "Enter": "Enter",
+       "Escape": "Escape",
+       "Tab": "Tab",
+       "Backspace": "Backspace",
+       "Space": "Space",
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "PageUp": "PageUp",
+       "PageDown": "PageDown",
+       "Home": "Home",
+       "End": "End"
+      }
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "instructions": "Which key to hold?",
+      "criteria": {
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "Space": "Space",
+       "Shift": "Shift"
+      }
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "instructions": "How long?",
+      "criteria": {
+       "short": "about 0.15 s",
+       "medium": "about 0.4 s",
+       "long": "about 0.8 s"
+      }
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "instructions": "Which way?",
+      "criteria": {
+       "down": "further down the page",
+       "up": "back up"
+      }
+     }
+    },
+    "answers": {
+     "next_action": {
+      "type": "choice",
+      "choice": "finish",
+      "probabilities": {
+       "go_back": 0,
+       "click": 0,
+       "press_key": 0,
+       "scroll": 0,
+       "escalate": 0,
+       "finish": 1,
+       "hold_key": 0,
+       "wait": 0
+      },
+      "confidence": 1
+     },
+     "goal_reached": {
+      "type": "noul",
+      "noul": 0.97
+     },
+     "click__element": {
+      "type": "choice",
+      "choice": "58",
+      "probabilities": {
+       "49": 0,
+       "52": 0,
+       "55": 0,
+       "58": 0.98,
+       "61": 0,
+       "64": 0,
+       "67": 0.02
+      },
+      "confidence": 0.97
+     },
+     "press_key__key": {
+      "type": "choice",
+      "choice": "Enter",
+      "probabilities": {
+       "ArrowRight": 0.01,
+       "ArrowLeft": 0,
+       "Space": 0.02,
+       "ArrowUp": 0,
+       "Backspace": 0,
+       "PageDown": 0.01,
+       "Enter": 0.67,
+       "Escape": 0.02,
+       "End": 0,
+       "Home": 0.2,
+       "Tab": 0.06,
+       "PageUp": 0,
+       "ArrowDown": 0.01
+      },
+      "confidence": 0.64
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "choice": "Space",
+      "probabilities": {
+       "ArrowLeft": 0.02,
+       "ArrowRight": 0.03,
+       "Space": 0.54,
+       "ArrowUp": 0.03,
+       "ArrowDown": 0.18,
+       "Shift": 0.2
+      },
+      "confidence": 0.46
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "choice": "short",
+      "probabilities": {
+       "medium": 0.13,
+       "long": 0.03,
+       "short": 0.84
+      },
+      "confidence": 0.76
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "choice": "down",
+      "probabilities": {
+       "up": 0.35,
+       "down": 0.65
+      },
+      "confidence": 0.29
+     }
+    },
+    "action": "finish",
+    "params": {},
+    "action_confidence": 1.0,
+    "weakest": null,
+    "threshold": null,
+    "verdict": "finish",
+    "result": null,
+    "latency_ms": 1918,
+    "usage": {
+     "input_tokens": 1473,
+     "output_tokens": 433
+    },
+    "served_model": "typesafe/jev-1.13-20260917",
+    "request_id": "gen-dec-1790280662-tcZkJatgmlDADghV8SQp",
+    "note": "not offered: type_text (no candidates for 'field' this step), select_option (no candidates for 'option' this step), switch_tab (no candidates for 'tab' this step); goal_reached 0.97"
+   }
+  ],
+  "usage": {
+   "input_tokens": 2911,
+   "output_tokens": 866
+  },
+  "served_model": "typesafe/jev-1.13-20260917",
+  "started_at": 1790280657.2958112,
+  "finished_at": 1790280664.618921,
+  "artifacts": [],
+  "error": null,
+  "config_version": 0,
+  "handoff": null,
+  "summary": "Goal reached after 1 action.",
+  "executed": 1
+ }
+}

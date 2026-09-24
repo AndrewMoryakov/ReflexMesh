@@ -1,0 +1,2406 @@
+{
+ "scenario": "form",
+ "run": 1,
+ "provider": "jev",
+ "cancel_t": null,
+ "goal": "Fill in the contact form with the name and the email, then send it.",
+ "controller_status": "incomplete",
+ "controller_reason": "no_confident_action",
+ "runtime_status": "completed",
+ "verified": true,
+ "expected": "completed",
+ "passed": true,
+ "false_completion": false,
+ "steps": 8,
+ "actions": [
+  {
+   "t": 1790280702.9453952,
+   "action": "type_text",
+   "params": {
+    "field": "3",
+    "value": "name"
+   },
+   "label": "textbox 'Name' (empty)",
+   "runtime": "allowed",
+   "result": {
+    "ok": true,
+    "text": "Typed 'Test User'",
+    "fields": {},
+    "artifacts": [],
+    "terminal": false
+   }
+  },
+  {
+   "t": 1790280705.2164373,
+   "action": "type_text",
+   "params": {
+    "field": "4",
+    "value": "email"
+   },
+   "label": "textbox 'Email' (empty)",
+   "runtime": "allowed",
+   "result": {
+    "ok": true,
+    "text": "Typed 'test@example.com'",
+    "fields": {},
+    "artifacts": [],
+    "terminal": false
+   }
+  },
+  {
+   "t": 1790280707.268688,
+   "action": "click",
+   "params": {
+    "element": "42"
+   },
+   "label": "button 'Send'",
+   "runtime": "allowed",
+   "result": {
+    "ok": true,
+    "text": "Clicked button \"Send\"",
+    "fields": {},
+    "artifacts": [],
+    "terminal": false
+   }
+  }
+ ],
+ "stops": [],
+ "wall_s": 21.4,
+ "served_model": "typesafe/jev-1.13-20260917",
+ "usage": {
+  "input_tokens": 14520,
+  "output_tokens": 4228
+ },
+ "site_log": [
+  {
+   "t": 1790280697.1519759,
+   "method": "GET",
+   "path": "/form",
+   "data": null
+  },
+  {
+   "t": 1790280707.483482,
+   "method": "POST",
+   "path": "/form",
+   "data": {
+    "name": "Test User",
+    "email": "test@example.com"
+   }
+  },
+  {
+   "t": 1790280707.4865072,
+   "method": "GET",
+   "path": "/form",
+   "data": null
+  }
+ ],
+ "trace": {
+  "goal": "Fill in the contact form with the name and the email, then send it.",
+  "status": "incomplete",
+  "reason": "no_confident_action",
+  "steps": [
+   {
+    "index": 0,
+    "started_at": 1790280700.776912,
+    "state": {
+     "goal": "Fill in the contact form with the name and the email, then send it.",
+     "instructions": "You operate a web page toward a goal. Each step you see the page's visible text with its controls numbered, and you choose one action: click a control, type one of the supplied values into a field, pick a dropdown option, press or hold a key, scroll, switch tab, or go back. When several controls need changing, take them in the order they appear on the page, and submit only after every one is set. Finish when the page shows the goal is done. Escalate when nothing offered can move it forward.",
+     "observation": {
+      "summary": "URL: http://127.0.0.1:8765/form\nTitle: 127.0.0.1:8765/form\n[14]<a />\n\tHome\n[17]<a />\n\tProfile\n[20]<a />\n\tSettings\n[23]<a />\n\tReports\n[26]<a />\n\tContact form\n[29]<a />\n\tDanger zone\n[32]<a />\n\tExport\nContact form\n[36]<label />\n\tName\n\t|SHADOW(open)|[3]<input type=text name=name />\n[39]<label />\n\tEmail\n\t|SHADOW(open)|[4]<input type=email name=email />\n[42]<button type=submit />\n\tSend\nSet so far: Name: empty; Email: empty.",
+      "url": "http://127.0.0.1:8765/form",
+      "title": "127.0.0.1:8765/form",
+      "controls": 10,
+      "tabs": 1,
+      "set": [
+       "Name: empty",
+       "Email: empty"
+      ],
+      "pixels_above": 0,
+      "pixels_below": 0
+     }
+    },
+    "state_tokens": 315,
+    "questions": {
+     "next_action": {
+      "type": "choice",
+      "instructions": "Given the goal, the observation and the history, choose the single best next action. Choose `finish` only when the goal is already achieved.",
+      "criteria": {
+       "click": "Click one numbered control: a link, button, checkbox, tab or option.",
+       "type_text": "Type one of the supplied values into a text field, replacing what is there.",
+       "press_key": "Press one key once, on whatever has focus.",
+       "hold_key": "Hold one key down for a while, for a page that reacts to held keys.",
+       "scroll": "Scroll the page one screen.",
+       "go_back": "Go back to the previous page.",
+       "wait": "Wait a second for the page to settle.",
+       "finish": "The goal is fully achieved as far as the observation shows; stop here.",
+       "escalate": "No available action fits the situation; ask for help and stop."
+      }
+     },
+     "goal_reached": {
+      "type": "noul",
+      "instructions": "Is the goal already fully achieved according to the observation?"
+     },
+     "click__element": {
+      "type": "choice",
+      "instructions": "Which control to click?",
+      "criteria": {
+       "14": "link 'Home'",
+       "17": "link 'Profile'",
+       "20": "link 'Settings'",
+       "23": "link 'Reports'",
+       "26": "link 'Contact form'",
+       "29": "link 'Danger zone'",
+       "32": "link 'Export'",
+       "3": "textbox 'Name' (empty)",
+       "4": "textbox 'Email' (empty)",
+       "42": "button 'Send'"
+      }
+     },
+     "type_text__field": {
+      "type": "choice",
+      "instructions": "Which field to type into?",
+      "criteria": {
+       "3": "textbox 'Name' (empty)",
+       "4": "textbox 'Email' (empty)"
+      }
+     },
+     "type_text__value": {
+      "type": "choice",
+      "instructions": "Which supplied value belongs in it?",
+      "criteria": {
+       "name": "name",
+       "email": "email"
+      }
+     },
+     "press_key__key": {
+      "type": "choice",
+      "instructions": "Which key?",
+      "criteria": {
+       "Enter": "Enter",
+       "Escape": "Escape",
+       "Tab": "Tab",
+       "Backspace": "Backspace",
+       "Space": "Space",
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "PageUp": "PageUp",
+       "PageDown": "PageDown",
+       "Home": "Home",
+       "End": "End"
+      }
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "instructions": "Which key to hold?",
+      "criteria": {
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "Space": "Space",
+       "Shift": "Shift"
+      }
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "instructions": "How long?",
+      "criteria": {
+       "short": "about 0.15 s",
+       "medium": "about 0.4 s",
+       "long": "about 0.8 s"
+      }
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "instructions": "Which way?",
+      "criteria": {
+       "down": "further down the page",
+       "up": "back up"
+      }
+     }
+    },
+    "answers": {
+     "next_action": {
+      "type": "choice",
+      "choice": "type_text",
+      "probabilities": {
+       "type_text": 0.73,
+       "escalate": 0.18,
+       "press_key": 0,
+       "hold_key": 0,
+       "click": 0.09,
+       "finish": 0,
+       "wait": 0,
+       "scroll": 0,
+       "go_back": 0
+      },
+      "confidence": 0.69
+     },
+     "goal_reached": {
+      "type": "noul",
+      "noul": 0.01
+     },
+     "click__element": {
+      "type": "choice",
+      "choice": "3",
+      "probabilities": {
+       "3": 0.96,
+       "4": 0,
+       "14": 0,
+       "17": 0,
+       "20": 0,
+       "23": 0,
+       "26": 0.04,
+       "29": 0,
+       "32": 0,
+       "42": 0
+      },
+      "confidence": 0.95
+     },
+     "type_text__field": {
+      "type": "choice",
+      "choice": "3",
+      "probabilities": {
+       "3": 1,
+       "4": 0
+      },
+      "confidence": 1
+     },
+     "type_text__value": {
+      "type": "choice",
+      "choice": "name",
+      "probabilities": {
+       "name": 0.94,
+       "email": 0.06
+      },
+      "confidence": 0.88
+     },
+     "press_key__key": {
+      "type": "choice",
+      "choice": "Tab",
+      "probabilities": {
+       "Enter": 0.27,
+       "Backspace": 0,
+       "ArrowDown": 0.01,
+       "Home": 0.03,
+       "Space": 0.01,
+       "Tab": 0.67,
+       "PageDown": 0,
+       "PageUp": 0,
+       "ArrowLeft": 0,
+       "ArrowUp": 0,
+       "End": 0,
+       "Escape": 0,
+       "ArrowRight": 0
+      },
+      "confidence": 0.63
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "choice": "Space",
+      "probabilities": {
+       "ArrowDown": 0.1,
+       "ArrowRight": 0.03,
+       "ArrowLeft": 0.01,
+       "ArrowUp": 0.01,
+       "Space": 0.44,
+       "Shift": 0.41
+      },
+      "confidence": 0.34
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "choice": "short",
+      "probabilities": {
+       "medium": 0.24,
+       "long": 0.03,
+       "short": 0.73
+      },
+      "confidence": 0.59
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "choice": "down",
+      "probabilities": {
+       "up": 0.14,
+       "down": 0.86
+      },
+      "confidence": 0.72
+     }
+    },
+    "action": "type_text",
+    "params": {
+     "field": "3",
+     "value": "name"
+    },
+    "action_confidence": 0.69,
+    "weakest": 0.69,
+    "threshold": 0.7,
+    "verdict": "refused",
+    "result": null,
+    "latency_ms": 2526,
+    "usage": {
+     "input_tokens": 1710,
+     "output_tokens": 525
+    },
+    "served_model": "typesafe/jev-1.13-20260917",
+    "request_id": "gen-dec-1790280699-hmVy23n19KLCqZkuXD7Q",
+    "note": "not offered: select_option (no candidates for 'option' this step), switch_tab (no candidates for 'tab' this step)"
+   },
+   {
+    "index": 1,
+    "started_at": 1790280702.9453049,
+    "state": {
+     "goal": "Fill in the contact form with the name and the email, then send it.",
+     "instructions": "You operate a web page toward a goal. Each step you see the page's visible text with its controls numbered, and you choose one action: click a control, type one of the supplied values into a field, pick a dropdown option, press or hold a key, scroll, switch tab, or go back. When several controls need changing, take them in the order they appear on the page, and submit only after every one is set. Finish when the page shows the goal is done. Escalate when nothing offered can move it forward.",
+     "observation": {
+      "summary": "URL: http://127.0.0.1:8765/form\nTitle: 127.0.0.1:8765/form\n[14]<a />\n\tHome\n[17]<a />\n\tProfile\n[20]<a />\n\tSettings\n[23]<a />\n\tReports\n[26]<a />\n\tContact form\n[29]<a />\n\tDanger zone\n[32]<a />\n\tExport\nContact form\n[36]<label />\n\tName\n\t|SHADOW(open)|[3]<input type=text name=name />\n[39]<label />\n\tEmail\n\t|SHADOW(open)|[4]<input type=email name=email />\n[42]<button type=submit />\n\tSend\nSet so far: Name: empty; Email: empty.",
+      "url": "http://127.0.0.1:8765/form",
+      "title": "127.0.0.1:8765/form",
+      "controls": 10,
+      "tabs": 1,
+      "set": [
+       "Name: empty",
+       "Email: empty"
+      ],
+      "pixels_above": 0,
+      "pixels_below": 0
+     },
+     "history": [
+      "refused type_text(field='3', value='name'): weakest judgment 0.69 below 0.70"
+     ]
+    },
+    "state_tokens": 338,
+    "questions": {
+     "next_action": {
+      "type": "choice",
+      "instructions": "Given the goal, the observation and the history, choose the single best next action. Choose `finish` only when the goal is already achieved.",
+      "criteria": {
+       "click": "Click one numbered control: a link, button, checkbox, tab or option.",
+       "type_text": "Type one of the supplied values into a text field, replacing what is there.",
+       "press_key": "Press one key once, on whatever has focus.",
+       "hold_key": "Hold one key down for a while, for a page that reacts to held keys.",
+       "scroll": "Scroll the page one screen.",
+       "go_back": "Go back to the previous page.",
+       "wait": "Wait a second for the page to settle.",
+       "finish": "The goal is fully achieved as far as the observation shows; stop here.",
+       "escalate": "No available action fits the situation; ask for help and stop."
+      }
+     },
+     "goal_reached": {
+      "type": "noul",
+      "instructions": "Is the goal already fully achieved according to the observation?"
+     },
+     "click__element": {
+      "type": "choice",
+      "instructions": "Which control to click?",
+      "criteria": {
+       "14": "link 'Home'",
+       "17": "link 'Profile'",
+       "20": "link 'Settings'",
+       "23": "link 'Reports'",
+       "26": "link 'Contact form'",
+       "29": "link 'Danger zone'",
+       "32": "link 'Export'",
+       "3": "textbox 'Name' (empty)",
+       "4": "textbox 'Email' (empty)",
+       "42": "button 'Send'"
+      }
+     },
+     "type_text__field": {
+      "type": "choice",
+      "instructions": "Which field to type into?",
+      "criteria": {
+       "3": "textbox 'Name' (empty)",
+       "4": "textbox 'Email' (empty)"
+      }
+     },
+     "type_text__value": {
+      "type": "choice",
+      "instructions": "Which supplied value belongs in it?",
+      "criteria": {
+       "name": "name",
+       "email": "email"
+      }
+     },
+     "press_key__key": {
+      "type": "choice",
+      "instructions": "Which key?",
+      "criteria": {
+       "Enter": "Enter",
+       "Escape": "Escape",
+       "Tab": "Tab",
+       "Backspace": "Backspace",
+       "Space": "Space",
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "PageUp": "PageUp",
+       "PageDown": "PageDown",
+       "Home": "Home",
+       "End": "End"
+      }
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "instructions": "Which key to hold?",
+      "criteria": {
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "Space": "Space",
+       "Shift": "Shift"
+      }
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "instructions": "How long?",
+      "criteria": {
+       "short": "about 0.15 s",
+       "medium": "about 0.4 s",
+       "long": "about 0.8 s"
+      }
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "instructions": "Which way?",
+      "criteria": {
+       "down": "further down the page",
+       "up": "back up"
+      }
+     }
+    },
+    "answers": {
+     "next_action": {
+      "type": "choice",
+      "choice": "type_text",
+      "probabilities": {
+       "type_text": 0.77,
+       "wait": 0,
+       "press_key": 0,
+       "click": 0.11,
+       "hold_key": 0,
+       "finish": 0,
+       "escalate": 0.12,
+       "scroll": 0,
+       "go_back": 0
+      },
+      "confidence": 0.74
+     },
+     "goal_reached": {
+      "type": "noul",
+      "noul": 0.01
+     },
+     "click__element": {
+      "type": "choice",
+      "choice": "3",
+      "probabilities": {
+       "3": 0.96,
+       "4": 0,
+       "14": 0,
+       "17": 0,
+       "20": 0,
+       "23": 0,
+       "26": 0.03,
+       "29": 0,
+       "32": 0,
+       "42": 0.01
+      },
+      "confidence": 0.95
+     },
+     "type_text__field": {
+      "type": "choice",
+      "choice": "3",
+      "probabilities": {
+       "3": 0.98,
+       "4": 0.02
+      },
+      "confidence": 0.96
+     },
+     "type_text__value": {
+      "type": "choice",
+      "choice": "name",
+      "probabilities": {
+       "name": 0.94,
+       "email": 0.06
+      },
+      "confidence": 0.88
+     },
+     "press_key__key": {
+      "type": "choice",
+      "choice": "Tab",
+      "probabilities": {
+       "Enter": 0.3,
+       "Backspace": 0.02,
+       "ArrowDown": 0.02,
+       "ArrowLeft": 0.01,
+       "Space": 0.02,
+       "Tab": 0.5700000000000001,
+       "PageDown": 0,
+       "PageUp": 0,
+       "Home": 0.04,
+       "ArrowUp": 0,
+       "End": 0,
+       "Escape": 0.01,
+       "ArrowRight": 0.01
+      },
+      "confidence": 0.52
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "choice": "Shift",
+      "probabilities": {
+       "ArrowDown": 0.08,
+       "Shift": 0.5700000000000001,
+       "ArrowLeft": 0.01,
+       "Space": 0.3,
+       "ArrowUp": 0.01,
+       "ArrowRight": 0.03
+      },
+      "confidence": 0.48
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "choice": "short",
+      "probabilities": {
+       "medium": 0.32,
+       "long": 0.05,
+       "short": 0.63
+      },
+      "confidence": 0.45
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "choice": "down",
+      "probabilities": {
+       "up": 0.33,
+       "down": 0.67
+      },
+      "confidence": 0.33
+     }
+    },
+    "action": "type_text",
+    "params": {
+     "field": "3",
+     "value": "name"
+    },
+    "action_confidence": 0.74,
+    "weakest": 0.74,
+    "threshold": 0.7,
+    "verdict": "run",
+    "result": {
+     "ok": true,
+     "text": "Typed 'Test User'",
+     "fields": {},
+     "artifacts": [],
+     "terminal": false
+    },
+    "latency_ms": 2147,
+    "usage": {
+     "input_tokens": 1744,
+     "output_tokens": 525
+    },
+    "served_model": "typesafe/jev-1.13-20260917",
+    "request_id": "gen-dec-1790280701-JnEPHRv63Gou3WdEhQTN",
+    "note": "not offered: select_option (no candidates for 'option' this step), switch_tab (no candidates for 'tab' this step)"
+   },
+   {
+    "index": 2,
+    "started_at": 1790280705.2163358,
+    "state": {
+     "goal": "Fill in the contact form with the name and the email, then send it.",
+     "instructions": "You operate a web page toward a goal. Each step you see the page's visible text with its controls numbered, and you choose one action: click a control, type one of the supplied values into a field, pick a dropdown option, press or hold a key, scroll, switch tab, or go back. When several controls need changing, take them in the order they appear on the page, and submit only after every one is set. Finish when the page shows the goal is done. Escalate when nothing offered can move it forward.",
+     "observation": {
+      "summary": "URL: http://127.0.0.1:8765/form\nTitle: 127.0.0.1:8765/form\n[14]<a />\n\tHome\n[17]<a />\n\tProfile\n[20]<a />\n\tSettings\n[23]<a />\n\tReports\n[26]<a />\n\tContact form\n[29]<a />\n\tDanger zone\n[32]<a />\n\tExport\nContact form\n[36]<label />\n\tName\n\t|SHADOW(open)|[3]<input type=text name=name value=Test User />\n[39]<label />\n\tEmail\n\t|SHADOW(open)|[4]<input type=email name=email />\n[42]<button type=submit />\n\tSend\nSet so far: Name: 'Test User'; Email: empty.",
+      "url": "http://127.0.0.1:8765/form",
+      "title": "127.0.0.1:8765/form",
+      "controls": 10,
+      "tabs": 1,
+      "set": [
+       "Name: 'Test User'",
+       "Email: empty"
+      ],
+      "pixels_above": 0,
+      "pixels_below": 0
+     },
+     "history": [
+      "refused type_text(field='3', value='name'): weakest judgment 0.69 below 0.70",
+      "type_text(field='3', value='name') -> Typed 'Test User'"
+     ]
+    },
+    "state_tokens": 360,
+    "questions": {
+     "next_action": {
+      "type": "choice",
+      "instructions": "Given the goal, the observation and the history, choose the single best next action. Choose `finish` only when the goal is already achieved.",
+      "criteria": {
+       "click": "Click one numbered control: a link, button, checkbox, tab or option.",
+       "type_text": "Type one of the supplied values into a text field, replacing what is there.",
+       "press_key": "Press one key once, on whatever has focus.",
+       "hold_key": "Hold one key down for a while, for a page that reacts to held keys.",
+       "scroll": "Scroll the page one screen.",
+       "go_back": "Go back to the previous page.",
+       "wait": "Wait a second for the page to settle.",
+       "finish": "The goal is fully achieved as far as the observation shows; stop here.",
+       "escalate": "No available action fits the situation; ask for help and stop."
+      }
+     },
+     "goal_reached": {
+      "type": "noul",
+      "instructions": "Is the goal already fully achieved according to the observation?"
+     },
+     "click__element": {
+      "type": "choice",
+      "instructions": "Which control to click?",
+      "criteria": {
+       "14": "link 'Home'",
+       "17": "link 'Profile'",
+       "20": "link 'Settings'",
+       "23": "link 'Reports'",
+       "26": "link 'Contact form'",
+       "29": "link 'Danger zone'",
+       "32": "link 'Export'",
+       "3": "textbox 'Name' (filled: 'Test User')",
+       "4": "textbox 'Email' (empty)",
+       "42": "button 'Send'"
+      }
+     },
+     "type_text__field": {
+      "type": "choice",
+      "instructions": "Which field to type into?",
+      "criteria": {
+       "3": "textbox 'Name' (filled: 'Test User')",
+       "4": "textbox 'Email' (empty)"
+      }
+     },
+     "type_text__value": {
+      "type": "choice",
+      "instructions": "Which supplied value belongs in it?",
+      "criteria": {
+       "name": "name",
+       "email": "email"
+      }
+     },
+     "press_key__key": {
+      "type": "choice",
+      "instructions": "Which key?",
+      "criteria": {
+       "Enter": "Enter",
+       "Escape": "Escape",
+       "Tab": "Tab",
+       "Backspace": "Backspace",
+       "Space": "Space",
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "PageUp": "PageUp",
+       "PageDown": "PageDown",
+       "Home": "Home",
+       "End": "End"
+      }
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "instructions": "Which key to hold?",
+      "criteria": {
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "Space": "Space",
+       "Shift": "Shift"
+      }
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "instructions": "How long?",
+      "criteria": {
+       "short": "about 0.15 s",
+       "medium": "about 0.4 s",
+       "long": "about 0.8 s"
+      }
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "instructions": "Which way?",
+      "criteria": {
+       "down": "further down the page",
+       "up": "back up"
+      }
+     }
+    },
+    "answers": {
+     "next_action": {
+      "type": "choice",
+      "choice": "type_text",
+      "probabilities": {
+       "go_back": 0,
+       "press_key": 0,
+       "click": 0.01,
+       "scroll": 0,
+       "escalate": 0.09,
+       "finish": 0,
+       "hold_key": 0,
+       "wait": 0,
+       "type_text": 0.9
+      },
+      "confidence": 0.89
+     },
+     "goal_reached": {
+      "type": "noul",
+      "noul": 0.02
+     },
+     "click__element": {
+      "type": "choice",
+      "choice": "4",
+      "probabilities": {
+       "3": 0.01,
+       "4": 0.96,
+       "14": 0,
+       "17": 0,
+       "20": 0,
+       "23": 0,
+       "26": 0,
+       "29": 0,
+       "32": 0,
+       "42": 0.03
+      },
+      "confidence": 0.96
+     },
+     "type_text__field": {
+      "type": "choice",
+      "choice": "4",
+      "probabilities": {
+       "3": 0,
+       "4": 1
+      },
+      "confidence": 1
+     },
+     "type_text__value": {
+      "type": "choice",
+      "choice": "email",
+      "probabilities": {
+       "name": 0.19,
+       "email": 0.81
+      },
+      "confidence": 0.62
+     },
+     "press_key__key": {
+      "type": "choice",
+      "choice": "Tab",
+      "probabilities": {
+       "ArrowRight": 0,
+       "ArrowLeft": 0,
+       "Space": 0.01,
+       "ArrowUp": 0,
+       "Enter": 0.28,
+       "PageDown": 0,
+       "Backspace": 0.02,
+       "Escape": 0,
+       "End": 0,
+       "Home": 0.02,
+       "Tab": 0.66,
+       "PageUp": 0,
+       "ArrowDown": 0.01
+      },
+      "confidence": 0.63
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "choice": "Shift",
+      "probabilities": {
+       "ArrowLeft": 0.01,
+       "ArrowRight": 0.03,
+       "Space": 0.39,
+       "ArrowUp": 0.01,
+       "ArrowDown": 0.1,
+       "Shift": 0.46
+      },
+      "confidence": 0.35
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "choice": "short",
+      "probabilities": {
+       "medium": 0.33,
+       "long": 0.03,
+       "short": 0.64
+      },
+      "confidence": 0.46
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "choice": "down",
+      "probabilities": {
+       "up": 0.07,
+       "down": 0.93
+      },
+      "confidence": 0.85
+     }
+    },
+    "action": "type_text",
+    "params": {
+     "field": "4",
+     "value": "email"
+    },
+    "action_confidence": 0.89,
+    "weakest": 0.81,
+    "threshold": 0.7,
+    "verdict": "run",
+    "result": {
+     "ok": true,
+     "text": "Typed 'test@example.com'",
+     "fields": {},
+     "artifacts": [],
+     "terminal": false
+    },
+    "latency_ms": 2093,
+    "usage": {
+     "input_tokens": 1780,
+     "output_tokens": 525
+    },
+    "served_model": "typesafe/jev-1.13-20260917",
+    "request_id": "gen-dec-1790280703-fY3LuTlWoGBOs5P0cIjU",
+    "note": "not offered: select_option (no candidates for 'option' this step), switch_tab (no candidates for 'tab' this step)"
+   },
+   {
+    "index": 3,
+    "started_at": 1790280707.2686012,
+    "state": {
+     "goal": "Fill in the contact form with the name and the email, then send it.",
+     "instructions": "You operate a web page toward a goal. Each step you see the page's visible text with its controls numbered, and you choose one action: click a control, type one of the supplied values into a field, pick a dropdown option, press or hold a key, scroll, switch tab, or go back. When several controls need changing, take them in the order they appear on the page, and submit only after every one is set. Finish when the page shows the goal is done. Escalate when nothing offered can move it forward.",
+     "observation": {
+      "summary": "URL: http://127.0.0.1:8765/form\nTitle: 127.0.0.1:8765/form\n[14]<a />\n\tHome\n[17]<a />\n\tProfile\n[20]<a />\n\tSettings\n[23]<a />\n\tReports\n[26]<a />\n\tContact form\n[29]<a />\n\tDanger zone\n[32]<a />\n\tExport\nContact form\n[36]<label />\n\tName\n\t|SHADOW(open)|[3]<input type=text name=name value=Test User />\n[39]<label />\n\tEmail\n\t|SHADOW(open)|[4]<input type=email name=email value=test@example.com />\n[42]<button type=submit />\n\tSend\nSet so far: Name: 'Test User'; Email: 'test@example.com'.",
+      "url": "http://127.0.0.1:8765/form",
+      "title": "127.0.0.1:8765/form",
+      "controls": 10,
+      "tabs": 1,
+      "set": [
+       "Name: 'Test User'",
+       "Email: 'test@example.com'"
+      ],
+      "pixels_above": 0,
+      "pixels_below": 0
+     },
+     "history": [
+      "refused type_text(field='3', value='name'): weakest judgment 0.69 below 0.70",
+      "type_text(field='3', value='name') -> Typed 'Test User'",
+      "type_text(field='4', value='email') -> Typed 'test@example.com'"
+     ]
+    },
+    "state_tokens": 389,
+    "questions": {
+     "next_action": {
+      "type": "choice",
+      "instructions": "Given the goal, the observation and the history, choose the single best next action. Choose `finish` only when the goal is already achieved.",
+      "criteria": {
+       "click": "Click one numbered control: a link, button, checkbox, tab or option.",
+       "type_text": "Type one of the supplied values into a text field, replacing what is there.",
+       "press_key": "Press one key once, on whatever has focus.",
+       "hold_key": "Hold one key down for a while, for a page that reacts to held keys.",
+       "scroll": "Scroll the page one screen.",
+       "go_back": "Go back to the previous page.",
+       "wait": "Wait a second for the page to settle.",
+       "finish": "The goal is fully achieved as far as the observation shows; stop here.",
+       "escalate": "No available action fits the situation; ask for help and stop."
+      }
+     },
+     "goal_reached": {
+      "type": "noul",
+      "instructions": "Is the goal already fully achieved according to the observation?"
+     },
+     "click__element": {
+      "type": "choice",
+      "instructions": "Which control to click?",
+      "criteria": {
+       "14": "link 'Home'",
+       "17": "link 'Profile'",
+       "20": "link 'Settings'",
+       "23": "link 'Reports'",
+       "26": "link 'Contact form'",
+       "29": "link 'Danger zone'",
+       "32": "link 'Export'",
+       "3": "textbox 'Name' (filled: 'Test User')",
+       "4": "textbox 'Email' (filled: 'test@example.com')",
+       "42": "button 'Send'"
+      }
+     },
+     "type_text__field": {
+      "type": "choice",
+      "instructions": "Which field to type into?",
+      "criteria": {
+       "3": "textbox 'Name' (filled: 'Test User')",
+       "4": "textbox 'Email' (filled: 'test@example.com')"
+      }
+     },
+     "type_text__value": {
+      "type": "choice",
+      "instructions": "Which supplied value belongs in it?",
+      "criteria": {
+       "name": "name",
+       "email": "email"
+      }
+     },
+     "press_key__key": {
+      "type": "choice",
+      "instructions": "Which key?",
+      "criteria": {
+       "Enter": "Enter",
+       "Escape": "Escape",
+       "Tab": "Tab",
+       "Backspace": "Backspace",
+       "Space": "Space",
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "PageUp": "PageUp",
+       "PageDown": "PageDown",
+       "Home": "Home",
+       "End": "End"
+      }
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "instructions": "Which key to hold?",
+      "criteria": {
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "Space": "Space",
+       "Shift": "Shift"
+      }
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "instructions": "How long?",
+      "criteria": {
+       "short": "about 0.15 s",
+       "medium": "about 0.4 s",
+       "long": "about 0.8 s"
+      }
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "instructions": "Which way?",
+      "criteria": {
+       "down": "further down the page",
+       "up": "back up"
+      }
+     }
+    },
+    "answers": {
+     "next_action": {
+      "type": "choice",
+      "choice": "click",
+      "probabilities": {
+       "go_back": 0,
+       "click": 0.99,
+       "press_key": 0,
+       "escalate": 0,
+       "scroll": 0,
+       "finish": 0.01,
+       "hold_key": 0,
+       "wait": 0,
+       "type_text": 0
+      },
+      "confidence": 0.98
+     },
+     "goal_reached": {
+      "type": "noul",
+      "noul": 0.09
+     },
+     "click__element": {
+      "type": "choice",
+      "choice": "42",
+      "probabilities": {
+       "3": 0,
+       "4": 0,
+       "14": 0,
+       "17": 0,
+       "20": 0,
+       "23": 0,
+       "26": 0,
+       "29": 0,
+       "32": 0,
+       "42": 1
+      },
+      "confidence": 1
+     },
+     "type_text__field": {
+      "type": "choice",
+      "choice": "3",
+      "probabilities": {
+       "3": 0.67,
+       "4": 0.33
+      },
+      "confidence": 0.34
+     },
+     "type_text__value": {
+      "type": "choice",
+      "choice": "name",
+      "probabilities": {
+       "name": 0.56,
+       "email": 0.44
+      },
+      "confidence": 0.12
+     },
+     "press_key__key": {
+      "type": "choice",
+      "choice": "Enter",
+      "probabilities": {
+       "ArrowLeft": 0,
+       "ArrowRight": 0,
+       "Space": 0.01,
+       "ArrowUp": 0,
+       "Backspace": 0,
+       "PageDown": 0,
+       "Enter": 0.87,
+       "Escape": 0,
+       "End": 0,
+       "Home": 0.02,
+       "ArrowDown": 0,
+       "PageUp": 0,
+       "Tab": 0.1
+      },
+      "confidence": 0.85
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "choice": "Space",
+      "probabilities": {
+       "ArrowRight": 0.01,
+       "ArrowLeft": 0,
+       "Space": 0.75,
+       "ArrowUp": 0,
+       "ArrowDown": 0.04,
+       "Shift": 0.2
+      },
+      "confidence": 0.7
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "choice": "short",
+      "probabilities": {
+       "medium": 0.24,
+       "long": 0.04,
+       "short": 0.72
+      },
+      "confidence": 0.58
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "choice": "down",
+      "probabilities": {
+       "up": 0.12,
+       "down": 0.88
+      },
+      "confidence": 0.75
+     }
+    },
+    "action": "click",
+    "params": {
+     "element": "42"
+    },
+    "action_confidence": 0.98,
+    "weakest": 0.98,
+    "threshold": 0.7,
+    "verdict": "run",
+    "result": {
+     "ok": true,
+     "text": "Clicked button \"Send\"",
+     "fields": {},
+     "artifacts": [],
+     "terminal": false
+    },
+    "latency_ms": 1810,
+    "usage": {
+     "input_tokens": 1821,
+     "output_tokens": 525
+    },
+    "served_model": "typesafe/jev-1.13-20260917",
+    "request_id": "gen-dec-1790280705-cUfpApP1RXxUmDJ02xa5",
+    "note": "not offered: select_option (no candidates for 'option' this step), switch_tab (no candidates for 'tab' this step)"
+   },
+   {
+    "index": 4,
+    "started_at": 1790280711.398629,
+    "state": {
+     "goal": "Fill in the contact form with the name and the email, then send it.",
+     "instructions": "You operate a web page toward a goal. Each step you see the page's visible text with its controls numbered, and you choose one action: click a control, type one of the supplied values into a field, pick a dropdown option, press or hold a key, scroll, switch tab, or go back. When several controls need changing, take them in the order they appear on the page, and submit only after every one is set. Finish when the page shows the goal is done. Escalate when nothing offered can move it forward.",
+     "observation": {
+      "summary": "URL: http://127.0.0.1:8765/form\nTitle: 127.0.0.1:8765/form\n*[77]<a />\n\tHome\n*[80]<a />\n\tProfile\n*[83]<a />\n\tSettings\n*[86]<a />\n\tReports\n*[89]<a />\n\tContact form\n*[92]<a />\n\tDanger zone\n*[95]<a />\n\tExport\nContact form\nMessage sent from Test User.\n*[101]<label />\n\tName\n\t|SHADOW(open)|*[66]<input type=text name=name />\n*[104]<label />\n\tEmail\n\t|SHADOW(open)|*[67]<input type=email name=email />\n*[107]<button type=submit />\n\tSend\nSet so far: Name: empty; Email: empty.",
+      "url": "http://127.0.0.1:8765/form",
+      "title": "127.0.0.1:8765/form",
+      "controls": 10,
+      "tabs": 1,
+      "set": [
+       "Name: empty",
+       "Email: empty"
+      ],
+      "pixels_above": 0,
+      "pixels_below": 0
+     },
+     "history": [
+      "refused type_text(field='3', value='name'): weakest judgment 0.69 below 0.70",
+      "type_text(field='3', value='name') -> Typed 'Test User'",
+      "type_text(field='4', value='email') -> Typed 'test@example.com'",
+      "click(element='42') -> Clicked button \"Send\""
+     ]
+    },
+    "state_tokens": 394,
+    "questions": {
+     "next_action": {
+      "type": "choice",
+      "instructions": "Given the goal, the observation and the history, choose the single best next action. Choose `finish` only when the goal is already achieved.",
+      "criteria": {
+       "click": "Click one numbered control: a link, button, checkbox, tab or option.",
+       "type_text": "Type one of the supplied values into a text field, replacing what is there.",
+       "press_key": "Press one key once, on whatever has focus.",
+       "hold_key": "Hold one key down for a while, for a page that reacts to held keys.",
+       "scroll": "Scroll the page one screen.",
+       "go_back": "Go back to the previous page.",
+       "wait": "Wait a second for the page to settle.",
+       "finish": "The goal is fully achieved as far as the observation shows; stop here.",
+       "escalate": "No available action fits the situation; ask for help and stop."
+      }
+     },
+     "goal_reached": {
+      "type": "noul",
+      "instructions": "Is the goal already fully achieved according to the observation?"
+     },
+     "click__element": {
+      "type": "choice",
+      "instructions": "Which control to click?",
+      "criteria": {
+       "77": "link 'Home'",
+       "80": "link 'Profile'",
+       "83": "link 'Settings'",
+       "86": "link 'Reports'",
+       "89": "link 'Contact form'",
+       "92": "link 'Danger zone'",
+       "95": "link 'Export'",
+       "66": "textbox 'Name' (empty)",
+       "67": "textbox 'Email' (empty)",
+       "107": "button 'Send'"
+      }
+     },
+     "type_text__field": {
+      "type": "choice",
+      "instructions": "Which field to type into?",
+      "criteria": {
+       "66": "textbox 'Name' (empty)",
+       "67": "textbox 'Email' (empty)"
+      }
+     },
+     "type_text__value": {
+      "type": "choice",
+      "instructions": "Which supplied value belongs in it?",
+      "criteria": {
+       "name": "name",
+       "email": "email"
+      }
+     },
+     "press_key__key": {
+      "type": "choice",
+      "instructions": "Which key?",
+      "criteria": {
+       "Enter": "Enter",
+       "Escape": "Escape",
+       "Tab": "Tab",
+       "Backspace": "Backspace",
+       "Space": "Space",
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "PageUp": "PageUp",
+       "PageDown": "PageDown",
+       "Home": "Home",
+       "End": "End"
+      }
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "instructions": "Which key to hold?",
+      "criteria": {
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "Space": "Space",
+       "Shift": "Shift"
+      }
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "instructions": "How long?",
+      "criteria": {
+       "short": "about 0.15 s",
+       "medium": "about 0.4 s",
+       "long": "about 0.8 s"
+      }
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "instructions": "Which way?",
+      "criteria": {
+       "down": "further down the page",
+       "up": "back up"
+      }
+     }
+    },
+    "answers": {
+     "next_action": {
+      "type": "choice",
+      "choice": "finish",
+      "probabilities": {
+       "finish": 0.53,
+       "go_back": 0,
+       "hold_key": 0,
+       "wait": 0.12,
+       "click": 0.07,
+       "press_key": 0,
+       "scroll": 0,
+       "escalate": 0.11,
+       "type_text": 0.17
+      },
+      "confidence": 0.46
+     },
+     "goal_reached": {
+      "type": "noul",
+      "noul": 0.34
+     },
+     "click__element": {
+      "type": "choice",
+      "choice": "107",
+      "probabilities": {
+       "66": 0.25,
+       "67": 0.01,
+       "77": 0,
+       "80": 0,
+       "83": 0,
+       "86": 0,
+       "89": 0.05,
+       "92": 0,
+       "95": 0,
+       "107": 0.68
+      },
+      "confidence": 0.65
+     },
+     "type_text__field": {
+      "type": "choice",
+      "choice": "66",
+      "probabilities": {
+       "66": 0.98,
+       "67": 0.02
+      },
+      "confidence": 0.96
+     },
+     "type_text__value": {
+      "type": "choice",
+      "choice": "name",
+      "probabilities": {
+       "name": 0.86,
+       "email": 0.14
+      },
+      "confidence": 0.72
+     },
+     "press_key__key": {
+      "type": "choice",
+      "choice": "Enter",
+      "probabilities": {
+       "ArrowRight": 0,
+       "Tab": 0.22,
+       "ArrowDown": 0.01,
+       "PageDown": 0,
+       "End": 0,
+       "ArrowLeft": 0,
+       "Space": 0.01,
+       "Home": 0.05,
+       "Escape": 0.01,
+       "Backspace": 0.01,
+       "PageUp": 0,
+       "ArrowUp": 0,
+       "Enter": 0.68
+      },
+      "confidence": 0.65
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "choice": "Space",
+      "probabilities": {
+       "ArrowRight": 0.02,
+       "Space": 0.51,
+       "Shift": 0.4,
+       "ArrowDown": 0.06,
+       "ArrowUp": 0.01,
+       "ArrowLeft": 0
+      },
+      "confidence": 0.42
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "choice": "short",
+      "probabilities": {
+       "long": 0.06,
+       "short": 0.61,
+       "medium": 0.33
+      },
+      "confidence": 0.41
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "choice": "down",
+      "probabilities": {
+       "up": 0.38,
+       "down": 0.62
+      },
+      "confidence": 0.24
+     }
+    },
+    "action": "finish",
+    "params": {},
+    "action_confidence": 0.46,
+    "weakest": null,
+    "threshold": null,
+    "verdict": "finish",
+    "result": null,
+    "latency_ms": 3307,
+    "usage": {
+     "input_tokens": 1816,
+     "output_tokens": 532
+    },
+    "served_model": "typesafe/jev-1.13-20260917",
+    "request_id": "gen-dec-1790280709-P1DMFj8e9j3dOkNDET3G",
+    "note": "not offered: select_option (no candidates for 'option' this step), switch_tab (no candidates for 'tab' this step); goal_reached only 0.34; one more step"
+   },
+   {
+    "index": 5,
+    "started_at": 1790280713.544314,
+    "state": {
+     "goal": "Fill in the contact form with the name and the email, then send it.",
+     "instructions": "You operate a web page toward a goal. Each step you see the page's visible text with its controls numbered, and you choose one action: click a control, type one of the supplied values into a field, pick a dropdown option, press or hold a key, scroll, switch tab, or go back. When several controls need changing, take them in the order they appear on the page, and submit only after every one is set. Finish when the page shows the goal is done. Escalate when nothing offered can move it forward.",
+     "observation": {
+      "summary": "URL: http://127.0.0.1:8765/form\nTitle: 127.0.0.1:8765/form\n[77]<a />\n\tHome\n[80]<a />\n\tProfile\n[83]<a />\n\tSettings\n[86]<a />\n\tReports\n[89]<a />\n\tContact form\n[92]<a />\n\tDanger zone\n[95]<a />\n\tExport\nContact form\nMessage sent from Test User.\n[101]<label />\n\tName\n\t|SHADOW(open)|[66]<input type=text name=name />\n[104]<label />\n\tEmail\n\t|SHADOW(open)|[67]<input type=email name=email />\n[107]<button type=submit />\n\tSend\nSet so far: Name: empty; Email: empty.",
+      "url": "http://127.0.0.1:8765/form",
+      "title": "127.0.0.1:8765/form",
+      "controls": 10,
+      "tabs": 1,
+      "set": [
+       "Name: empty",
+       "Email: empty"
+      ],
+      "pixels_above": 0,
+      "pixels_below": 0
+     },
+     "history": [
+      "refused type_text(field='3', value='name'): weakest judgment 0.69 below 0.70",
+      "type_text(field='3', value='name') -> Typed 'Test User'",
+      "type_text(field='4', value='email') -> Typed 'test@example.com'",
+      "click(element='42') -> Clicked button \"Send\"",
+      "finish proposed (not offered: select_option (no candidates for 'option' this step), switch_tab (no candidates for 'tab' this step); goal_reached only 0.34; one more step)"
+     ]
+    },
+    "state_tokens": 435,
+    "questions": {
+     "next_action": {
+      "type": "choice",
+      "instructions": "Given the goal, the observation and the history, choose the single best next action. Choose `finish` only when the goal is already achieved.",
+      "criteria": {
+       "click": "Click one numbered control: a link, button, checkbox, tab or option.",
+       "type_text": "Type one of the supplied values into a text field, replacing what is there.",
+       "press_key": "Press one key once, on whatever has focus.",
+       "hold_key": "Hold one key down for a while, for a page that reacts to held keys.",
+       "scroll": "Scroll the page one screen.",
+       "go_back": "Go back to the previous page.",
+       "wait": "Wait a second for the page to settle.",
+       "finish": "The goal is fully achieved as far as the observation shows; stop here.",
+       "escalate": "No available action fits the situation; ask for help and stop."
+      }
+     },
+     "goal_reached": {
+      "type": "noul",
+      "instructions": "Is the goal already fully achieved according to the observation?"
+     },
+     "click__element": {
+      "type": "choice",
+      "instructions": "Which control to click?",
+      "criteria": {
+       "77": "link 'Home'",
+       "80": "link 'Profile'",
+       "83": "link 'Settings'",
+       "86": "link 'Reports'",
+       "89": "link 'Contact form'",
+       "92": "link 'Danger zone'",
+       "95": "link 'Export'",
+       "66": "textbox 'Name' (empty)",
+       "67": "textbox 'Email' (empty)",
+       "107": "button 'Send'"
+      }
+     },
+     "type_text__field": {
+      "type": "choice",
+      "instructions": "Which field to type into?",
+      "criteria": {
+       "66": "textbox 'Name' (empty)",
+       "67": "textbox 'Email' (empty)"
+      }
+     },
+     "type_text__value": {
+      "type": "choice",
+      "instructions": "Which supplied value belongs in it?",
+      "criteria": {
+       "name": "name",
+       "email": "email"
+      }
+     },
+     "press_key__key": {
+      "type": "choice",
+      "instructions": "Which key?",
+      "criteria": {
+       "Enter": "Enter",
+       "Escape": "Escape",
+       "Tab": "Tab",
+       "Backspace": "Backspace",
+       "Space": "Space",
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "PageUp": "PageUp",
+       "PageDown": "PageDown",
+       "Home": "Home",
+       "End": "End"
+      }
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "instructions": "Which key to hold?",
+      "criteria": {
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "Space": "Space",
+       "Shift": "Shift"
+      }
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "instructions": "How long?",
+      "criteria": {
+       "short": "about 0.15 s",
+       "medium": "about 0.4 s",
+       "long": "about 0.8 s"
+      }
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "instructions": "Which way?",
+      "criteria": {
+       "down": "further down the page",
+       "up": "back up"
+      }
+     }
+    },
+    "answers": {
+     "next_action": {
+      "type": "choice",
+      "choice": "wait",
+      "probabilities": {
+       "escalate": 0.13,
+       "click": 0.18,
+       "hold_key": 0,
+       "go_back": 0,
+       "wait": 0.3,
+       "scroll": 0,
+       "type_text": 0.15,
+       "finish": 0.24,
+       "press_key": 0
+      },
+      "confidence": 0.2
+     },
+     "goal_reached": {
+      "type": "noul",
+      "noul": 0.15
+     },
+     "click__element": {
+      "type": "choice",
+      "choice": "107",
+      "probabilities": {
+       "66": 0.2,
+       "67": 0.01,
+       "77": 0,
+       "80": 0,
+       "83": 0,
+       "86": 0,
+       "89": 0.05,
+       "92": 0,
+       "95": 0,
+       "107": 0.74
+      },
+      "confidence": 0.7
+     },
+     "type_text__field": {
+      "type": "choice",
+      "choice": "66",
+      "probabilities": {
+       "66": 0.96,
+       "67": 0.04
+      },
+      "confidence": 0.92
+     },
+     "type_text__value": {
+      "type": "choice",
+      "choice": "name",
+      "probabilities": {
+       "email": 0.19,
+       "name": 0.81
+      },
+      "confidence": 0.62
+     },
+     "press_key__key": {
+      "type": "choice",
+      "choice": "Enter",
+      "probabilities": {
+       "Space": 0.01,
+       "PageDown": 0.01,
+       "PageUp": 0,
+       "Backspace": 0.01,
+       "End": 0,
+       "ArrowLeft": 0,
+       "Home": 0.06,
+       "Tab": 0.16,
+       "ArrowDown": 0.01,
+       "ArrowRight": 0.01,
+       "Enter": 0.72,
+       "Escape": 0.01,
+       "ArrowUp": 0
+      },
+      "confidence": 0.7
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "choice": "Space",
+      "probabilities": {
+       "Space": 0.55,
+       "Shift": 0.28,
+       "ArrowDown": 0.12,
+       "ArrowRight": 0.02,
+       "ArrowUp": 0.01,
+       "ArrowLeft": 0.01
+      },
+      "confidence": 0.46
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "choice": "short",
+      "probabilities": {
+       "long": 0.06,
+       "short": 0.59,
+       "medium": 0.35
+      },
+      "confidence": 0.38
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "choice": "down",
+      "probabilities": {
+       "down": 0.63,
+       "up": 0.37
+      },
+      "confidence": 0.26
+     }
+    },
+    "action": "wait",
+    "params": {},
+    "action_confidence": 0.2,
+    "weakest": 0.2,
+    "threshold": 0.5,
+    "verdict": "refused",
+    "result": null,
+    "latency_ms": 2126,
+    "usage": {
+     "input_tokens": 1863,
+     "output_tokens": 532
+    },
+    "served_model": "typesafe/jev-1.13-20260917",
+    "request_id": "gen-dec-1790280711-V0mjaLaxT4VXNUt4xTNN",
+    "note": "not offered: select_option (no candidates for 'option' this step), switch_tab (no candidates for 'tab' this step)"
+   },
+   {
+    "index": 6,
+    "started_at": 1790280715.35118,
+    "state": {
+     "goal": "Fill in the contact form with the name and the email, then send it.",
+     "instructions": "You operate a web page toward a goal. Each step you see the page's visible text with its controls numbered, and you choose one action: click a control, type one of the supplied values into a field, pick a dropdown option, press or hold a key, scroll, switch tab, or go back. When several controls need changing, take them in the order they appear on the page, and submit only after every one is set. Finish when the page shows the goal is done. Escalate when nothing offered can move it forward.",
+     "observation": {
+      "summary": "URL: http://127.0.0.1:8765/form\nTitle: 127.0.0.1:8765/form\n[77]<a />\n\tHome\n[80]<a />\n\tProfile\n[83]<a />\n\tSettings\n[86]<a />\n\tReports\n[89]<a />\n\tContact form\n[92]<a />\n\tDanger zone\n[95]<a />\n\tExport\nContact form\nMessage sent from Test User.\n[101]<label />\n\tName\n\t|SHADOW(open)|[66]<input type=text name=name />\n[104]<label />\n\tEmail\n\t|SHADOW(open)|[67]<input type=email name=email />\n[107]<button type=submit />\n\tSend\nSet so far: Name: empty; Email: empty.",
+      "url": "http://127.0.0.1:8765/form",
+      "title": "127.0.0.1:8765/form",
+      "controls": 10,
+      "tabs": 1,
+      "set": [
+       "Name: empty",
+       "Email: empty"
+      ],
+      "pixels_above": 0,
+      "pixels_below": 0
+     },
+     "history": [
+      "refused type_text(field='3', value='name'): weakest judgment 0.69 below 0.70",
+      "type_text(field='3', value='name') -> Typed 'Test User'",
+      "type_text(field='4', value='email') -> Typed 'test@example.com'",
+      "click(element='42') -> Clicked button \"Send\"",
+      "finish proposed (not offered: select_option (no candidates for 'option' this step), switch_tab (no candidates for 'tab' this step); goal_reached only 0.34; one more step)",
+      "refused wait(): weakest judgment 0.20 below 0.50"
+     ]
+    },
+    "state_tokens": 448,
+    "questions": {
+     "next_action": {
+      "type": "choice",
+      "instructions": "Given the goal, the observation and the history, choose the single best next action. Choose `finish` only when the goal is already achieved.",
+      "criteria": {
+       "click": "Click one numbered control: a link, button, checkbox, tab or option.",
+       "type_text": "Type one of the supplied values into a text field, replacing what is there.",
+       "press_key": "Press one key once, on whatever has focus.",
+       "hold_key": "Hold one key down for a while, for a page that reacts to held keys.",
+       "scroll": "Scroll the page one screen.",
+       "go_back": "Go back to the previous page.",
+       "wait": "Wait a second for the page to settle.",
+       "finish": "The goal is fully achieved as far as the observation shows; stop here.",
+       "escalate": "No available action fits the situation; ask for help and stop."
+      }
+     },
+     "goal_reached": {
+      "type": "noul",
+      "instructions": "Is the goal already fully achieved according to the observation?"
+     },
+     "click__element": {
+      "type": "choice",
+      "instructions": "Which control to click?",
+      "criteria": {
+       "77": "link 'Home'",
+       "80": "link 'Profile'",
+       "83": "link 'Settings'",
+       "86": "link 'Reports'",
+       "89": "link 'Contact form'",
+       "92": "link 'Danger zone'",
+       "95": "link 'Export'",
+       "66": "textbox 'Name' (empty)",
+       "67": "textbox 'Email' (empty)",
+       "107": "button 'Send'"
+      }
+     },
+     "type_text__field": {
+      "type": "choice",
+      "instructions": "Which field to type into?",
+      "criteria": {
+       "66": "textbox 'Name' (empty)",
+       "67": "textbox 'Email' (empty)"
+      }
+     },
+     "type_text__value": {
+      "type": "choice",
+      "instructions": "Which supplied value belongs in it?",
+      "criteria": {
+       "name": "name",
+       "email": "email"
+      }
+     },
+     "press_key__key": {
+      "type": "choice",
+      "instructions": "Which key?",
+      "criteria": {
+       "Enter": "Enter",
+       "Escape": "Escape",
+       "Tab": "Tab",
+       "Backspace": "Backspace",
+       "Space": "Space",
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "PageUp": "PageUp",
+       "PageDown": "PageDown",
+       "Home": "Home",
+       "End": "End"
+      }
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "instructions": "Which key to hold?",
+      "criteria": {
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "Space": "Space",
+       "Shift": "Shift"
+      }
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "instructions": "How long?",
+      "criteria": {
+       "short": "about 0.15 s",
+       "medium": "about 0.4 s",
+       "long": "about 0.8 s"
+      }
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "instructions": "Which way?",
+      "criteria": {
+       "down": "further down the page",
+       "up": "back up"
+      }
+     }
+    },
+    "answers": {
+     "next_action": {
+      "type": "choice",
+      "choice": "wait",
+      "probabilities": {
+       "click": 0.19,
+       "press_key": 0,
+       "escalate": 0.1,
+       "go_back": 0,
+       "hold_key": 0,
+       "wait": 0.37,
+       "scroll": 0,
+       "type_text": 0.1,
+       "finish": 0.24
+      },
+      "confidence": 0.28
+     },
+     "goal_reached": {
+      "type": "noul",
+      "noul": 0.22
+     },
+     "click__element": {
+      "type": "choice",
+      "choice": "107",
+      "probabilities": {
+       "66": 0.13,
+       "67": 0.02,
+       "77": 0,
+       "80": 0,
+       "83": 0,
+       "86": 0,
+       "89": 0.05,
+       "92": 0,
+       "95": 0,
+       "107": 0.8
+      },
+      "confidence": 0.76
+     },
+     "type_text__field": {
+      "type": "choice",
+      "choice": "66",
+      "probabilities": {
+       "66": 0.93,
+       "67": 0.07
+      },
+      "confidence": 0.87
+     },
+     "type_text__value": {
+      "type": "choice",
+      "choice": "name",
+      "probabilities": {
+       "name": 0.75,
+       "email": 0.25
+      },
+      "confidence": 0.5
+     },
+     "press_key__key": {
+      "type": "choice",
+      "choice": "Enter",
+      "probabilities": {
+       "Escape": 0.01,
+       "Space": 0.01,
+       "ArrowUp": 0,
+       "ArrowRight": 0.01,
+       "PageUp": 0,
+       "Enter": 0.74,
+       "Home": 0.04,
+       "ArrowDown": 0.01,
+       "End": 0,
+       "ArrowLeft": 0,
+       "PageDown": 0.01,
+       "Tab": 0.16,
+       "Backspace": 0.01
+      },
+      "confidence": 0.72
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "choice": "Space",
+      "probabilities": {
+       "Shift": 0.21000000000000002,
+       "ArrowDown": 0.13,
+       "Space": 0.63,
+       "ArrowUp": 0.01,
+       "ArrowRight": 0.02,
+       "ArrowLeft": 0
+      },
+      "confidence": 0.55
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "choice": "short",
+      "probabilities": {
+       "short": 0.6,
+       "long": 0.08,
+       "medium": 0.32
+      },
+      "confidence": 0.41
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "choice": "down",
+      "probabilities": {
+       "down": 0.76,
+       "up": 0.24
+      },
+      "confidence": 0.52
+     }
+    },
+    "action": "wait",
+    "params": {},
+    "action_confidence": 0.28,
+    "weakest": 0.28,
+    "threshold": 0.5,
+    "verdict": "refused",
+    "result": null,
+    "latency_ms": 1785,
+    "usage": {
+     "input_tokens": 1883,
+     "output_tokens": 532
+    },
+    "served_model": "typesafe/jev-1.13-20260917",
+    "request_id": "gen-dec-1790280713-ZR906eXElKGtnh4iSu60",
+    "note": "not offered: select_option (no candidates for 'option' this step), switch_tab (no candidates for 'tab' this step)"
+   },
+   {
+    "index": 7,
+    "started_at": 1790280717.48356,
+    "state": {
+     "goal": "Fill in the contact form with the name and the email, then send it.",
+     "instructions": "You operate a web page toward a goal. Each step you see the page's visible text with its controls numbered, and you choose one action: click a control, type one of the supplied values into a field, pick a dropdown option, press or hold a key, scroll, switch tab, or go back. When several controls need changing, take them in the order they appear on the page, and submit only after every one is set. Finish when the page shows the goal is done. Escalate when nothing offered can move it forward.",
+     "observation": {
+      "summary": "URL: http://127.0.0.1:8765/form\nTitle: 127.0.0.1:8765/form\n[77]<a />\n\tHome\n[80]<a />\n\tProfile\n[83]<a />\n\tSettings\n[86]<a />\n\tReports\n[89]<a />\n\tContact form\n[92]<a />\n\tDanger zone\n[95]<a />\n\tExport\nContact form\nMessage sent from Test User.\n[101]<label />\n\tName\n\t|SHADOW(open)|[66]<input type=text name=name />\n[104]<label />\n\tEmail\n\t|SHADOW(open)|[67]<input type=email name=email />\n[107]<button type=submit />\n\tSend\nSet so far: Name: empty; Email: empty.",
+      "url": "http://127.0.0.1:8765/form",
+      "title": "127.0.0.1:8765/form",
+      "controls": 10,
+      "tabs": 1,
+      "set": [
+       "Name: empty",
+       "Email: empty"
+      ],
+      "pixels_above": 0,
+      "pixels_below": 0
+     },
+     "history": [
+      "refused type_text(field='3', value='name'): weakest judgment 0.69 below 0.70",
+      "type_text(field='3', value='name') -> Typed 'Test User'",
+      "type_text(field='4', value='email') -> Typed 'test@example.com'",
+      "click(element='42') -> Clicked button \"Send\"",
+      "finish proposed (not offered: select_option (no candidates for 'option' this step), switch_tab (no candidates for 'tab' this step); goal_reached only 0.34; one more step)",
+      "refused wait(): weakest judgment 0.20 below 0.50",
+      "refused wait(): weakest judgment 0.28 below 0.50"
+     ]
+    },
+    "state_tokens": 461,
+    "questions": {
+     "next_action": {
+      "type": "choice",
+      "instructions": "Given the goal, the observation and the history, choose the single best next action. Choose `finish` only when the goal is already achieved.",
+      "criteria": {
+       "click": "Click one numbered control: a link, button, checkbox, tab or option.",
+       "type_text": "Type one of the supplied values into a text field, replacing what is there.",
+       "press_key": "Press one key once, on whatever has focus.",
+       "hold_key": "Hold one key down for a while, for a page that reacts to held keys.",
+       "scroll": "Scroll the page one screen.",
+       "go_back": "Go back to the previous page.",
+       "wait": "Wait a second for the page to settle.",
+       "finish": "The goal is fully achieved as far as the observation shows; stop here.",
+       "escalate": "No available action fits the situation; ask for help and stop."
+      }
+     },
+     "goal_reached": {
+      "type": "noul",
+      "instructions": "Is the goal already fully achieved according to the observation?"
+     },
+     "click__element": {
+      "type": "choice",
+      "instructions": "Which control to click?",
+      "criteria": {
+       "77": "link 'Home'",
+       "80": "link 'Profile'",
+       "83": "link 'Settings'",
+       "86": "link 'Reports'",
+       "89": "link 'Contact form'",
+       "92": "link 'Danger zone'",
+       "95": "link 'Export'",
+       "66": "textbox 'Name' (empty)",
+       "67": "textbox 'Email' (empty)",
+       "107": "button 'Send'"
+      }
+     },
+     "type_text__field": {
+      "type": "choice",
+      "instructions": "Which field to type into?",
+      "criteria": {
+       "66": "textbox 'Name' (empty)",
+       "67": "textbox 'Email' (empty)"
+      }
+     },
+     "type_text__value": {
+      "type": "choice",
+      "instructions": "Which supplied value belongs in it?",
+      "criteria": {
+       "name": "name",
+       "email": "email"
+      }
+     },
+     "press_key__key": {
+      "type": "choice",
+      "instructions": "Which key?",
+      "criteria": {
+       "Enter": "Enter",
+       "Escape": "Escape",
+       "Tab": "Tab",
+       "Backspace": "Backspace",
+       "Space": "Space",
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "PageUp": "PageUp",
+       "PageDown": "PageDown",
+       "Home": "Home",
+       "End": "End"
+      }
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "instructions": "Which key to hold?",
+      "criteria": {
+       "ArrowLeft": "ArrowLeft",
+       "ArrowRight": "ArrowRight",
+       "ArrowUp": "ArrowUp",
+       "ArrowDown": "ArrowDown",
+       "Space": "Space",
+       "Shift": "Shift"
+      }
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "instructions": "How long?",
+      "criteria": {
+       "short": "about 0.15 s",
+       "medium": "about 0.4 s",
+       "long": "about 0.8 s"
+      }
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "instructions": "Which way?",
+      "criteria": {
+       "down": "further down the page",
+       "up": "back up"
+      }
+     }
+    },
+    "answers": {
+     "next_action": {
+      "type": "choice",
+      "choice": "wait",
+      "probabilities": {
+       "wait": 0.42,
+       "scroll": 0,
+       "press_key": 0,
+       "click": 0.12,
+       "type_text": 0.14,
+       "hold_key": 0,
+       "go_back": 0,
+       "escalate": 0.08,
+       "finish": 0.24
+      },
+      "confidence": 0.35
+     },
+     "goal_reached": {
+      "type": "noul",
+      "noul": 0.21
+     },
+     "click__element": {
+      "type": "choice",
+      "choice": "107",
+      "probabilities": {
+       "66": 0.22,
+       "67": 0.02,
+       "77": 0,
+       "80": 0,
+       "83": 0,
+       "86": 0,
+       "89": 0.05,
+       "92": 0,
+       "95": 0,
+       "107": 0.71
+      },
+      "confidence": 0.68
+     },
+     "type_text__field": {
+      "type": "choice",
+      "choice": "66",
+      "probabilities": {
+       "66": 0.97,
+       "67": 0.03
+      },
+      "confidence": 0.93
+     },
+     "type_text__value": {
+      "type": "choice",
+      "choice": "name",
+      "probabilities": {
+       "email": 0.21,
+       "name": 0.79
+      },
+      "confidence": 0.59
+     },
+     "press_key__key": {
+      "type": "choice",
+      "choice": "Enter",
+      "probabilities": {
+       "Escape": 0.01,
+       "End": 0,
+       "Tab": 0.15,
+       "PageDown": 0.01,
+       "ArrowDown": 0.01,
+       "Home": 0.05,
+       "ArrowUp": 0,
+       "Enter": 0.74,
+       "ArrowLeft": 0,
+       "PageUp": 0,
+       "ArrowRight": 0.01,
+       "Backspace": 0.01,
+       "Space": 0.01
+      },
+      "confidence": 0.73
+     },
+     "hold_key__key": {
+      "type": "choice",
+      "choice": "Space",
+      "probabilities": {
+       "Shift": 0.27,
+       "ArrowDown": 0.12,
+       "ArrowUp": 0.01,
+       "ArrowRight": 0.02,
+       "Space": 0.58,
+       "ArrowLeft": 0
+      },
+      "confidence": 0.5
+     },
+     "hold_key__duration": {
+      "type": "choice",
+      "choice": "short",
+      "probabilities": {
+       "medium": 0.41,
+       "short": 0.5,
+       "long": 0.09
+      },
+      "confidence": 0.25
+     },
+     "scroll__direction": {
+      "type": "choice",
+      "choice": "down",
+      "probabilities": {
+       "up": 0.25,
+       "down": 0.75
+      },
+      "confidence": 0.49
+     }
+    },
+    "action": "wait",
+    "params": {},
+    "action_confidence": 0.35,
+    "weakest": 0.35,
+    "threshold": 0.5,
+    "verdict": "refused",
+    "result": null,
+    "latency_ms": 2109,
+    "usage": {
+     "input_tokens": 1903,
+     "output_tokens": 532
+    },
+    "served_model": "typesafe/jev-1.13-20260917",
+    "request_id": "gen-dec-1790280715-qIIL3uBAZ1XlNyG41cgM",
+    "note": "not offered: select_option (no candidates for 'option' this step), switch_tab (no candidates for 'tab' this step)"
+   }
+  ],
+  "usage": {
+   "input_tokens": 14520,
+   "output_tokens": 4228
+  },
+  "served_model": "typesafe/jev-1.13-20260917",
+  "started_at": 1790280696.2223217,
+  "finished_at": 1790280717.4835768,
+  "artifacts": [],
+  "error": null,
+  "config_version": 0,
+  "handoff": {
+   "reason": "no_confident_action",
+   "state": {
+    "goal": "Fill in the contact form with the name and the email, then send it.",
+    "instructions": "You operate a web page toward a goal. Each step you see the page's visible text with its controls numbered, and you choose one action: click a control, type one of the supplied values into a field, pick a dropdown option, press or hold a key, scroll, switch tab, or go back. When several controls need changing, take them in the order they appear on the page, and submit only after every one is set. Finish when the page shows the goal is done. Escalate when nothing offered can move it forward.",
+    "observation": {
+     "summary": "URL: http://127.0.0.1:8765/form\nTitle: 127.0.0.1:8765/form\n[77]<a />\n\tHome\n[80]<a />\n\tProfile\n[83]<a />\n\tSettings\n[86]<a />\n\tReports\n[89]<a />\n\tContact form\n[92]<a />\n\tDanger zone\n[95]<a />\n\tExport\nContact form\nMessage sent from Test User.\n[101]<label />\n\tName\n\t|SHADOW(open)|[66]<input type=text name=name />\n[104]<label />\n\tEmail\n\t|SHADOW(open)|[67]<input type=email name=email />\n[107]<button type=submit />\n\tSend\nSet so far: Name: empty; Email: empty.",
+     "url": "http://127.0.0.1:8765/form",
+     "title": "127.0.0.1:8765/form",
+     "controls": 10,
+     "tabs": 1,
+     "set": [
+      "Name: empty",
+      "Email: empty"
+     ],
+     "pixels_above": 0,
+     "pixels_below": 0
+    },
+    "history": [
+     "refused type_text(field='3', value='name'): weakest judgment 0.69 below 0.70",
+     "type_text(field='3', value='name') -> Typed 'Test User'",
+     "type_text(field='4', value='email') -> Typed 'test@example.com'",
+     "click(element='42') -> Clicked button \"Send\"",
+     "finish proposed (not offered: select_option (no candidates for 'option' this step), switch_tab (no candidates for 'tab' this step); goal_reached only 0.34; one more step)",
+     "refused wait(): weakest judgment 0.20 below 0.50",
+     "refused wait(): weakest judgment 0.28 below 0.50"
+    ]
+   },
+   "questions": {
+    "next_action": {
+     "type": "choice",
+     "instructions": "Given the goal, the observation and the history, choose the single best next action. Choose `finish` only when the goal is already achieved.",
+     "criteria": {
+      "click": "Click one numbered control: a link, button, checkbox, tab or option.",
+      "type_text": "Type one of the supplied values into a text field, replacing what is there.",
+      "press_key": "Press one key once, on whatever has focus.",
+      "hold_key": "Hold one key down for a while, for a page that reacts to held keys.",
+      "scroll": "Scroll the page one screen.",
+      "go_back": "Go back to the previous page.",
+      "wait": "Wait a second for the page to settle.",
+      "finish": "The goal is fully achieved as far as the observation shows; stop here.",
+      "escalate": "No available action fits the situation; ask for help and stop."
+     }
+    },
+    "goal_reached": {
+     "type": "noul",
+     "instructions": "Is the goal already fully achieved according to the observation?"
+    },
+    "click__element": {
+     "type": "choice",
+     "instructions": "Which control to click?",
+     "criteria": {
+      "77": "link 'Home'",
+      "80": "link 'Profile'",
+      "83": "link 'Settings'",
+      "86": "link 'Reports'",
+      "89": "link 'Contact form'",
+      "92": "link 'Danger zone'",
+      "95": "link 'Export'",
+      "66": "textbox 'Name' (empty)",
+      "67": "textbox 'Email' (empty)",
+      "107": "button 'Send'"
+     }
+    },
+    "type_text__field": {
+     "type": "choice",
+     "instructions": "Which field to type into?",
+     "criteria": {
+      "66": "textbox 'Name' (empty)",
+      "67": "textbox 'Email' (empty)"
+     }
+    },
+    "type_text__value": {
+     "type": "choice",
+     "instructions": "Which supplied value belongs in it?",
+     "criteria": {
+      "name": "name",
+      "email": "email"
+     }
+    },
+    "press_key__key": {
+     "type": "choice",
+     "instructions": "Which key?",
+     "criteria": {
+      "Enter": "Enter",
+      "Escape": "Escape",
+      "Tab": "Tab",
+      "Backspace": "Backspace",
+      "Space": "Space",
+      "ArrowLeft": "ArrowLeft",
+      "ArrowRight": "ArrowRight",
+      "ArrowUp": "ArrowUp",
+      "ArrowDown": "ArrowDown",
+      "PageUp": "PageUp",
+      "PageDown": "PageDown",
+      "Home": "Home",
+      "End": "End"
+     }
+    },
+    "hold_key__key": {
+     "type": "choice",
+     "instructions": "Which key to hold?",
+     "criteria": {
+      "ArrowLeft": "ArrowLeft",
+      "ArrowRight": "ArrowRight",
+      "ArrowUp": "ArrowUp",
+      "ArrowDown": "ArrowDown",
+      "Space": "Space",
+      "Shift": "Shift"
+     }
+    },
+    "hold_key__duration": {
+     "type": "choice",
+     "instructions": "How long?",
+     "criteria": {
+      "short": "about 0.15 s",
+      "medium": "about 0.4 s",
+      "long": "about 0.8 s"
+     }
+    },
+    "scroll__direction": {
+     "type": "choice",
+     "instructions": "Which way?",
+     "criteria": {
+      "down": "further down the page",
+      "up": "back up"
+     }
+    }
+   },
+   "answers": {
+    "next_action": {
+     "type": "choice",
+     "choice": "wait",
+     "probabilities": {
+      "wait": 0.42,
+      "scroll": 0,
+      "press_key": 0,
+      "click": 0.12,
+      "type_text": 0.14,
+      "hold_key": 0,
+      "go_back": 0,
+      "escalate": 0.08,
+      "finish": 0.24
+     },
+     "confidence": 0.35
+    },
+    "goal_reached": {
+     "type": "noul",
+     "noul": 0.21
+    },
+    "click__element": {
+     "type": "choice",
+     "choice": "107",
+     "probabilities": {
+      "66": 0.22,
+      "67": 0.02,
+      "77": 0,
+      "80": 0,
+      "83": 0,
+      "86": 0,
+      "89": 0.05,
+      "92": 0,
+      "95": 0,
+      "107": 0.71
+     },
+     "confidence": 0.68
+    },
+    "type_text__field": {
+     "type": "choice",
+     "choice": "66",
+     "probabilities": {
+      "66": 0.97,
+      "67": 0.03
+     },
+     "confidence": 0.93
+    },
+    "type_text__value": {
+     "type": "choice",
+     "choice": "name",
+     "probabilities": {
+      "email": 0.21,
+      "name": 0.79
+     },
+     "confidence": 0.59
+    },
+    "press_key__key": {
+     "type": "choice",
+     "choice": "Enter",
+     "probabilities": {
+      "Escape": 0.01,
+      "End": 0,
+      "Tab": 0.15,
+      "PageDown": 0.01,
+      "ArrowDown": 0.01,
+      "Home": 0.05,
+      "ArrowUp": 0,
+      "Enter": 0.74,
+      "ArrowLeft": 0,
+      "PageUp": 0,
+      "ArrowRight": 0.01,
+      "Backspace": 0.01,
+      "Space": 0.01
+     },
+     "confidence": 0.73
+    },
+    "hold_key__key": {
+     "type": "choice",
+     "choice": "Space",
+     "probabilities": {
+      "Shift": 0.27,
+      "ArrowDown": 0.12,
+      "ArrowUp": 0.01,
+      "ArrowRight": 0.02,
+      "Space": 0.58,
+      "ArrowLeft": 0
+     },
+     "confidence": 0.5
+    },
+    "hold_key__duration": {
+     "type": "choice",
+     "choice": "short",
+     "probabilities": {
+      "medium": 0.41,
+      "short": 0.5,
+      "long": 0.09
+     },
+     "confidence": 0.25
+    },
+    "scroll__direction": {
+     "type": "choice",
+     "choice": "down",
+     "probabilities": {
+      "up": 0.25,
+      "down": 0.75
+     },
+     "confidence": 0.49
+    }
+   },
+   "weakest": 0.35,
+   "threshold": 0.5,
+   "risk": "read",
+   "step": 7
+  },
+  "summary": "Stopped after 3 actions: no action cleared the confidence threshold on the last attempts. A handoff is attached.",
+  "executed": 3
+ }
+}

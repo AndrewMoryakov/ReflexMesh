@@ -31,7 +31,7 @@ HTTP-пути; выбранный маршрут никогда не означ�
 
 - Live-подтверждение прямого провайдера typesafe.
 - Execution runtime, общий deadline, управление сессией, отмена и recovery.
-- SystemOneHarness/Cua, браузерные и desktop-действия.
+- Runtime исполнения в `src/` (V0.5); Cua и desktop-действия. Браузерный цикл SOH + Browser Use проверен только как spike ([V0.4](research/V0.4-spike.md)).
 - TextSlots, verifier, собственное хранилище execution receipts.
 - MCP Task API, Pi-интеграция, HTTP Task API.
 - OCR/VLM, ClawBridge, Skyvern, Ui.Vision, Jev meso-supervisor.
