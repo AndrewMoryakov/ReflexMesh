@@ -1,0 +1,242 @@
+{
+  "metrics": {
+    "rules": {
+      "decisions": 75,
+      "runs": 1,
+      "accuracy": 0.65,
+      "accuracy_ci95": [
+        0.5236,
+        0.7583
+      ],
+      "correct": 39,
+      "primary_decisions": 60,
+      "accuracy_majority": 0.65,
+      "accuracy_by": {
+        "kind": {
+          "ambiguous": 0.6,
+          "paraphrase": 0.1333,
+          "single": 0.9333
+        },
+        "lang": {
+          "en": 0.6786,
+          "ru": 0.625
+        }
+      },
+      "accuracy_single_by_class": {
+        "CUA": 1.0,
+        "LLM": 0.9,
+        "PERCEPTION": 0.9
+      },
+      "coverage": 0.65,
+      "abstention": 0.35,
+      "error_rate": 0.0,
+      "errors": {},
+      "forbidden": 0,
+      "forbidden_cases": [],
+      "refusal_abstention": 0.875,
+      "refusal_outcomes": {
+        "abstained": 7,
+        "CUA": 1
+      },
+      "composite_outcomes": {
+        "PERCEPTION": 1,
+        "abstained": 5,
+        "CUA": 1
+      },
+      "stability": null,
+      "unstable_cases": [],
+      "latency_p50_ms": 0.0,
+      "latency_p95_ms": 0.1,
+      "calls_total": 0,
+      "cost_total": 0.0,
+      "cost_known_decisions": 75,
+      "cost_per_decision": 0.0,
+      "confusion_primary": {
+        "CUA": {
+          "CUA": 13,
+          "abstained": 6
+        },
+        "CUA/PERCEPTION": {
+          "abstained": 1
+        },
+        "LLM": {
+          "LLM": 11,
+          "abstained": 9
+        },
+        "PERCEPTION": {
+          "PERCEPTION": 15,
+          "abstained": 5
+        }
+      },
+      "wrong_primary": [
+        "A-01",
+        "A-05",
+        "A-09",
+        "A-12",
+        "A-14",
+        "A-15",
+        "P-CUA-01",
+        "P-CUA-02",
+        "P-CUA-04",
+        "P-CUA-05",
+        "P-LLM-01",
+        "P-LLM-02",
+        "P-LLM-03",
+        "P-LLM-04",
+        "P-LLM-05",
+        "P-PER-01",
+        "P-PER-03",
+        "P-PER-04",
+        "P-PER-05",
+        "S-LLM-02",
+        "S-PER-07"
+      ]
+    },
+    "jev": {
+      "decisions": 225,
+      "runs": 3,
+      "accuracy": 1.0,
+      "accuracy_ci95": [
+        0.9791,
+        1.0
+      ],
+      "correct": 180,
+      "primary_decisions": 180,
+      "accuracy_majority": 1.0,
+      "accuracy_by": {
+        "kind": {
+          "ambiguous": 1.0,
+          "paraphrase": 1.0,
+          "single": 1.0
+        },
+        "lang": {
+          "en": 1.0,
+          "ru": 1.0
+        }
+      },
+      "accuracy_single_by_class": {
+        "CUA": 1.0,
+        "LLM": 1.0,
+        "PERCEPTION": 1.0
+      },
+      "coverage": 1.0,
+      "abstention": 0.0,
+      "error_rate": 0.0,
+      "errors": {},
+      "forbidden": 0,
+      "forbidden_cases": [],
+      "refusal_abstention": 0.25,
+      "refusal_outcomes": {
+        "LLM": 15,
+        "CUA": 3,
+        "abstained": 6
+      },
+      "composite_outcomes": {
+        "PERCEPTION": 3,
+        "CUA": 12,
+        "abstained": 6
+      },
+      "stability": 1.0,
+      "unstable_cases": [],
+      "latency_p50_ms": 598.5,
+      "latency_p95_ms": 681.0,
+      "calls_total": 225,
+      "cost_total": 0.004215,
+      "cost_known_decisions": 225,
+      "cost_per_decision": 1.873e-05,
+      "confusion_primary": {
+        "CUA": {
+          "CUA": 57
+        },
+        "CUA/PERCEPTION": {
+          "PERCEPTION": 3
+        },
+        "LLM": {
+          "LLM": 60
+        },
+        "PERCEPTION": {
+          "PERCEPTION": 60
+        }
+      },
+      "wrong_primary": []
+    },
+    "llm": {
+      "decisions": 225,
+      "runs": 3,
+      "accuracy": 1.0,
+      "accuracy_ci95": [
+        0.9791,
+        1.0
+      ],
+      "correct": 180,
+      "primary_decisions": 180,
+      "accuracy_majority": 1.0,
+      "accuracy_by": {
+        "kind": {
+          "ambiguous": 1.0,
+          "paraphrase": 1.0,
+          "single": 1.0
+        },
+        "lang": {
+          "en": 1.0,
+          "ru": 1.0
+        }
+      },
+      "accuracy_single_by_class": {
+        "CUA": 1.0,
+        "LLM": 1.0,
+        "PERCEPTION": 1.0
+      },
+      "coverage": 1.0,
+      "abstention": 0.0,
+      "error_rate": 0.0,
+      "errors": {},
+      "forbidden": 0,
+      "forbidden_cases": [],
+      "refusal_abstention": 0.7917,
+      "refusal_outcomes": {
+        "abstained": 19,
+        "LLM": 3,
+        "CUA": 2
+      },
+      "composite_outcomes": {
+        "PERCEPTION": 3,
+        "CUA": 18
+      },
+      "stability": 0.9867,
+      "unstable_cases": [
+        "R-05"
+      ],
+      "latency_p50_ms": 6440.9,
+      "latency_p95_ms": 9526.1,
+      "calls_total": 225,
+      "cost_total": 0.506535,
+      "cost_known_decisions": 225,
+      "cost_per_decision": 0.00225127,
+      "confusion_primary": {
+        "CUA": {
+          "CUA": 57
+        },
+        "CUA/PERCEPTION": {
+          "PERCEPTION": 3
+        },
+        "LLM": {
+          "LLM": 60
+        },
+        "PERCEPTION": {
+          "PERCEPTION": 60
+        }
+      },
+      "wrong_primary": []
+    }
+  },
+  "criteria": {
+    "T1": true,
+    "T2": true,
+    "T3": true,
+    "T4": true,
+    "T5": true,
+    "T6": true
+  },
+  "verdict": "useful"
+}

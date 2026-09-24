@@ -1,0 +1,18 @@
+{
+  "reflexmesh_commit": "15ac9dbc87ededcac5d204ef1f28e51052090070",
+  "reflexmesh_dirty": false,
+  "protocol_status": "frozen",
+  "python": "3.13.7",
+  "platform": "Linux-6.17.0-14-generic-x86_64-with-glibc2.42",
+  "comparators": [
+    "rules",
+    "jev",
+    "llm"
+  ],
+  "cases": 75,
+  "jev_url": "http://127.0.0.1:8797",
+  "jevrouter_commit": "f944acb6530621bced023352e2358a63218bf4d9",
+  "llm": "openai-codex/gpt-5.5",
+  "started_at": "2026-09-24T17:22:05Z",
+  "finished_at": "2026-09-24T17:50:01Z"
+}
