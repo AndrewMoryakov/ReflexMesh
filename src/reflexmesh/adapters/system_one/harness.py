@@ -12,6 +12,8 @@ class CountingProvider:
     def decide(self, state, questions):
         if self.model:
             self.gate.reserve_call()
+            if hasattr(self.inner, "_client"):
+                self.inner._client.timeout = max(0.01, min(30.0, self.gate.remaining()))
         self.events.put(("decision_request", "model" if self.model else "script"))
         return self.inner.decide(state, questions)
 

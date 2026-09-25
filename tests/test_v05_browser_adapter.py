@@ -10,7 +10,25 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from reflexmesh.adapters.system_one.fixture_browser import FixtureBrowser
 from reflexmesh.contracts.execution import ExecutionTask
 from reflexmesh.runtime.runner import RuntimeStop
-from test_v05_runtime import sample
+from reflexmesh.runtime.runner import AttemptSupervisor, ControlledEnvironment, WorkerResult
+from test_v05_runtime import sample, pass_verifier
+
+
+def rejected_candidate(gate, events, adapter, action, params):
+    env = ControlledEnvironment(adapter, gate, events, adapter.admit)
+    env.observe()
+    env.execute(action, params)
+    return WorkerResult("finish")
+
+
+def stale_candidate(gate, events, adapter):
+    env = ControlledEnvironment(adapter, gate, events, adapter.admit)
+    env.observe()
+    adapter.backend.nodes[0].backend_node_id += 1
+    skipped = env.execute("click", {"element": "0"})
+    assert not skipped.ok
+    env.observe()
+    return WorkerResult("no_confident_action")
 
 
 class FakeBackend:
@@ -72,6 +90,29 @@ class AdapterContract(unittest.TestCase):
         adapter.observe()
         adapter.backend.url = "https://external.example/form"
         self.assertEqual(adapter.admit("click", {"element": "0"}), "stale_target")
+
+    def test_reindexed_node_reobserved_without_dispatch(self):
+        adapter = self.setup_adapter()
+        task = adapter.task
+        result = AttemptSupervisor(task, lambda g, e: stale_candidate(g, e, adapter), pass_verifier).run()
+        self.assertEqual((result["attempt_status"], result["budget"]["dispatches"]), ("completed", 0))
+        self.assertEqual(result["budget"]["steps"], 2)
+        self.assertIn("reobserve", [row["kind"] for row in result["trace"]])
+
+    def test_unknown_candidate_blocks_before_dispatch(self):
+        adapter = self.setup_adapter()
+        result = AttemptSupervisor(adapter.task,
+                                   lambda g, e: rejected_candidate(g, e, adapter, "click", {"element": "9"})).run()
+        self.assertEqual((result["stop_reason"], result["budget"]["dispatches"]), ("invalid_action", 0))
+
+    def test_substituted_slot_blocks_before_dispatch(self):
+        adapter = self.setup_adapter()
+        adapter.backend.nodes[0] = SimpleNamespace(attributes={"data-reflex-id": "name"},
+                                                   backend_node_id=15, tag_name="input")
+        result = AttemptSupervisor(adapter.task,
+                                   lambda g, e: rejected_candidate(g, e, adapter, "type_text",
+                                                                      {"field": "0", "value": "other@1"})).run()
+        self.assertEqual((result["stop_reason"], result["budget"]["dispatches"]), ("invalid_action", 0))
 
     def test_outside_origin_is_rejected(self):
         adapter = self.setup_adapter()

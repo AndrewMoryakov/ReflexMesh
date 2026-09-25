@@ -8,6 +8,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 import urllib.parse
@@ -31,7 +32,8 @@ class FixtureChecks(unittest.TestCase):
         self.port = available_port()
         self.run_id = "fixture-test"
         self.process = subprocess.Popen([sys.executable, str(ROOT / "experiments/v05/site/server.py"),
-                                         "--port", str(self.port), "--run-id", self.run_id],
+                                         "--port", str(self.port), "--run-id", self.run_id,
+                                         "--slow-seconds", "0.2"],
                                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.origin = f"http://127.0.0.1:{self.port}"
         for _ in range(50):
@@ -83,6 +85,47 @@ class FixtureChecks(unittest.TestCase):
         self.assertEqual(verifier(task, 1, observation)[0]["status"], "fail")
         self.assertEqual(verifier(task, 1, None)[0]["status"], "unknown")
 
+    def test_delayed_old_export_cannot_satisfy_new_fixture(self):
+        old_task = self.task("export_completed_once")
+        old_verifier = FixtureVerifier(old_task, read_fixture(old_task, 1))
+        sent = threading.Event()
+
+        def delayed_post():
+            sent.set()
+            urllib.request.urlopen(urllib.request.Request(self.origin + "/slow/export", data=b""),
+                                   timeout=2).close()
+
+        thread = threading.Thread(target=delayed_post)
+        thread.start()
+        self.assertTrue(sent.wait(1))
+        new_port = available_port()
+        new_run = "isolated-next-run"
+        new_process = subprocess.Popen([sys.executable, str(ROOT / "experiments/v05/site/server.py"),
+                                        "--port", str(new_port), "--run-id", new_run,
+                                        "--slow-seconds", "0.2"],
+                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            data = copy.deepcopy(sample())
+            data["fixture"] = {"origin": f"http://127.0.0.1:{new_port}", "run_id": new_run}
+            data["criteria"] = [{"id": "export", "kind": "postcondition",
+                                 "predicate": "export_completed_once", "args": {}}]
+            new_task = ExecutionTask.from_dict(data)
+            for _ in range(50):
+                try:
+                    new_baseline = read_fixture(new_task, 0.1)
+                    break
+                except OSError:
+                    time.sleep(0.02)
+            else:
+                self.fail("new fixture did not start")
+            thread.join(2)
+            self.assertFalse(thread.is_alive())
+            self.assertEqual(old_verifier(old_task, 1)[0]["status"], "pass")
+            self.assertEqual(FixtureVerifier(new_task, new_baseline)(new_task, 1)[0]["status"], "fail")
+        finally:
+            new_process.terminate()
+            new_process.wait(timeout=2)
+
     def test_wrong_run_is_rejected(self):
         wrong = copy.deepcopy(sample())
         wrong["fixture"] = {"origin": self.origin, "run_id": "other-run"}
@@ -107,6 +150,12 @@ class FixtureChecks(unittest.TestCase):
             result = json.loads(proc.stdout)
             self.assertEqual(result["stop_reason"], "executor_unavailable")
             self.assertEqual(json.loads((output_dir / "result.json").read_text()), result)
+            self.assertNotIn("secret-text", (output_dir / "trace.jsonl").read_text())
+            self.assertNotIn("secret-text", (output_dir / "evidence.jsonl").read_text())
+            self.assertNotIn("secret-text", (output_dir / "result.json").read_text())
+            self.assertTrue((output_dir / "evidence.jsonl").is_file())
+            for ref in result["evidence_refs"]:
+                self.assertIn(ref, (output_dir / "evidence.jsonl").read_text())
 
 
 if __name__ == "__main__":

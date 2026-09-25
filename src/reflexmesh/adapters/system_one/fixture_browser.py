@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 from reflexmesh.contracts.execution import ExecutionTask
 from reflexmesh.runtime.runner import RuntimeStop
@@ -125,6 +125,8 @@ class FixtureBrowser:
         operation = OPERATIONS[before[1]]
         if operation not in self.task.permissions or (action == "type_text") != (operation == "type_text"):
             return "policy_denied"
+        if operation == "navigate" and not self._valid_url(urljoin(self.observation_url, before[4])):
+            return "policy_denied"
         if action == "type_text" and (type(params["value"]) is not str or
                                       params["value"] not in {s.reference for s in self.task.slots}):
             return "invalid_action"
@@ -148,6 +150,8 @@ class FixtureBrowser:
         if target is None:
             return {"operation": "unknown"}
         info = {"operation": OPERATIONS[target[1]], "target_id": target[1]}
+        if info["operation"] == "navigate":
+            info["destination"] = urljoin(self.observation_url, target[4])
         if action == "type_text":
             info["slot_ref"] = str(params.get("value"))
         return info
