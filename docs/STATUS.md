@@ -30,9 +30,11 @@ HTTP-пути; выбранный маршрут никогда не означ�
 ## Пока отсутствует
 
 - Live-подтверждение прямого провайдера typesafe.
-- Execution runtime, общий deadline, управление сессией, отмена и recovery.
-- Runtime исполнения в `src/` (V0.5); Cua и desktop-действия. Браузерный цикл SOH + Browser Use проверен только как spike ([V0.4](research/V0.4-spike.md)).
-- TextSlots, verifier, собственное хранилище execution receipts.
+- V0.5 acceptance remains open. Initial supervisor, cancellation/dispatch gate, TextSlot
+  input validation, isolated test fixture, verifier predicates, and optional SOH adapter
+  are implemented locally. The [implementation progress report](research/V0.5-implementation-progress.md)
+  identifies exactly which checks ran and which browser/live checks remain pending.
+- Cua and desktop actions; recovery and a durable execution receipts store.
 - MCP Task API, Pi-интеграция, HTTP Task API.
 - OCR/VLM, ClawBridge, Skyvern, Ui.Vision, Jev meso-supervisor.
 
@@ -49,7 +51,7 @@ V0.3 выполнен по [утверждённому протоколу](specs
 за решение. Слабое место — смысловой отказ: Jev выбирает ближайший разрешённый маршрут
 (корректный отказ 25% против 79% у LLM). [V0.3b](research/V0.3b-refusal.md): кандидат `NONE`
 поднимает корректный отказ Jev до 96% без потерь на обычных задачах; реализовано в адаптере
-([ADR-0003](architecture/ADR-0003-none-candidate-refusal.md), [live-проверка](research/ADR-0003-live-check.md)). Следующий шаг по [плану](ROADMAP.md) — V0.4.
+([ADR-0003](architecture/ADR-0003-none-candidate-refusal.md), [live-проверка](research/ADR-0003-live-check.md)). The next open gate in the [roadmap](ROADMAP.md) is V0.5.
 Правила INV-03 уточнены через [ADR-0002](architecture/ADR-0002-routing-effects-and-loop-control.md).
 Новых execution-свидетельств эти документы не добавляют; live-свидетельства
 отдельно опубликованы для OpenRouter.

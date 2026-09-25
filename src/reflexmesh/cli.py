@@ -54,8 +54,20 @@ def main(argv: list[str] | None = None) -> int:
     route.add_argument("--allow-demo", action="store_true", help="explicitly accept upstream demo responses")
     route.add_argument("--no-none-candidate", action="store_true",
                        help="do not offer the NONE refusal candidate to JevRouter (pre-ADR-0003 behaviour)")
+    run = sub.add_parser("run", help="execute one bounded browser subtask")
+    run.add_argument("--input", default="-", metavar="FILE")
+    run.add_argument("--output-dir", required=True, metavar="DIR")
+    run.add_argument("--routing-provider", choices=("stub", "jevrouter"), required=True)
+    run.add_argument("--action-provider", choices=("script", "jev"), required=True)
+    run.add_argument("--script", metavar="FILE")
+    run.add_argument("--chrome", metavar="FILE", help="explicit Chromium/Chrome executable")
+    run.add_argument("--jev-url", default="http://127.0.0.1:8787")
+    run.add_argument("--timeout", type=float, default=30.0)
     try:
         args = parser.parse_args(argv)
+        if args.command == "run":
+            from reflexmesh.runtime.cli import run_execution
+            return run_execution(args)
         if args.provider == "stub" and (args.allow_demo or args.no_none_candidate
                                         or args.jev_url != "http://127.0.0.1:8787" or args.timeout != 30.0):
             raise ValidationError("JevRouter options require --provider jevrouter")

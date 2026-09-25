@@ -9,10 +9,12 @@ Jev предназначен для ограниченного выбора, LLM
 Браузер — первый прикладной сценарий; desktop добавляется после V1.0.
 Интерактивные интерфейсы не определяют границ проекта.
 Это целевая концепция; её текущий реализованный объём описан ниже.
-Текущий завершённый инкремент: **V0.2 — адаптер локального JevRouter и CLI**.
-Live gate закрыт для OpenRouter: вызов облачной модели подтверждён
-[отчётом прогона](docs/research/V0.2-live-openrouter.md). Следующий этап — V0.3,
-сравнительная оценка маршрутизации. Браузерное выполнение, MCP и Pi ещё не подключены.
+**Current verified milestone: V0.4.** The [V0.4 report](docs/research/V0.4-spike.md)
+documents the controlled SystemOneHarness + Browser Use spike. The V0.5 execution
+code is in progress; its deterministic runtime and fixture checks do not yet close
+the real-browser or Jev acceptance gates. See the [V0.5 specification](docs/specs/V0.5.md)
+and [local run guide](docs/guides/V0.5-local-run.md). Earlier V0.2 live routing
+evidence remains in the [live report](docs/research/V0.2-live-openrouter.md).
 
 ## Направление и документы
 
