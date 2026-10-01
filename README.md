@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/ReflexMesh-hero.png" alt="ReflexMesh: a task from an agent goes to a router, which picks one route (API/MCP tool, CLI/script, browser/desktop, model/agent, macro/workflow) through a gate of permissions and limits; a verifier checks the goal and either confirms the result or stops and hands the task back" width="100%">
+  <img src="docs/assets/ReflexMesh-hero.png" alt="ReflexMesh, target design: a task from an agent goes to a router, which picks one route through a gate of permissions and limits; a verifier checks the goal and either confirms the result or stops with a reason. Only the browser route is built, as an experiment on a fixture site together with the gate and the verifier; the API/MCP tool, CLI/script, model/agent and macro/workflow routes are marked planned" width="100%">
 </p>
 
 <h1 align="center">ReflexMesh</h1>
@@ -195,7 +195,7 @@ reflexmesh run --input task.json --output-dir ./evidence-001 \
 - **TextSlots.** Versioned immutable texts (`name@1`); actions refer to a slot rather than carrying text, and criteria can refer to slots.
 - **Criteria.** Postconditions evaluated by a read-only verifier against fixture-server state: `current_page`, `settings_saved`, `form_submitted_once`, `export_completed_once`, `account_intact`.
 - **Providers.** `--routing-provider stub|jevrouter` and `--action-provider script|jev`, both explicit; `script` is a deterministic test fixture supplied by `--script`.
-- **Outcome.** One JSON on stdout and `result.json`, `trace.jsonl`, `evidence.jsonl` in the output directory. `attempt_status` is `completed` (exit 0), `blocked` (3), `incomplete` (4), `failed` (5) or `cancelled` (130); input or output-preparation errors exit 2. `task_outcome` is `pass` only for a completed attempt whose checks all pass. Success is never read from the harness's own status.
+- **Outcome.** One JSON on stdout and `result.json`, `trace.jsonl`, `evidence.jsonl` in the output directory. `attempt_status` is `completed` (exit 0), `blocked` (3), `incomplete` (4), `failed` (5) or `cancelled` (130); input errors and output-directory preparation errors (before the attempt starts) exit 2, while a failure to write the output files after the run is reported as `failed` with stop reason `output_error` and exits 5. `task_outcome` is `pass` only for a completed attempt whose checks all pass. Success is never read from the harness's own status.
 - **Control.** A supervisor with a deadline that starts before availability checks, routing and startup; step and model-call counters; a dispatch and cancellation gate with a defined order; a worker process with bounded grace and cleanup; unresolved actions recorded as unknown effects rather than guessed.
 - **Platform and dependencies.** The first supported environment is Linux or WSL with a fresh browser process per attempt, a loopback fixture, and pinned optional dependencies (SystemOneHarness and Browser Use). The supervisor uses the POSIX `fork` start method, so `reflexmesh run` does not start on native Windows (measured on Windows with Python 3.13). The routing CLI and the V0.1–V0.3 tests are not affected.
 
@@ -380,7 +380,7 @@ The script starts and stops a local demo server itself in a temporary directory.
 | Command | What it does | Exit codes |
 |---|---|---|
 | `reflexmesh route [--input FILE\|-] [--provider stub\|jevrouter] [--jev-url URL] [--timeout S] [--allow-demo] [--no-none-candidate]` | Routing only; prints a RoutingDecision JSON | `0` selected, `3` abstained, `4` needs confirmation, `5` adapter or provider error, `2` input error |
-| `reflexmesh run --input FILE --output-dir DIR --routing-provider stub\|jevrouter --action-provider script\|jev [--script FILE] [--chrome FILE] [--jev-url URL] [--timeout S]` | Executes one bounded browser subtask on a fixture site (experimental, POSIX only) | `0` completed, `3` blocked, `4` incomplete, `5` failed, `130` cancelled, `2` input or output error |
+| `reflexmesh run --input FILE --output-dir DIR --routing-provider stub\|jevrouter --action-provider script\|jev [--script FILE] [--chrome FILE] [--jev-url URL] [--timeout S]` | Executes one bounded browser subtask on a fixture site (experimental, POSIX only) | `0` completed, `3` blocked, `4` incomplete, `5` failed (this includes a write failure for `trace.jsonl`, `evidence.jsonl` or `result.json` after the run: stop reason `output_error`), `130` cancelled, `2` input error or output-directory preparation error (before the attempt starts: the directory cannot be created, is not empty, or `trace.jsonl` cannot be created) |
 | `reflexmesh --version`, `--help` | Plain text | |
 
 ### JevRouter adapter failure codes
