@@ -79,6 +79,10 @@ class RealBrowserAdapter(unittest.TestCase):
         self.browser.backend._run(run())
         time.sleep(0.2)
 
+    def offered(self, obs):
+        """Fixture targets behind the candidates offered to the model."""
+        return {self.browser.targets[i][1] for i in obs.candidates.get("elements", {}) if i in self.browser.targets}
+
     def index(self, target_id):
         return next(i for i, t in self.browser.targets.items() if t[1] == target_id)
 
@@ -116,7 +120,7 @@ class RealBrowserAdapter(unittest.TestCase):
         self.js("document.querySelector('[data-reflex-id=\"send-form\"]').disabled = true;")
         self.assertEqual(self.browser.admit("click", {"element": send}), "stale_target")
         obs = self.browser.observe()
-        self.assertNotIn("[reflex:send-form]", " ".join(obs.candidates.get("elements", {}).values()))
+        self.assertNotIn("send-form", self.offered(obs))
 
     def test_changed_form_endpoint_is_stale_then_denied(self):
         self.browser.observe()
@@ -124,7 +128,7 @@ class RealBrowserAdapter(unittest.TestCase):
         self.js("document.querySelector('[data-reflex-id=\"send-form\"]').setAttribute('formaction', '/danger/delete');")
         self.assertEqual(self.browser.admit("click", {"element": send}), "stale_target")
         obs = self.browser.observe()
-        self.assertNotIn("[reflex:send-form]", " ".join(obs.candidates.get("elements", {}).values()))
+        self.assertNotIn("send-form", self.offered(obs))
         resend = self.index("send-form")
         self.assertEqual(self.browser.admit("click", {"element": resend}), "policy_denied")
 

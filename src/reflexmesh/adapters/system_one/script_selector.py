@@ -22,6 +22,16 @@ class FixtureScriptProvider:
         """The adapter whose full target map resolves forced (unoffered) proposals."""
         self.environment = environment
 
+    def _target_id(self, index, description):
+        """Fixture target behind an offered candidate, from the bound adapter's identity map."""
+        targets = getattr(self.environment, "targets", None)
+        if targets is not None:
+            target = targets.get(str(index))
+            return target[1] if target else None
+        # Unbound (unit tests): candidates may carry an explicit [reflex:ID] marker.
+        text = str(description)
+        return text.split("[reflex:", 1)[1].split("]", 1)[0] if "[reflex:" in text else None
+
     def _forced_index(self, target_id: str) -> str:
         targets = getattr(self.environment, "targets", None) or {}
         matching = [index for index, target in targets.items() if target[1] == target_id]
@@ -50,8 +60,8 @@ class FixtureScriptProvider:
                 forced = self._forced_index(entry["target_id"])
             targets = questions.get(f"{action}__{field}", {}).get("criteria") or {}
             if forced is None:
-                matching = [str(index) for index, description in targets.items()
-                            if f"[reflex:{entry['target_id']}]" in str(description)]
+                matching = [str(index) for index in targets if self._target_id(index, targets[index]) ==
+                            entry["target_id"]]
                 if len(matching) != 1:
                     raise ValueError("script target is not an admissible candidate")
                 params = [f"{field}='{matching[0]}'"]
