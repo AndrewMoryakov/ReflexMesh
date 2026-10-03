@@ -149,12 +149,12 @@ def run_execution(args) -> int:
 
     supervisor = AttemptSupervisor(task, BrowserExecutionStrategy(task, args, entries, faults),
                                    verifier_factory=FixtureVerifier)
-    previous = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, lambda *_: supervisor.cancel())
     try:
         result = supervisor.run()
     finally:
-        signal.signal(signal.SIGINT, previous)
+        # A late SIGINT after the terminal transition is a no-op; it must not interrupt the output.
+        signal.signal(signal.SIGINT, lambda *_: None)
     if faults:
         result["faults"] = sorted(faults)  # Injected acceptance faults are part of the record.
     result.update(trace_ref="trace.jsonl", evidence_refs=list(dict.fromkeys(
