@@ -1,0 +1,449 @@
+{
+  "schema_version": "v05-u-results/0.1",
+  "manifest_sha256": "1dcca6c8bf7d4d625332fbd5edbfba6630ef30292ac837856d70431feb8aa0c4",
+  "git_head": "530f6b510b2ddb97bbb0f52d089a9794ec9b7f79",
+  "python": "3.12.3",
+  "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "harness_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+  "browser_use_version": "0.13.10",
+  "providers": "deterministic fakes and pinned harness script; no live model",
+  "command": [
+    "/opt/rm/SystemOneHarness/.venv/bin/python",
+    "experiments/v05/run_u.py",
+    "--output",
+    "/opt/rm/results/v05-u-530f6b5.json"
+  ],
+  "started_at_unix": 1791027561.4285693,
+  "cases": [
+    {
+      "id": "C02.false_finish",
+      "expected": "failed/postcondition_failed; task=fail",
+      "test": "test_v05_runtime.Lifecycle.test_finish_with_false_postcondition_fails",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.02
+    },
+    {
+      "id": "C02.no_confident_verified",
+      "expected": "completed/verified; task=pass",
+      "test": "test_v05_runtime.Lifecycle.test_no_confident_action_can_be_verified",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.006
+    },
+    {
+      "id": "C02.protocol_error_with_pass",
+      "expected": "failed/protocol_error; task=unknown",
+      "test": "test_v05_runtime.Lifecycle.test_protocol_error_with_pass_evidence_stays_failed",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.06
+    },
+    {
+      "id": "C02.already_satisfied",
+      "expected": "completed/already_satisfied; no goal mutation",
+      "test": "test_v05_runtime.Lifecycle.test_current_page_already_satisfied_after_bootstrap",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.008
+    },
+    {
+      "id": "C03.policy_denial",
+      "expected": "blocked/policy_denied; dispatch=0",
+      "test": "test_v05_harness.HarnessIntegration.test_policy_veto_prevents_action",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.277
+    },
+    {
+      "id": "C03.stale_reindexed_node",
+      "expected": "no rejected dispatch; re-observe within budget",
+      "test": "test_v05_browser_adapter.AdapterContract.test_reindexed_node_reobserved_without_dispatch",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.006
+    },
+    {
+      "id": "C03.substituted_slot",
+      "expected": "blocked/invalid_action; dispatch=0",
+      "test": "test_v05_browser_adapter.AdapterContract.test_substituted_slot_blocks_before_dispatch",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.056
+    },
+    {
+      "id": "C03.unknown_candidate",
+      "expected": "blocked/invalid_action; dispatch=0",
+      "test": "test_v05_browser_adapter.AdapterContract.test_unknown_candidate_blocks_before_dispatch",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.056
+    },
+    {
+      "id": "C04.none_route",
+      "expected": "blocked/no_route; dispatch=0",
+      "test": "test_v05_preflight.PreflightLifecycle.test_none_route_and_wrong_fixture_block_without_dispatch",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.112
+    },
+    {
+      "id": "C04.missing_executor",
+      "expected": "blocked/executor_unavailable; dispatch=0",
+      "test": "test_v05_preflight.PreflightLifecycle.test_macro_request_charged_and_routing_retained",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.057
+    },
+    {
+      "id": "C04.unsupported_predicate",
+      "expected": "blocked/unsupported_criterion; dispatch=0",
+      "test": "test_v05_preflight.PreflightLifecycle.test_unknown_predicate_blocks_without_preflight",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.056
+    },
+    {
+      "id": "C04.wrong_fixture_run",
+      "expected": "blocked/fixture_mismatch; dispatch=0",
+      "test": "test_v05_preflight.PreflightLifecycle.test_none_route_and_wrong_fixture_block_without_dispatch",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.114
+    },
+    {
+      "id": "C04.unsupported_adapter_contract",
+      "expected": "blocked/adapter_contract_unsupported; dispatch=0",
+      "test": "test_v05_runtime.Lifecycle.test_unsupported_adapter_contract_blocks",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.054
+    },
+    {
+      "id": "C05.cancel_pending_decision",
+      "expected": "cancelled/cancel_requested; no later dispatch",
+      "test": "test_v05_preflight.PreflightLifecycle.test_cancel_during_macro_cannot_start_execution",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.058
+    },
+    {
+      "id": "C05.expire_pending_decision",
+      "expected": "incomplete/deadline; no later dispatch",
+      "test": "test_v05_runtime.Lifecycle.test_hung_worker_is_bounded",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 5.308
+    },
+    {
+      "id": "C06.cancel_before_dispatch",
+      "expected": "cancelled; dispatch=0, including after revalidation",
+      "test": "test_v05_runtime.Lifecycle.test_cancel_after_revalidation_before_commit",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.056
+    },
+    {
+      "id": "C06.dispatch_before_cancel",
+      "expected": "cancelled; committed action retained",
+      "test": "test_v05_runtime.Lifecycle.test_cancel_in_flight_retains_unknown_effect",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.059
+    },
+    {
+      "id": "C07.cancel_in_flight_late_return",
+      "expected": "cancelled; effect reconciled if evidence available",
+      "test": "test_v05_runtime.Lifecycle.test_cancel_in_flight_late_verification_refines_effect_only",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.061
+    },
+    {
+      "id": "C07.cancel_in_flight_lost_return",
+      "expected": "cancelled; effect=unknown with no driver return",
+      "test": "test_v05_runtime.Lifecycle.test_cancel_in_flight_lost_return_forces_cleanup",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 5.06
+    },
+    {
+      "id": "C07.deadline_in_flight_late_return",
+      "expected": "incomplete/deadline; immutable stop and classified effect",
+      "test": "test_v05_runtime.Lifecycle.test_deadline_in_flight_keeps_unknown_effect_and_sequence",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.561
+    },
+    {
+      "id": "C07.deadline_in_flight_lost_return",
+      "expected": "incomplete/deadline; effect=unknown",
+      "test": "test_v05_runtime.Lifecycle.test_hung_driver_is_bounded_with_unknown_effect",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 5.304
+    },
+    {
+      "id": "C08.hung_provider",
+      "expected": "incomplete/deadline; forced cleanup; no dispatch",
+      "test": "test_v05_runtime.Lifecycle.test_hung_provider_is_bounded",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 5.302
+    },
+    {
+      "id": "C08.hung_driver",
+      "expected": "incomplete/deadline; forced cleanup; effect=unknown",
+      "test": "test_v05_runtime.Lifecycle.test_hung_driver_is_bounded_with_unknown_effect",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 5.305
+    },
+    {
+      "id": "C08.hung_close",
+      "expected": "incomplete/deadline; forced cleanup",
+      "test": "test_v05_runtime.Lifecycle.test_hung_close_is_bounded",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 5.303
+    },
+    {
+      "id": "C09.lost_submit_then_repeat",
+      "expected": "at most one submission; stop effect_unknown",
+      "test": "test_v05_runtime.Lifecycle.test_lost_submit_response_cannot_repeat",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.054
+    },
+    {
+      "id": "C10.step_limit",
+      "expected": "incomplete/step_limit; exact count",
+      "test": "test_v05_runtime.Lifecycle.test_step_and_model_call_limits",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.107
+    },
+    {
+      "id": "C10.macro_call_limit",
+      "expected": "incomplete/model_call_limit; macro charged",
+      "test": "test_v05_preflight.PreflightLifecycle.test_macro_call_exhausts_budget_before_micro_request",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.006
+    },
+    {
+      "id": "C10.micro_call_limit",
+      "expected": "incomplete/model_call_limit; micro charged",
+      "test": "test_v05_runtime.Lifecycle.test_micro_model_call_limit_before_second_provider_request",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.053
+    },
+    {
+      "id": "C10.retry_rejection",
+      "expected": "invalid_input; no attempt",
+      "test": "test_v05_runtime.InputContract.test_invalid_inputs",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "C10.invalid_nonfinite_input",
+      "expected": "invalid_input; no attempt",
+      "test": "test_v05_runtime.InputContract.test_invalid_inputs",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "C10.verifier_unavailable",
+      "expected": "incomplete/verification_unknown; no false success",
+      "test": "test_v05_runtime.Lifecycle.test_unavailable_verifier_is_unknown_before_deadline",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.006
+    },
+    {
+      "id": "C11.visit_then_navigate_away",
+      "expected": "current_page fails at final browser observation",
+      "test": "test_v05_fixture.FixtureChecks.test_historic_navigation_does_not_prove_current_page",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.063
+    },
+    {
+      "id": "C11.old_delayed_export",
+      "expected": "old run cannot satisfy new-run evidence",
+      "test": "test_v05_fixture.FixtureChecks.test_delayed_old_export_cannot_satisfy_new_fixture",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.248
+    },
+    {
+      "id": "C11.wrong_run_evidence",
+      "expected": "mismatched run rejected",
+      "test": "test_v05_fixture.FixtureChecks.test_wrong_run_is_rejected",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.044
+    },
+    {
+      "id": "C12.cancel_late_constraint_violation",
+      "expected": "cancelled; task=fail",
+      "test": "test_v05_runtime.Lifecycle.test_cancel_then_confirmed_late_constraint_violation",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.054
+    },
+    {
+      "id": "C12.redacted_logs",
+      "expected": "no raw slots or sentinels; evidence linked",
+      "test": "test_v05_fixture.FixtureChecks.test_cli_explains_missing_browser",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.212
+    },
+    {
+      "id": "REV.constraint_rows_complete",
+      "expected": "completed attempt carries six runtime constraint rows, all pass",
+      "test": "test_v05_constraints.ConstraintRows.test_completed_attempt_carries_every_runtime_constraint",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.007
+    },
+    {
+      "id": "REV.missing_session_evidence",
+      "expected": "session constraint unknown; no completion",
+      "test": "test_v05_constraints.ConstraintRows.test_missing_session_evidence_prevents_completion",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.006
+    },
+    {
+      "id": "REV.permission_violation_sticky",
+      "expected": "failed/constraint_violated; task=fail",
+      "test": "test_v05_constraints.ConstraintRows.test_permission_violation_is_confirmed_and_sticky",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 1.06
+    },
+    {
+      "id": "REV.policy_revocation_after_selection",
+      "expected": "blocked/policy_denied; dispatch=0; revision 2",
+      "test": "test_v05_constraints.PolicyRevision.test_revocation_after_selection_blocks_dispatch",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.061
+    },
+    {
+      "id": "REV.unrelated_revocation_reobserves",
+      "expected": "stale_policy re-observation; one dispatch; completed",
+      "test": "test_v05_constraints.PolicyRevision.test_unrelated_revocation_forces_fresh_observation",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.007
+    },
+    {
+      "id": "REV.adapter_revocation_before_commit",
+      "expected": "adapter path: blocked/policy_denied; dispatch=0",
+      "test": "test_v05_browser_adapter.AdapterContract.test_policy_revocation_after_selection_prevents_dispatch",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.058
+    },
+    {
+      "id": "REV.worker_dies_holding_gate",
+      "expected": "failed/executor_error; committed action effect=unknown; bounded",
+      "test": "test_v05_constraints.GateFailure.test_worker_dies_holding_gate",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 1.057
+    },
+    {
+      "id": "REV.worker_hangs_holding_gate",
+      "expected": "failed/executor_error; forced cleanup within G+K+1",
+      "test": "test_v05_constraints.GateFailure.test_worker_hangs_holding_gate",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 6.309
+    },
+    {
+      "id": "REV.descendant_cleanup",
+      "expected": "surviving process-group descendant terminated; cleanup=forced",
+      "test": "test_v05_constraints.Cleanup.test_surviving_descendant_is_terminated",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.01
+    },
+    {
+      "id": "REV.deadline_and_exit_bounds",
+      "expected": "deadline delay <= 0.25 s; exit <= terminal + G + K + 1",
+      "test": "test_v05_constraints.Cleanup.test_deadline_transition_and_exit_bounds",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 5.308
+    },
+    {
+      "id": "REV.lost_return_reconciled_applied",
+      "expected": "server record reconciles lost return as applied",
+      "test": "test_v05_constraints.Reconciliation.test_lost_return_reconciled_as_applied_from_server_record",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 5.507
+    },
+    {
+      "id": "REV.absent_request_not_applied",
+      "expected": "no server request after browser stop: not_applied",
+      "test": "test_v05_constraints.Reconciliation.test_absent_request_after_browser_stop_is_not_applied",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 5.505
+    },
+    {
+      "id": "REV.document_identity",
+      "expected": "new document with the same URL is stale",
+      "test": "test_v05_browser_adapter.AdapterContract.test_new_document_with_same_url_is_stale",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "REV.disabled_target",
+      "expected": "disabled target not offered; disabling after observation is stale",
+      "test": "test_v05_browser_adapter.AdapterContract.test_disabled_target_is_not_offered_and_disabling_is_stale",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "REV.form_endpoint",
+      "expected": "form endpoint must match the fixture definition",
+      "test": "test_v05_browser_adapter.AdapterContract.test_form_endpoint_must_match_fixture_definition",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "REV.frames_unsupported",
+      "expected": "frames yield adapter_contract_unsupported",
+      "test": "test_v05_browser_adapter.AdapterContract.test_frames_fail_closed",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.0
+    },
+    {
+      "id": "REV.attributeless_node_unsupported",
+      "expected": "node without attributes yields adapter_contract_unsupported",
+      "test": "test_v05_browser_adapter.AdapterContract.test_node_without_attributes_fails_closed",
+      "status": "passed",
+      "reason": "assertions_passed",
+      "duration_seconds": 0.0
+    }
+  ],
+  "counts": {
+    "passed": 53,
+    "pending": 0,
+    "failed": 0
+  },
+  "finished_at_unix": 1791027623.9853625
+}
