@@ -68,7 +68,7 @@ class EffectsVerifier:
         return [{"id": c.id, "status": self.status, "evidence_refs": ["fake://server"]} for c in task.criteria]
 
     def effects(self, task, timeout):
-        return {"ref": "fake://server", "submit_form": {"requests": self.requests, "running": False}}
+        return {"ref": "fake://server", "targets": {"send-form": {"requests": self.requests, "running": False}}}
 
 
 def submit_once(gate, events, hang=False):

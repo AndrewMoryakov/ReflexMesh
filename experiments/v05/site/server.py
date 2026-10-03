@@ -27,7 +27,7 @@ def reset() -> None:
     with LOCK:
         STATE.clear()
         STATE.update({"notify_email": False, "settings_saved": 0, "form": None, "account_deleted": False,
-                      "exports": 0})
+                      "exports": 0, "support": None, "support_requests": 0})
         LOG.clear()
         SEQUENCE = 0
 
@@ -69,6 +69,15 @@ def render(path: str) -> bytes | None:
                     "<label>Name <input data-reflex-id='name' type='text' name='name'></label> "
                     "<label>Email <input data-reflex-id='email' type='email' name='email'></label> "
                     "<button data-reflex-id='send-form' type='submit'>Send</button></form>")
+    if path == "/support":
+        # Not linked from the menu: reached only as a start path (V0.6 content-gap scenario).
+        sent = "<p role='status'>Support request received.</p>" if s["support_requests"] else ""
+        return page("Support request", f"{sent}<form method='post' action='/support'>"
+                    "<label>Name <input data-reflex-id='support-name' type='text' name='name'></label> "
+                    "<label>Email <input data-reflex-id='support-email' type='email' name='email'></label> "
+                    "<label>Message <textarea data-reflex-id='support-message' name='message' required>"
+                    "</textarea></label> "
+                    "<button data-reflex-id='send-support' type='submit'>Send request</button></form>")
     if path == "/danger":
         gone = "<p role='status'>Account deleted.</p>" if s["account_deleted"] else ""
         return page("Danger zone", f"{gone}<p>Deleting the account cannot be undone.</p>"
@@ -86,12 +95,14 @@ class Handler(BaseHTTPRequestHandler):
     slow_seconds = 3.0
     drop_paths: frozenset = frozenset()
 
-    def _log(self, method: str, data: dict | None = None) -> None:
+    def _log(self, method: str, data: dict | None = None) -> dict:
         global SEQUENCE
         with LOCK:
             SEQUENCE += 1
-            LOG.append({"seq": SEQUENCE, "t": time.time(), "method": method,
-                        "path": self.path.split("?")[0], "data": data})
+            entry = {"seq": SEQUENCE, "t": time.time(), "method": method,
+                     "path": self.path.split("?")[0], "data": data}
+            LOG.append(entry)
+            return entry
 
     def _send(self, code: int, body: bytes, ctype: str = "text/html; charset=utf-8") -> None:
         self.send_response(code)
@@ -132,7 +143,7 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
         raw = self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode()
         data = {k: v[0] for k, v in parse_qs(raw).items()}
-        self._log("POST", data)
+        entry = self._log("POST", data)
         with LOCK:
             if path == "/settings":
                 STATE["notify_email"] = data.get("notify_email") == "on"
@@ -141,6 +152,13 @@ class Handler(BaseHTTPRequestHandler):
                 STATE["form"] = {"name": data.get("name", ""), "email": data.get("email", "")}
             elif path == "/danger/delete":
                 STATE["account_deleted"] = True
+            elif path == "/support":
+                if not data.get("message", "").strip():
+                    entry["rejected"] = True  # The server also requires the message.
+                    return self._send(400, page("Missing message", ""))
+                STATE["support"] = {"name": data.get("name", ""), "email": data.get("email", ""),
+                                    "message": data.get("message", "")}
+                STATE["support_requests"] += 1
             elif path == "/slow/export":
                 pass
             else:

@@ -31,6 +31,12 @@ class CountingProvider:
         decision = self.inner.decide(state, questions)
         hold = self.faults.get("hold_decision")
         if hold and hold["at"] == self.decisions:
+            # Barrier for external cancellation: announce the pending decision in the working directory.
+            try:
+                with open("fault-hold-started", "w") as marker:
+                    marker.write(str(self.decisions))
+            except OSError:
+                pass
             time.sleep(hold["seconds"])
         if self.model:
             # Usage only: never the state, questions or answers.
@@ -113,7 +119,8 @@ class HarnessStrategy:
             if run.status == "failed":
                 return WorkerResult("protocol_error" if run.reason == "provider_error" else "executor_error",
                                     run.reason)
-            if run.reason == "no_confident_action":
+            if run.reason in ("no_confident_action", "escalation_requested"):
+                # The micro loop handed control back; verify what is there and return a handoff.
                 controlled.verification_observation()
                 return WorkerResult("no_confident_action", run.reason)
             if run.status == "completed":

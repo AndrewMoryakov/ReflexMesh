@@ -16,6 +16,7 @@ PREDICATES = {
     "form_submitted_once": {"name_slot": str, "email_slot": str},
     "export_completed_once": {},
     "account_intact": {},
+    "support_request_sent_once": {"name_slot": str, "email_slot": str},
 }
 
 

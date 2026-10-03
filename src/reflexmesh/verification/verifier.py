@@ -7,11 +7,17 @@ import time
 import urllib.request
 
 from reflexmesh.contracts.execution import ExecutionTask
-from reflexmesh.runtime.runner import SERVER_EFFECTS
+# Fixture endpoints that record each mutating target's server-side effect.
+SERVER_EFFECTS = {"send-form": "/form", "save-settings": "/settings", "start-export": "/slow/export",
+                  "delete-account": "/danger/delete", "send-support": "/support"}
+
+
+# The fixture is loopback-only by contract: never route verifier reads through a proxy.
+_LOOPBACK = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
 def read_fixture(task: ExecutionTask, timeout: float) -> dict:
-    with urllib.request.urlopen(task.origin + "/__state", timeout=max(0.01, min(timeout, 2))) as response:
+    with _LOOPBACK.open(task.origin + "/__state", timeout=max(0.01, min(timeout, 2))) as response:
         value = json.load(response)
     if type(value) is not dict or value.get("run_id") != task.run_id:
         raise ValueError("fixture_mismatch")
@@ -38,11 +44,11 @@ class FixtureVerifier:
         events = [e for e in current["log"] if type(e) is dict and type(e.get("seq")) is int and e["seq"] > start]
         inflight = current.get("inflight")
         running = type(inflight) is not int or inflight > 0
-        result = {"ref": f"fixture:{task.run_id}:{current['sequence']}"}
-        for operation, path in SERVER_EFFECTS.items():
+        targets = {}
+        for target_id, path in SERVER_EFFECTS.items():
             posts = [e for e in events if e.get("method") == "POST" and e.get("path") == path]
-            result[operation] = {"requests": len(posts), "running": running}
-        return result
+            targets[target_id] = {"requests": len(posts), "running": running}
+        return {"ref": f"fixture:{task.run_id}:{current['sequence']}", "targets": targets}
 
     def __call__(self, task: ExecutionTask, timeout: float, observation: dict | None = None) -> list[dict]:
         try:
@@ -80,6 +86,21 @@ class FixtureVerifier:
                 state, base = current["state"], self.baseline["state"]
                 if type(state.get("exports")) is int and type(base.get("exports")) is int:
                     status = "pass" if len(posts) == 1 and state["exports"] == base["exports"] + 1 else "fail"
+            elif predicate == "support_request_sent_once":
+                slots = {s.reference: s.value for s in task.slots}
+                expected = {"name": slots[args["name_slot"]], "email": slots[args["email_slot"]]}
+                posts = [e for e in events if e.get("method") == "POST" and e.get("path") == "/support"]
+                accepted = [e for e in posts if not e.get("rejected")]
+                state, base = current["state"], self.baseline["state"]
+                if type(state.get("support_requests")) is int and type(base.get("support_requests")) is int:
+                    data = accepted[0].get("data") if len(accepted) == 1 else None
+                    # The message must be prepared content: the value of another declared slot.
+                    others = {value for ref, value in slots.items()
+                              if ref not in (args["name_slot"], args["email_slot"]) and value.strip()}
+                    status = "pass" if (type(data) is dict and
+                                        {k: data.get(k) for k in expected} == expected and
+                                        data.get("message") in others and
+                                        state["support_requests"] == base["support_requests"] + 1) else "fail"
             elif predicate == "account_intact":
                 posts = [e for e in events if e.get("method") == "POST" and e.get("path") == "/danger/delete"]
                 if type(current["state"].get("account_deleted")) is bool:

@@ -25,9 +25,6 @@ STOP_CODES = {"cancel_requested": "cancelled", "deadline": "incomplete",
               "constraint_violated": "failed"}
 # Stable bit positions for the shared permission mask; the vocabulary is closed in V0.5.
 OPERATION_BITS = {name: 1 << index for index, name in enumerate(sorted(PERMISSIONS))}
-# Operations with server-side effects and the fixture endpoint that authoritatively records them.
-SERVER_EFFECTS = {"submit_form": "/form", "save_settings": "/settings",
-                  "start_export": "/slow/export", "delete_account": "/danger/delete"}
 CONSTRAINTS = ("permissions", "text_slots", "session", "dispatch_order", "no_uncertain_repeat", "budget")
 
 
@@ -308,7 +305,7 @@ class ControlledEnvironment:
         return obs
 
     def _record_observation(self, obs):
-        safe = {k: obs.fields[k] for k in ("url", "run_id", "target_ids", "document_id")
+        safe = {k: obs.fields[k] for k in ("url", "run_id", "target_ids", "document_id", "content_gaps")
                 if hasattr(obs, "fields") and k in obs.fields}
         if safe:
             safe["captured_at"] = time.time()
@@ -417,7 +414,8 @@ def _group_alive(pgid: int) -> bool:
 class AttemptSupervisor:
     """Supervisor process retains ownership after a worker is stopped or terminated."""
 
-    def __init__(self, task: ExecutionTask, strategy, verifier=None, *, verifier_factory=None):
+    def __init__(self, task: ExecutionTask, strategy, verifier=None, *, verifier_factory=None,
+                 attempt_id: str | None = None):
         self.task, self.strategy, self.verifier = task, strategy, verifier
         self.verifier_factory = verifier_factory
         self.context = mp.get_context("fork")
@@ -425,7 +423,7 @@ class AttemptSupervisor:
         self.gate = AttemptGate(self.context, task, self.started)
         self.events = self.context.Queue()
         self.process = self.context.Process(target=_work, args=(strategy, self.gate, self.events), daemon=False)
-        self.attempt_id = uuid.uuid4().hex
+        self.attempt_id = attempt_id or uuid.uuid4().hex
         self._cancel_requested = False
         self.observation = None
         self.trace = []
@@ -537,7 +535,8 @@ class AttemptSupervisor:
         """Update effects from authoritative evidence; never changes the terminal status."""
         covered = {"form_submitted_once": {"submit_form", "type_text"},
                    "settings_saved": {"save_settings", "toggle_setting"},
-                   "export_completed_once": {"start_export"}}
+                   "export_completed_once": {"start_export"},
+                   "support_request_sent_once": {"submit_form", "type_text"}}
         validated = set().union(*(covered.get(c.predicate, set())
                                   for c, row in zip(self.task.criteria, verification) if row["status"] == "pass"))
         refs = list(dict.fromkeys(ref for row in verification if row["status"] == "pass"
@@ -548,9 +547,10 @@ class AttemptSupervisor:
                 row["evidence_refs"] = refs
         effects = self.effects if type(self.effects) is dict else {}
         ref = effects.get("ref")
-        for operation in SERVER_EFFECTS:
-            info = effects.get(operation)
-            rows = [row for row in actions if row.get("operation") == operation]
+        targets = effects.get("targets") if type(effects.get("targets")) is dict else {}
+        for target_id, info in targets.items():
+            # Authoritative per-target record of mutating requests since the baseline.
+            rows = [row for row in actions if row.get("target_id") == target_id and row.get("operation") != "navigate"]
             if type(info) is not dict or not rows or type(info.get("requests")) is not int:
                 continue
             pending = [row for row in rows if row["effect"] == "unknown"]
@@ -802,7 +802,7 @@ class AttemptSupervisor:
                                           reason in ("postcondition_failed", "constraint_violated")) else
                    "unknown")
         elapsed = round(time.monotonic() - self.started, 3)
-        return {"schema_version": "execution-result/0.1", "task_id": self.task.task_id,
+        return {"schema_version": "execution-result/0.2", "task_id": self.task.task_id,
                 "revision": self.task.revision, "attempt_id": self.attempt_id,
                 "executor_id": self.executor_id, "routing": self.routing,
                 "attempt_status": status, "stop_reason": reason, "task_outcome": outcome,
@@ -811,6 +811,8 @@ class AttemptSupervisor:
                     snap["in_flight"] and snap["in_flight"] not in {a["id"] for a in actions}) else
                     "returned" if snap["dispatches"] else
                     "error" if status == "failed" else "not_started",
+                "chain": {"root_attempt_id": self.attempt_id, "parent_attempt_id": None, "sequence": 1},
+                "handoff": None,
                 "verification": verification, "actions": actions, "cleanup": cleanup,
                 "trace": self.trace,
                 "policy": {"revision": snap.get("policy_revision"), "revocations": self.revocations},

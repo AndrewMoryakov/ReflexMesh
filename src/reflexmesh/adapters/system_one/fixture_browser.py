@@ -26,8 +26,10 @@ OPERATIONS = {
     "notify-email": "toggle_setting", "save-settings": "save_settings",
     "name": "type_text", "email": "type_text", "send-form": "submit_form",
     "start-export": "start_export", "delete-account": "delete_account",
+    "support-name": "type_text", "support-email": "type_text", "support-message": "type_text",
+    "send-support": "submit_form",
 }
-PATHS = {"/", "/profile", "/reports", "/settings", "/form", "/danger", "/slow"}
+PATHS = {"/", "/profile", "/reports", "/settings", "/form", "/danger", "/slow", "/support"}
 LINKS = {"home": "/", "profile": "/profile", "settings": "/settings", "reports": "/reports",
          "form": "/form", "danger": "/danger", "export": "/slow"}
 # Trusted fixture definitions: (tag, type attribute, form endpoint path, form method).
@@ -39,6 +41,10 @@ CONTROLS = {
     "send-form": ("button", "submit", "/form", "post"),
     "start-export": ("button", "submit", "/slow/export", "post"),
     "delete-account": ("button", "submit", "/danger/delete", "post"),
+    "support-name": ("input", "text", "/support", "post"),
+    "support-email": ("input", "email", "/support", "post"),
+    "support-message": ("textarea", "", "/support", "post"),
+    "send-support": ("button", "submit", "/support", "post"),
 }
 PROFILE_PREFIX = "browser-use-user-data-dir-reflexmesh-"  # Browser Use keeps such a profile as is.
 
@@ -58,7 +64,9 @@ _NODE_FACTS = """function () {
           disabled: !!(this.disabled || (this.matches && this.matches(":disabled"))),
           form_action: action, form_method: method,
           duplicates: rid ? document.querySelectorAll('[data-reflex-id="' + CSS.escape(rid) + '"]').length : 0,
-          top_frame: window === window.top};
+          top_frame: window === window.top,
+          required: !!this.required,
+          empty: ("value" in this) ? String(this.value || "").trim() === "" : null};
 }"""
 
 
@@ -107,6 +115,7 @@ class FixtureBrowser:
                                           text_values={s.reference: s.value for s in task.slots},
                                           user_data_dir=self.profile)
         self.targets: dict[str, tuple] = {}
+        self.content_gaps: list[str] = []
         self.page: tuple | None = None
         self.observation_url = ""
         self.unsupported = False
@@ -186,6 +195,7 @@ class FixtureBrowser:
     def _map(self) -> dict[str, tuple]:
         nodes = self._selector_map()
         page = self.page or {}
+        self.content_gaps = []  # Enabled required text fields that are empty in this observation.
         result, seen_ids, candidates = {}, set(), {}
         for index, node in nodes.items():
             attrs = getattr(node, "attributes", None)
@@ -222,6 +232,9 @@ class FixtureBrowser:
             result[index] = (backend_id, target_id, str(live.get("tag") or ""), str(live.get("type") or ""),
                              live.get("href"), bool(live.get("disabled")), live.get("form_action"),
                              live.get("form_method"), page.get("document_id"))
+            if (OPERATIONS[target_id] == "type_text" and live.get("required") and live.get("empty") is True
+                    and not live.get("disabled")):
+                self.content_gaps.append(target_id)
         return result
 
     def _trusted(self, target: tuple) -> bool:
@@ -266,6 +279,7 @@ class FixtureBrowser:
         obs.fields["run_id"] = self.task.run_id
         obs.fields["document_id"] = self.page["document_id"]
         obs.fields["target_ids"] = [node[1] for node in self.targets.values()]
+        obs.fields["content_gaps"] = sorted(self.content_gaps)
         return obs
 
     def _valid_url(self, url: str) -> bool:

@@ -64,11 +64,22 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--jev-url", default="http://127.0.0.1:8787")
     run.add_argument("--timeout", type=float, default=30.0)
     run.add_argument("--faults", metavar="FILE", help="acceptance fault injection (JSON); test use only")
+    run.add_argument("--attempt-id", metavar="HEX32", help="attempt ID chosen by a Task API caller")
+    run.add_argument("--chain", metavar="FILE", help="link to a parent attempt (JSON); set by the Task API")
+    mcp = sub.add_parser("mcp", help="serve the Task API over MCP (stdio)")
+    mcp.add_argument("--state-dir", required=True, metavar="DIR")
+    mcp.add_argument("--chrome", metavar="FILE", help="Chromium executable for browser attempts")
+    mcp.add_argument("--jev-url", default="http://127.0.0.1:8787")
+    mcp.add_argument("--max-concurrent", type=int, default=1)
+    mcp.add_argument("--allow-faults", action="store_true", help="accept acceptance fault barriers (test use only)")
     try:
         args = parser.parse_args(argv)
         if args.command == "run":
             from reflexmesh.runtime.cli import run_execution
             return run_execution(args)
+        if args.command == "mcp":
+            from reflexmesh.api.mcp_server import serve
+            return serve(args)
         if args.provider == "stub" and (args.allow_demo or args.no_none_candidate
                                         or args.jev_url != "http://127.0.0.1:8787" or args.timeout != 30.0):
             raise ValidationError("JevRouter options require --provider jevrouter")
