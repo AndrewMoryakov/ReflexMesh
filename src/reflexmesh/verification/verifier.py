@@ -7,6 +7,7 @@ import time
 import urllib.request
 
 from reflexmesh.contracts.execution import ExecutionTask
+from reflexmesh.runtime.runner import SERVER_EFFECTS
 
 
 def read_fixture(task: ExecutionTask, timeout: float) -> dict:
@@ -26,6 +27,22 @@ class FixtureVerifier:
         if baseline.get("run_id") != task.run_id:
             raise ValueError("fixture_mismatch")
         self.baseline = baseline
+
+    def effects(self, task: ExecutionTask, timeout: float) -> dict:
+        """Authoritative server-side record of mutating requests since the baseline.
+
+        `running` is true while the fixture still holds any request open, so absence of a
+        record is not yet proof that a request will never arrive."""
+        current = read_fixture(task, timeout)
+        start = int(self.baseline["sequence"])
+        events = [e for e in current["log"] if type(e) is dict and type(e.get("seq")) is int and e["seq"] > start]
+        inflight = current.get("inflight")
+        running = type(inflight) is not int or inflight > 0
+        result = {"ref": f"fixture:{task.run_id}:{current['sequence']}"}
+        for operation, path in SERVER_EFFECTS.items():
+            posts = [e for e in events if e.get("method") == "POST" and e.get("path") == path]
+            result[operation] = {"requests": len(posts), "running": running}
+        return result
 
     def __call__(self, task: ExecutionTask, timeout: float, observation: dict | None = None) -> list[dict]:
         try:

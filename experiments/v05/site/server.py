@@ -2,7 +2,9 @@
 
     python server.py --port 8765
 
-GET /__state returns a run ID, sequence, log, and state. /slow/export is delayed.
+GET /__state returns a run ID, sequence, log, state and the number of POST requests still being
+handled. /slow/export is delayed. --drop-path closes the connection after applying a POST to that
+path without answering (a lost response).
 """
 import argparse
 from html import escape
@@ -17,6 +19,7 @@ STATE: dict = {}
 LOG: list = []
 RUN_ID = ""
 SEQUENCE = 0
+INFLIGHT = 0  # Mutating requests received but not yet answered.
 
 
 def reset() -> None:
@@ -81,6 +84,7 @@ def render(path: str) -> bytes | None:
 
 class Handler(BaseHTTPRequestHandler):
     slow_seconds = 3.0
+    drop_paths: frozenset = frozenset()
 
     def _log(self, method: str, data: dict | None = None) -> None:
         global SEQUENCE
@@ -106,7 +110,7 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
         if path == "/__state":
             with LOCK:
-                return self._send(200, json.dumps({"run_id": RUN_ID, "sequence": SEQUENCE,
+                return self._send(200, json.dumps({"run_id": RUN_ID, "sequence": SEQUENCE, "inflight": INFLIGHT,
                                                    "log": LOG, "state": STATE}).encode(), "application/json")
         if path == "/favicon.ico":
             return self._send(404, b"")
@@ -115,6 +119,16 @@ class Handler(BaseHTTPRequestHandler):
         return self._send(200, body) if body else self._send(404, page("Not found", ""))
 
     def do_POST(self):
+        global INFLIGHT
+        with LOCK:
+            INFLIGHT += 1
+        try:
+            self._post()
+        finally:
+            with LOCK:
+                INFLIGHT -= 1
+
+    def _post(self):
         path = self.path.split("?")[0]
         raw = self.rfile.read(int(self.headers.get("Content-Length") or 0)).decode()
         data = {k: v[0] for k, v in parse_qs(raw).items()}
@@ -135,6 +149,9 @@ class Handler(BaseHTTPRequestHandler):
             time.sleep(self.slow_seconds)
             with LOCK:
                 STATE["exports"] += 1
+        if path in self.drop_paths:
+            self.close_connection = True
+            return
         self._redirect(path.rsplit("/", 1)[0] or "/" if path.count("/") > 1 else path)
 
     def log_message(self, *args):
@@ -147,9 +164,11 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--slow-seconds", type=float, default=3.0)
+    parser.add_argument("--drop-path", action="append", default=[], help="apply a POST, then drop the response")
     args = parser.parse_args()
     RUN_ID = args.run_id
     Handler.slow_seconds = args.slow_seconds
+    Handler.drop_paths = frozenset(args.drop_path)
     reset()
     ThreadingHTTPServer(("127.0.0.1", args.port), Handler).serve_forever()
 
