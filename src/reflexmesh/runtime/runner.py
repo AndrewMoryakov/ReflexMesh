@@ -305,7 +305,8 @@ class ControlledEnvironment:
         return obs
 
     def _record_observation(self, obs):
-        safe = {k: obs.fields[k] for k in ("url", "run_id", "target_ids", "document_id", "content_gaps")
+        safe = {k: obs.fields[k] for k in ("url", "run_id", "target_ids", "document_id", "content_gaps",
+                                           "filled_targets")
                 if hasattr(obs, "fields") and k in obs.fields}
         if safe:
             safe["captured_at"] = time.time()
@@ -524,6 +525,13 @@ class AttemptSupervisor:
                     row["driver_error"] = True
         elif event[0] == "observation":
             self.observation = event[1]
+            filled = event[1].get("filled_targets") if type(event[1].get("filled_targets")) is list else []
+            for row in actions:
+                # A fresh observation after the driver returned shows the typed field holding a value.
+                if (row.get("operation") == "type_text" and row.get("driver_returned") and
+                        row.get("effect") == "unknown" and row.get("target_id") in filled):
+                    row["effect"] = "applied"
+                    row["evidence_refs"] = [f"browser:{self.attempt_id}:{seq}"]
             for row in actions:
                 if (row.get("operation") == "navigate" and row.get("driver_returned") and
                         row.get("effect") == "unknown" and

@@ -116,6 +116,7 @@ class FixtureBrowser:
                                           user_data_dir=self.profile)
         self.targets: dict[str, tuple] = {}
         self.content_gaps: list[str] = []
+        self.filled_targets: list[str] = []
         self.page: tuple | None = None
         self.observation_url = ""
         self.unsupported = False
@@ -196,6 +197,7 @@ class FixtureBrowser:
         nodes = self._selector_map()
         page = self.page or {}
         self.content_gaps = []  # Enabled required text fields that are empty in this observation.
+        self.filled_targets = []  # Text fields holding a value in this observation (never the value).
         result, seen_ids, candidates = {}, set(), {}
         for index, node in nodes.items():
             attrs = getattr(node, "attributes", None)
@@ -232,6 +234,8 @@ class FixtureBrowser:
             result[index] = (backend_id, target_id, str(live.get("tag") or ""), str(live.get("type") or ""),
                              live.get("href"), bool(live.get("disabled")), live.get("form_action"),
                              live.get("form_method"), page.get("document_id"))
+            if OPERATIONS[target_id] == "type_text" and live.get("empty") is False:
+                self.filled_targets.append(target_id)
             if (OPERATIONS[target_id] == "type_text" and live.get("required") and live.get("empty") is True
                     and not live.get("disabled")):
                 self.content_gaps.append(target_id)
@@ -280,6 +284,7 @@ class FixtureBrowser:
         obs.fields["document_id"] = self.page["document_id"]
         obs.fields["target_ids"] = [node[1] for node in self.targets.values()]
         obs.fields["content_gaps"] = sorted(self.content_gaps)
+        obs.fields["filled_targets"] = sorted(self.filled_targets)
         return obs
 
     def _valid_url(self, url: str) -> bool:

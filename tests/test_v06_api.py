@@ -292,6 +292,13 @@ class Handoff(unittest.TestCase):
                          ("unknown_effect", {"allowed": False, "reason": "unresolved_effect"}))
         self.assertEqual(handoff["actions"][0]["outcome"], "possibly_done")
 
+    def test_session_local_uncertainty_does_not_block_continuation(self):
+        actions = [{"id": 2, "operation": "type_text", "target_id": "name", "slot_ref": "name@1", "effect": "unknown"}]
+        handoff = self.build(synthetic_result(self.task, status="cancelled", reason="cancel_requested",
+                                              actions=actions))
+        self.assertEqual((handoff["kind"], handoff["continuation"]["allowed"]), ("cancelled", True))
+        self.assertEqual(handoff["actions"][0]["outcome"], "possibly_done")
+
     def test_content_gap_yields_needs_content(self):
         handoff = self.build(synthetic_result(self.task, status="failed", reason="postcondition_failed",
                                               gaps=["support-message"]))
@@ -303,6 +310,44 @@ class Handoff(unittest.TestCase):
         used = {"steps": 8, "model_calls": 1, "wall_seconds": 3}
         handoff = self.build(synthetic_result(self.task, used=used))
         self.assertEqual(handoff["continuation"], {"allowed": False, "reason": "budget_exhausted"})
+
+
+class TypedFieldEvidence(unittest.TestCase):
+    def test_fresh_observation_of_filled_field_resolves_typing(self):
+        from reflexmesh.runtime.runner import AttemptSupervisor, ControlledEnvironment, WorkerResult
+        from types import SimpleNamespace
+
+        class Env:
+            filled = []
+
+            def reset(self, goal):
+                pass
+
+            def observe(self):
+                return SimpleNamespace(fields={"url": "http://127.0.0.1:1/form", "filled_targets": list(self.filled)},
+                                       candidates={})
+
+            def describe(self, action, params):
+                return {"operation": "type_text", "target_id": "name", "slot_ref": "name@1"}
+
+            def execute(self, action, params):
+                self.filled.append("name")
+                return SimpleNamespace(ok=True)
+
+            def close(self):
+                pass
+
+        def worker(gate, events):
+            env = ControlledEnvironment(Env(), gate, events, lambda *_: None)
+            env.observe()
+            env.execute("type_text", {"field": "1", "value": "name@1"})
+            env.observe()
+            return WorkerResult("no_confident_action")
+
+        data = task_for(free_port(), wall=3)
+        result = AttemptSupervisor(ExecutionTask.from_dict(data), worker).run()
+        self.assertEqual(result["actions"][0]["effect"], "applied")
+        self.assertTrue(result["actions"][0]["evidence_refs"][0].startswith("browser:"))
 
 
 class Continuation(unittest.TestCase):

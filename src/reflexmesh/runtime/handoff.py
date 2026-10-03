@@ -9,6 +9,8 @@ from __future__ import annotations
 from reflexmesh.contracts.execution import ExecutionTask
 
 OUTCOMES = {"applied": "done", "not_applied": "not_done", "unknown": "possibly_done"}
+# Effects confined to the attempt's own browser session, which is discarded after every attempt.
+SESSION_LOCAL = {"navigate", "type_text", "toggle_setting"}
 KINDS = {"blocked": "blocked", "incomplete": "incomplete", "cancelled": "cancelled", "failed": "failed"}
 
 
@@ -52,7 +54,8 @@ def build_handoff(task: ExecutionTask, result: dict, *, root_limits: dict, usage
         if row.get("slot_ref"):
             item["slot_ref"] = row["slot_ref"]
         actions.append(item)
-    unresolved = [a for a in actions if a["operation"] != "navigate" and a["outcome"] == "possibly_done"]
+    # Only an operation with an external effect can make a continuation a blind repeat (INV-11).
+    unresolved = [a for a in actions if a["operation"] not in SESSION_LOCAL and a["outcome"] == "possibly_done"]
     gaps = content_gaps(result)
     if unresolved:
         kind = "unknown_effect"
