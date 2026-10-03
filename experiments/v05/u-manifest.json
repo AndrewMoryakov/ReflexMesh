@@ -1,5 +1,7 @@
 {
   "schema_version": "v05-u-manifest/0.1",
+  "revision": 2,
+  "revision_note": "2026-10-03: adds REV.* rows closing the 2026-09-25 review (sections 2-5); C-rows unchanged.",
   "spec_ref": "docs/specs/V0.5.md#9-fixed-acceptance-gate-r7",
   "levels": ["U"],
   "repetitions": 1,
@@ -39,6 +41,23 @@
     {"id":"C11.old_delayed_export","expected":"old run cannot satisfy new-run evidence","test":"test_v05_fixture.FixtureChecks.test_delayed_old_export_cannot_satisfy_new_fixture"},
     {"id":"C11.wrong_run_evidence","expected":"mismatched run rejected","test":"test_v05_fixture.FixtureChecks.test_wrong_run_is_rejected"},
     {"id":"C12.cancel_late_constraint_violation","expected":"cancelled; task=fail","test":"test_v05_runtime.Lifecycle.test_cancel_then_confirmed_late_constraint_violation"},
-    {"id":"C12.redacted_logs","expected":"no raw slots or sentinels; evidence linked","test":"test_v05_fixture.FixtureChecks.test_cli_explains_missing_browser"}
+    {"id":"C12.redacted_logs","expected":"no raw slots or sentinels; evidence linked","test":"test_v05_fixture.FixtureChecks.test_cli_explains_missing_browser"},
+    {"id":"REV.constraint_rows_complete","expected":"completed attempt carries six runtime constraint rows, all pass","test":"test_v05_constraints.ConstraintRows.test_completed_attempt_carries_every_runtime_constraint"},
+    {"id":"REV.missing_session_evidence","expected":"session constraint unknown; no completion","test":"test_v05_constraints.ConstraintRows.test_missing_session_evidence_prevents_completion"},
+    {"id":"REV.permission_violation_sticky","expected":"failed/constraint_violated; task=fail","test":"test_v05_constraints.ConstraintRows.test_permission_violation_is_confirmed_and_sticky"},
+    {"id":"REV.policy_revocation_after_selection","expected":"blocked/policy_denied; dispatch=0; revision 2","test":"test_v05_constraints.PolicyRevision.test_revocation_after_selection_blocks_dispatch"},
+    {"id":"REV.unrelated_revocation_reobserves","expected":"stale_policy re-observation; one dispatch; completed","test":"test_v05_constraints.PolicyRevision.test_unrelated_revocation_forces_fresh_observation"},
+    {"id":"REV.adapter_revocation_before_commit","expected":"adapter path: blocked/policy_denied; dispatch=0","test":"test_v05_browser_adapter.AdapterContract.test_policy_revocation_after_selection_prevents_dispatch"},
+    {"id":"REV.worker_dies_holding_gate","expected":"failed/executor_error; committed action effect=unknown; bounded","test":"test_v05_constraints.GateFailure.test_worker_dies_holding_gate"},
+    {"id":"REV.worker_hangs_holding_gate","expected":"failed/executor_error; forced cleanup within G+K+1","test":"test_v05_constraints.GateFailure.test_worker_hangs_holding_gate"},
+    {"id":"REV.descendant_cleanup","expected":"surviving process-group descendant terminated; cleanup=forced","test":"test_v05_constraints.Cleanup.test_surviving_descendant_is_terminated"},
+    {"id":"REV.deadline_and_exit_bounds","expected":"deadline delay <= 0.25 s; exit <= terminal + G + K + 1","test":"test_v05_constraints.Cleanup.test_deadline_transition_and_exit_bounds"},
+    {"id":"REV.lost_return_reconciled_applied","expected":"server record reconciles lost return as applied","test":"test_v05_constraints.Reconciliation.test_lost_return_reconciled_as_applied_from_server_record"},
+    {"id":"REV.absent_request_not_applied","expected":"no server request after browser stop: not_applied","test":"test_v05_constraints.Reconciliation.test_absent_request_after_browser_stop_is_not_applied"},
+    {"id":"REV.document_identity","expected":"new document with the same URL is stale","test":"test_v05_browser_adapter.AdapterContract.test_new_document_with_same_url_is_stale"},
+    {"id":"REV.disabled_target","expected":"disabled target not offered; disabling after observation is stale","test":"test_v05_browser_adapter.AdapterContract.test_disabled_target_is_not_offered_and_disabling_is_stale"},
+    {"id":"REV.form_endpoint","expected":"form endpoint must match the fixture definition","test":"test_v05_browser_adapter.AdapterContract.test_form_endpoint_must_match_fixture_definition"},
+    {"id":"REV.frames_unsupported","expected":"frames yield adapter_contract_unsupported","test":"test_v05_browser_adapter.AdapterContract.test_frames_fail_closed"},
+    {"id":"REV.attributeless_node_unsupported","expected":"node without attributes yields adapter_contract_unsupported","test":"test_v05_browser_adapter.AdapterContract.test_node_without_attributes_fails_closed"}
   ]
 }

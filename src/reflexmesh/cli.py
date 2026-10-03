@@ -63,6 +63,7 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--chrome", metavar="FILE", help="explicit Chromium/Chrome executable")
     run.add_argument("--jev-url", default="http://127.0.0.1:8787")
     run.add_argument("--timeout", type=float, default=30.0)
+    run.add_argument("--faults", metavar="FILE", help="acceptance fault injection (JSON); test use only")
     try:
         args = parser.parse_args(argv)
         if args.command == "run":
