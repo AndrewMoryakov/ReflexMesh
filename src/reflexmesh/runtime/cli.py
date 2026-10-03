@@ -182,11 +182,7 @@ def run_execution(args) -> int:
         return _error("output_unavailable")
 
     supervisor = AttemptSupervisor(task, BrowserExecutionStrategy(task, args, entries, faults),
-<<<<<<< HEAD
                                    verifier_factory=FixtureVerifier, attempt_id=attempt_id)
-=======
-                                   verifier_factory=FixtureVerifier)
->>>>>>> origin/v0.5-acceptance
     signal.signal(signal.SIGINT, lambda *_: supervisor.cancel())
     control = Path(args.control_dir) if getattr(args, "control_dir", None) else None
     if control is not None:
