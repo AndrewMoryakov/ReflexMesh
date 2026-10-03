@@ -95,6 +95,15 @@ def _quiet_dependency_logs(task: ExecutionTask) -> None:
             handler.addFilter(redact)
 
 
+def slot_descriptions(slots) -> dict[str, str]:
+    """Choice keys are exact slot references; descriptions are readable names (never values)."""
+    versions: dict[str, int] = {}
+    for slot in slots:
+        versions[slot.id] = versions.get(slot.id, 0) + 1
+    return {slot.reference: (slot.id if versions[slot.id] == 1 else f"{slot.id} (version {slot.version})")
+            for slot in slots}
+
+
 class FixtureBrowser:
     """Filters SOH candidates and revalidates fixture node identity before dispatch."""
 
@@ -267,17 +276,16 @@ class FixtureBrowser:
         if self.unsupported:
             raise RuntimeStop("adapter_contract_unsupported")
         permitted = {index: OPERATIONS[node[1]] for index, node in self.targets.items() if self._admissible(node)}
-        obs.candidates["elements"] = {index: f"{label} [reflex:{self.targets[index][1]}]" for index, label in
-                                      obs.candidates.get("elements", {}).items()
+        # The model sees the page's own labels; fixture target IDs stay internal (self.targets).
+        obs.candidates["elements"] = {index: label for index, label in obs.candidates.get("elements", {}).items()
                                       if index in permitted and permitted[index] != "type_text"}
-        obs.candidates["text_fields"] = {index: f"{label} [reflex:{self.targets[index][1]}]" for index, label in
-                                         obs.candidates.get("text_fields", {}).items()
+        obs.candidates["text_fields"] = {index: label for index, label in obs.candidates.get("text_fields", {}).items()
                                          if index in permitted and permitted[index] == "type_text"}
         if not obs.candidates.get("text_fields"):
             obs.candidates.pop("text_fields", None)
             obs.candidates.pop("text_values", None)
         else:
-            obs.candidates["text_values"] = {s.reference: s.reference for s in self.task.slots}
+            obs.candidates["text_values"] = slot_descriptions(self.task.slots)
         for name in ("options", "tabs"):
             obs.candidates.pop(name, None)
         obs.fields["run_id"] = self.task.run_id

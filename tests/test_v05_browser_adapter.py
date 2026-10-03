@@ -213,6 +213,17 @@ class AdapterContract(unittest.TestCase):
         self.assertEqual(obs.candidates["elements"], {})
         self.assertEqual(adapter.admit("click", {"element": "0"}), "policy_denied")
 
+    def test_model_sees_page_labels_and_readable_slot_names(self):
+        from reflexmesh.adapters.system_one.fixture_browser import slot_descriptions
+        adapter = self.setup_adapter()
+        obs = adapter.observe()
+        self.assertEqual(obs.candidates["elements"], {"0": "button 'Send'"})
+        slots = ExecutionTask.from_dict({**sample(), "text_slots": [
+            {"id": "name", "version": 1, "value": "a"}, {"id": "name", "version": 2, "value": "b"},
+            {"id": "email", "version": 1, "value": "c"}]}).slots
+        self.assertEqual(slot_descriptions(slots), {"name@1": "name (version 1)", "name@2": "name (version 2)",
+                                                    "email@1": "email"})
+
     def test_outside_origin_is_rejected(self):
         adapter = self.setup_adapter()
         adapter.backend.url = "https://external.example/form"
