@@ -1,6 +1,6 @@
 # Текущее состояние ReflexMesh
 
-Дата проверки: 2026-09-24. Ранний контрактный baseline:
+Дата проверки: 2026-10-03 (V0.5); ранее 2026-09-24. Ранний контрактный baseline:
 [62ccf0d](https://github.com/AndrewMoryakov/ReflexMesh/commit/62ccf0d29c5d0e599f92561b4d8da3f980d63719).
 Последующий live-прогон и расширенные сценарии имеют собственные commit и среду в отчётах.
 Live gate V0.2 закрыт 2026-09-24 для `openrouter:~typesafe/jev-latest` на коммите 7c03412 ([отчёт](research/V0.2-live-openrouter.md)).
@@ -21,6 +21,7 @@ Live gate V0.2 закрыт 2026-09-24 для `openrouter:~typesafe/jev-latest` 
 | V0.2 live | ReflexMesh → JevRouter → OpenRouter → `typesafe/jev-1.13-20260917` | [Live-отчёт](research/V0.2-live-openrouter.md): 5/5 пунктов pass, вызовы подтверждены ledger OpenRouter; typesafe напрямую не проверен. [Расширенные сценарии](research/V0.2-live-extended-openrouter.md): все три маршрута, RU/EN, пары, 5 повторов, live-ошибка провайдера |
 | Upstream | JevRouter на закреплённом commit f944acb | Проверено HTTP/contract и live через OpenRouter |
 | Платформы | Linux/Python 3.12.14/Node 24.19.0; Windows 11/Python 3.13.15/Node 24.15.0 | 25 тестов проходят на обеих платформах (Windows-специфичный timeout в тесте исправлен в 599b58d) |
+| V0.5 | `reflexmesh run`: supervisor и worker, dispatch gate, лимиты, отмена, ревизия политики, шесть ограничений исполнения, адаптер Browser Use с идентичностью документа/узла, TextSlots, verifier, изолированный стенд | [Приёмка](research/V0.5-acceptance.md) на a-moryakov-nb (WSL, Chromium 153), коммит 530f6b5: U 53/53, B 84/84, J 15/18. J: сбои только на форме — Jev не набирает порог 0.70 на первом вводе; runtime каждый раз честно возвращал `failed/postcondition_failed` |
 
 Числа тестов и конфигурации относятся к указанным в отчётах прогонам;
 актуализация документации сама по себе не является новым runtime-прогоном.
@@ -30,10 +31,9 @@ HTTP-пути; выбранный маршрут никогда не означ�
 ## Пока отсутствует
 
 - Live-подтверждение прямого провайдера typesafe.
-- V0.5 acceptance remains open. Initial supervisor, cancellation/dispatch gate, TextSlot
-  input validation, isolated test fixture, verifier predicates, and optional SOH adapter
-  are implemented locally. The [implementation progress report](research/V0.5-implementation-progress.md)
-  identifies exactly which checks ran and which browser/live checks remain pending.
+- Стабильный J для сценариев с вводом текста: уверенность Jev в `type_text` ниже порога записи
+  SystemOneHarness ([диагностика](research/V0.5-acceptance.md#j-failures-and-diagnosis)); измеренная
+  стоимость micro-решений (OpenRouter не возвращает cost — `cost=null` с причиной).
 - Cua and desktop actions; recovery and a durable execution receipts store.
 - MCP Task API, Pi-интеграция, HTTP Task API.
 - OCR/VLM, ClawBridge, Skyvern, Ui.Vision, Jev meso-supervisor.
@@ -51,7 +51,9 @@ V0.3 выполнен по [утверждённому протоколу](specs
 за решение. Слабое место — смысловой отказ: Jev выбирает ближайший разрешённый маршрут
 (корректный отказ 25% против 79% у LLM). [V0.3b](research/V0.3b-refusal.md): кандидат `NONE`
 поднимает корректный отказ Jev до 96% без потерь на обычных задачах; реализовано в адаптере
-([ADR-0003](architecture/ADR-0003-none-candidate-refusal.md), [live-проверка](research/ADR-0003-live-check.md)). The next open gate in the [roadmap](ROADMAP.md) is V0.5.
+([ADR-0003](architecture/ADR-0003-none-candidate-refusal.md), [live-проверка](research/ADR-0003-live-check.md)).
+V0.5 проверен на U и B, J с ограничением ([приёмка](research/V0.5-acceptance.md)); следующий
+открытый gate по [roadmap](ROADMAP.md) — V0.6.
 Правила INV-03 уточнены через [ADR-0002](architecture/ADR-0002-routing-effects-and-loop-control.md).
 Новых execution-свидетельств эти документы не добавляют; live-свидетельства
 отдельно опубликованы для OpenRouter.
