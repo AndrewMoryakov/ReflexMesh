@@ -24,7 +24,7 @@ def sample():
             "start_path": "/form", "permissions": ["navigate", "type_text", "submit_form"],
             "text_slots": [{"id": "name", "version": 1, "value": "secret-text"}],
             "criteria": [{"id": "sent", "kind": "postcondition", "predicate": "account_intact", "args": {}}],
-            "limits": {"wall_seconds": 0.3, "max_steps": 3, "max_model_calls": 3,
+            "limits": {"wall_seconds": 2.0, "max_steps": 3, "max_model_calls": 3,
                        "max_action_retries": 0}}
 
 
@@ -122,6 +122,9 @@ class FakeNavigationEnvironment:
 
     def reset(self, goal):
         pass
+
+    def session_info(self):
+        return {"session_id": "fake-session", "fresh_profile": True, "attached": False}
 
     def observe(self):
         return SimpleNamespace(fields={"url": self.task.origin + self.task.start_path,
@@ -273,6 +276,12 @@ class Lifecycle(unittest.TestCase):
     def task(self):
         return ExecutionTask.from_dict(sample())
 
+    def deadline_task(self):
+        """A short wall for checks whose subject is the deadline itself."""
+        data = sample()
+        data["limits"]["wall_seconds"] = 0.3
+        return ExecutionTask.from_dict(data)
+
     def test_verified_finish(self):
         result = AttemptSupervisor(self.task(), finish_no_action, pass_verifier).run()
         self.assertEqual((result["attempt_status"], result["task_outcome"]), ("completed", "pass"))
@@ -362,7 +371,7 @@ class Lifecycle(unittest.TestCase):
     def test_deadline_in_flight_keeps_unknown_effect_and_sequence(self):
         ctx = mp.get_context("fork")
         entered, release = ctx.Event(), ctx.Event()
-        sup = AttemptSupervisor(self.task(), lambda g, e: in_flight(g, e, entered, release), pass_verifier)
+        sup = AttemptSupervisor(self.deadline_task(), lambda g, e: in_flight(g, e, entered, release), pass_verifier)
         t = threading.Timer(0.5, release.set)
         t.start()
         result = sup.run()
@@ -432,7 +441,7 @@ class Lifecycle(unittest.TestCase):
 
     def test_hung_worker_is_bounded(self):
         started = time.monotonic()
-        result = AttemptSupervisor(self.task(), never_returns, pass_verifier).run()
+        result = AttemptSupervisor(self.deadline_task(), never_returns, pass_verifier).run()
         self.assertEqual(result["attempt_status"], "incomplete")
         self.assertEqual(result["stop_reason"], "deadline")
         self.assertEqual(result["cleanup"], "forced")
@@ -440,7 +449,7 @@ class Lifecycle(unittest.TestCase):
         self.assertLess(time.monotonic() - started, 6.5)
 
     def test_hung_provider_is_bounded(self):
-        result = AttemptSupervisor(self.task(), hung_provider).run()
+        result = AttemptSupervisor(self.deadline_task(), hung_provider).run()
         self.assertEqual((result["stop_reason"], result["cleanup"], result["budget"]["model_calls"]),
                          ("deadline", "forced", 1))
         self.assertEqual(result["budget"]["dispatches"], 0)
@@ -448,7 +457,7 @@ class Lifecycle(unittest.TestCase):
     def test_hung_driver_is_bounded_with_unknown_effect(self):
         ctx = mp.get_context("fork")
         entered, release = ctx.Event(), ctx.Event()
-        result = AttemptSupervisor(self.task(), lambda g, e: in_flight(g, e, entered, release)).run()
+        result = AttemptSupervisor(self.deadline_task(), lambda g, e: in_flight(g, e, entered, release)).run()
         self.assertEqual((result["attempt_status"], result["stop_reason"], result["cleanup"],
                           result["budget"]["dispatches"]),
                          ("incomplete", "deadline", "forced", 1))
@@ -456,7 +465,7 @@ class Lifecycle(unittest.TestCase):
         self.assertIsNone(result["actions"][0]["return_seq"])
 
     def test_hung_close_is_bounded(self):
-        result = AttemptSupervisor(self.task(), hung_close).run()
+        result = AttemptSupervisor(self.deadline_task(), hung_close).run()
         self.assertEqual((result["stop_reason"], result["cleanup"]), ("deadline", "forced"))
 
     def test_second_mutating_proposal_is_rejected(self):
@@ -474,7 +483,7 @@ class Lifecycle(unittest.TestCase):
 
     def test_hung_verifier_cannot_block_supervisor(self):
         started = time.monotonic()
-        result = AttemptSupervisor(self.task(), finish_no_action, hung_verifier).run()
+        result = AttemptSupervisor(self.deadline_task(), finish_no_action, hung_verifier).run()
         self.assertEqual((result["attempt_status"], result["stop_reason"]),
                          ("incomplete", "deadline"))
         self.assertLess(time.monotonic() - started, 2)

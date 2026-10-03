@@ -133,8 +133,7 @@ class FixtureChecks(unittest.TestCase):
             read_fixture(ExecutionTask.from_dict(wrong), 1)
 
     def test_cli_explains_missing_browser(self):
-        if __import__("importlib").util.find_spec("browser_use") is not None:
-            self.skipTest("Browser Use installed; exercise the full integration instead")
+        # An explicit missing executable makes this independent of locally installed browsers.
         data = copy.deepcopy(sample())
         data["fixture"] = {"origin": self.origin, "run_id": self.run_id}
         with tempfile.TemporaryDirectory() as tmp:
@@ -144,7 +143,8 @@ class FixtureChecks(unittest.TestCase):
             env = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
             proc = subprocess.run([sys.executable, "-m", "reflexmesh", "run", "--input", str(task_path),
                                    "--output-dir", str(output_dir), "--routing-provider", "stub",
-                                   "--action-provider", "script", "--script", str(script_path)],
+                                   "--action-provider", "script", "--script", str(script_path),
+                                   "--chrome", "/nonexistent/reflexmesh-test-chrome"],
                                   env=env, capture_output=True, timeout=5)
             self.assertEqual(proc.returncode, 3, proc.stderr)
             result = json.loads(proc.stdout)

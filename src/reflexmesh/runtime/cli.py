@@ -17,6 +17,7 @@ from reflexmesh.contracts.execution import ExecutionTask, PREDICATES
 from reflexmesh.contracts.task import Route, Task, ValidationError
 from reflexmesh.routing.stub import route_task
 from reflexmesh.routing.jev_router import route_task as jev_route, validate_config
+from reflexmesh.runtime.faults import validate_faults
 from reflexmesh.runtime.runner import AttemptSupervisor, WorkerResult
 from reflexmesh.verification.verifier import FixtureVerifier, read_fixture
 
@@ -67,8 +68,9 @@ def _script_provider(entries):
 class BrowserExecutionStrategy:
     """Run preflight, macro routing and the browser loop in one supervised worker."""
 
-    def __init__(self, task, args, entries):
+    def __init__(self, task, args, entries, faults=None):
         self.task, self.args, self.entries = task, args, entries
+        self.faults = dict(faults or {})
 
     def __call__(self, gate, events):
         task, args = self.task, self.args
@@ -103,17 +105,20 @@ class BrowserExecutionStrategy:
 
         if importlib.util.find_spec("systemone_harness") is None or importlib.util.find_spec("browser_use") is None:
             return WorkerResult("blocked", "executor_unavailable")
-        from systemone_harness.envs.browser import default_chrome
-        chrome = args.chrome or default_chrome()
+        chrome = args.chrome
+        if not chrome:
+            from systemone_harness.envs.browser import default_chrome
+            chrome = default_chrome()
         if not chrome or not (Path(chrome).is_file() or shutil.which(chrome)):
             return WorkerResult("blocked", "executor_unavailable")
         gate.remaining()
         events.put(("executor_selected", "browser.soh"))
-        strategy = HarnessStrategy(task.goal, functools.partial(FixtureBrowser, task, chrome=chrome),
+        strategy = HarnessStrategy(task.goal, functools.partial(FixtureBrowser, task, chrome=chrome,
+                                                                faults=self.faults),
                                    FixtureBrowser.action_space,
                                    functools.partial(_script_provider, self.entries) if self.entries is not None
                                    else _jev_action_provider,
-                                   admit=None, model=self.entries is None, bootstrap=True)
+                                   admit=None, model=self.entries is None, bootstrap=True, faults=self.faults)
         return strategy(gate, events)
 
 
@@ -130,6 +135,7 @@ def run_execution(args) -> int:
             entries = None
         if args.routing_provider == "jevrouter":
             validate_config(args.jev_url, args.timeout)
+        faults = validate_faults(_load(args.faults)) if getattr(args, "faults", None) else {}
     except (OSError, UnicodeError, ValueError, json.JSONDecodeError, RecursionError):
         return _error("invalid_input")
     output = Path(args.output_dir)
@@ -141,7 +147,7 @@ def run_execution(args) -> int:
     except OSError:
         return _error("output_unavailable")
 
-    supervisor = AttemptSupervisor(task, BrowserExecutionStrategy(task, args, entries),
+    supervisor = AttemptSupervisor(task, BrowserExecutionStrategy(task, args, entries, faults),
                                    verifier_factory=FixtureVerifier)
     previous = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, lambda *_: supervisor.cancel())
@@ -149,6 +155,8 @@ def run_execution(args) -> int:
         result = supervisor.run()
     finally:
         signal.signal(signal.SIGINT, previous)
+    if faults:
+        result["faults"] = sorted(faults)  # Injected acceptance faults are part of the record.
     result.update(trace_ref="trace.jsonl", evidence_refs=list(dict.fromkeys(
         [ref for row in result["verification"] for ref in row.get("evidence_refs", [])] +
         [ref for row in result["actions"] for ref in row.get("evidence_refs", [])])))
