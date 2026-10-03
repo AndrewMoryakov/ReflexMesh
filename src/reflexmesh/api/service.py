@@ -116,7 +116,7 @@ class TaskService:
             (directory / "task.json").write_text(json.dumps(task, indent=1), encoding="utf-8")
             command = [self.python, "-m", "reflexmesh", "run", "--input", "task.json", "--output-dir", "out",
                        "--routing-provider", routing_provider, "--action-provider", action_provider,
-                       "--attempt-id", attempt_id]
+                       "--attempt-id", attempt_id, "--control-dir", "."]
             if script is not None:
                 (directory / "script.json").write_text(json.dumps(script, indent=1), encoding="utf-8")
                 command += ["--script", "script.json"]
@@ -191,12 +191,24 @@ class TaskService:
         process = self.processes.get(attempt_id)
         if process is None or process.poll() is not None:
             return {"attempt_id": attempt_id, "cancel": "already_terminal"}
-        try:
-            process.send_signal(signal.SIGINT)  # The CLI's own cancellation path (same as Ctrl-C).
-        except ProcessLookupError:
+        if not self._request_cancel(attempt_id, process):
             return {"attempt_id": attempt_id, "cancel": "already_terminal"}
         return {"attempt_id": attempt_id, "cancel": "requested",
                 "note": "acceptance is decided at the attempt's gate; check status for the terminal state"}
+
+    def _request_cancel(self, attempt_id: str, process) -> bool:
+        """Cancel through the CLI's own SIGINT path without racing its start-up.
+
+        Write the request first, then signal only once the CLI has announced its handler; a CLI
+        that announces later sees the request itself. Either side therefore observes the other."""
+        directory = self.root / "attempts" / attempt_id
+        (directory / "cancel").touch()
+        if (directory / "ready").exists():
+            try:
+                process.send_signal(signal.SIGINT)
+            except ProcessLookupError:
+                return False
+        return True
 
     def continue_task(self, parent_attempt_id: str, changes: dict, routing_provider: str, action_provider: str,
                       script=None, faults=None) -> dict:
@@ -266,11 +278,8 @@ class TaskService:
         with self.lock:
             self.closed = True
             running = {k: p for k, p in self.processes.items() if p.poll() is None}
-        for process in running.values():
-            try:
-                process.send_signal(signal.SIGINT)
-            except ProcessLookupError:
-                pass
+        for attempt_id, process in running.items():
+            self._request_cancel(attempt_id, process)
         limit = time.monotonic() + SHUTDOWN_BOUND + 2.0
         while time.monotonic() < limit and any(p.poll() is None for p in running.values()):
             time.sleep(0.05)

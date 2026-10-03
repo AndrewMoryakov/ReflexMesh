@@ -183,12 +183,19 @@ def run_execution(args) -> int:
 
     supervisor = AttemptSupervisor(task, BrowserExecutionStrategy(task, args, entries, faults),
                                    verifier_factory=FixtureVerifier, attempt_id=attempt_id)
-    previous = signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGINT, lambda *_: supervisor.cancel())
+    control = Path(args.control_dir) if getattr(args, "control_dir", None) else None
+    if control is not None:
+        # Handshake with a Task API caller: announce the handler, then honour a cancel that was
+        # requested before it existed (the caller only signals once 'ready' is present).
+        (control / "ready").touch()
+        if (control / "cancel").exists():
+            supervisor.cancel()
     try:
         result = supervisor.run()
     finally:
-        signal.signal(signal.SIGINT, previous)
+        # A late SIGINT after the terminal transition is a no-op; it must not interrupt the output.
+        signal.signal(signal.SIGINT, lambda *_: None)
     if faults:
         result["faults"] = sorted(faults)  # Injected acceptance faults are part of the record.
     result.update(trace_ref="trace.jsonl", evidence_refs=list(dict.fromkeys(

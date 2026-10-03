@@ -198,6 +198,19 @@ class McpProtocol(unittest.TestCase):
         again, _ = self.client.tool("reflexmesh_cancel", attempt_id=first["attempt_id"])
         self.assertEqual(again["cancel"], "already_terminal")
 
+    def test_immediate_cancel_is_not_lost(self):
+        # A cancel that arrives before the CLI has installed its handler must still be honoured.
+        self.client.initialize()
+        submitted, _ = self.client.tool("reflexmesh_submit", task=task_for(self.silent.port, wall=20),
+                                        routing_provider="stub", action_provider="script",
+                                        script=[{"action": "finish"}])
+        cancel, _ = self.client.tool("reflexmesh_cancel", attempt_id=submitted["attempt_id"])
+        self.assertEqual(cancel["cancel"], "requested")
+        done, _ = self.client.tool("reflexmesh_status", attempt_id=submitted["attempt_id"], wait_seconds=20)
+        self.assertEqual(done["state"], "terminal", done)
+        self.assertEqual(done["result"]["attempt_status"], "cancelled")
+        self.assertEqual(done["result"]["budget"]["dispatches"], 0)
+
     def test_shutdown_cancels_and_reaps_running_attempt(self):
         self.client.initialize()
         submitted, _ = self.client.tool("reflexmesh_submit", task=task_for(self.silent.port, wall=60),

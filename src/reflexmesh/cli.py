@@ -66,6 +66,7 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--faults", metavar="FILE", help="acceptance fault injection (JSON); test use only")
     run.add_argument("--attempt-id", metavar="HEX32", help="attempt ID chosen by a Task API caller")
     run.add_argument("--chain", metavar="FILE", help="link to a parent attempt (JSON); set by the Task API")
+    run.add_argument("--control-dir", metavar="DIR", help="cancellation handshake directory; set by the Task API")
     mcp = sub.add_parser("mcp", help="serve the Task API over MCP (stdio)")
     mcp.add_argument("--state-dir", required=True, metavar="DIR")
     mcp.add_argument("--chrome", metavar="FILE", help="Chromium executable for browser attempts")
