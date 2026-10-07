@@ -2,12 +2,14 @@
 
 import copy
 import multiprocessing as mp
+import signal
 import sys
 import threading
 import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -43,6 +45,29 @@ def unavailable_verifier(task, timeout):
 def paused_verifier(task, timeout, observation, entered, release):
     entered.set()
     release.wait(2)
+    return pass_verifier(task, timeout)
+
+
+def blocked_verifier(task, timeout, entered, ignore_term=False):
+    if ignore_term:
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    entered.set()
+    # No timeout or cooperative release: cancellation must stop the process.
+    threading.Event().wait()
+
+
+def pass_on_termination(task, timeout, entered, returned):
+    stopped = False
+
+    def stop(*_):
+        nonlocal stopped
+        stopped = True
+
+    signal.signal(signal.SIGTERM, stop)
+    entered.set()
+    while not stopped:
+        time.sleep(0.01)
+    returned.set()
     return pass_verifier(task, timeout)
 
 
@@ -478,6 +503,135 @@ class Lifecycle(unittest.TestCase):
         self.assertEqual((result["attempt_status"], result["stop_reason"]),
                          ("incomplete", "deadline"))
         self.assertLess(time.monotonic() - started, 2)
+
+    def _cancel_blocked_verifier(self, verifier, entered):
+        data = sample()
+        data["limits"]["wall_seconds"] = 30
+        sup = AttemptSupervisor(ExecutionTask.from_dict(data), finish_no_action, verifier)
+        attempts = []
+        processes = []
+        make_process = sup.context.Process
+
+        def record_process(*args, **kwargs):
+            process = make_process(*args, **kwargs)
+            processes.append(process)
+            return process
+
+        def cancel():
+            if entered.wait(2):
+                cancelled_at = time.monotonic()
+                attempts.append((sup.cancel(), cancelled_at))
+
+        thread = threading.Thread(target=cancel)
+        thread.start()
+        try:
+            with patch.object(sup.context, "Process", side_effect=record_process):
+                result = sup.run()
+            finished_at = time.monotonic()
+            verifier_alive = any(process.is_alive() for process in processes)
+        finally:
+            thread.join(2)
+            # Keep a failing regression from leaking a deliberately immortal child.
+            for process in processes:
+                if process.is_alive():
+                    process.kill()
+                process.join(timeout=1)
+        self.assertFalse(thread.is_alive())
+        self.assertEqual(len(attempts), 1)
+        accepted, cancelled_at = attempts[0]
+        self.assertTrue(accepted)
+        self.assertLess(finished_at - cancelled_at, 2)
+        self.assertEqual(len(processes), 1)
+        self.assertFalse(verifier_alive)
+        self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
+                         ("cancelled", "cancel_requested", "unknown"))
+        self.assertEqual(result["verification"][0]["status"], "unknown")
+        self.assertEqual(result["verification"][0]["evidence_refs"], [])
+        return result
+
+    def test_cancel_permanently_blocked_verifier_does_not_wait_for_deadline(self):
+        for ignore_term in (False, True):
+            with self.subTest(ignore_term=ignore_term):
+                entered = mp.get_context("fork").Event()
+                self._cancel_blocked_verifier(
+                    lambda task, remaining: blocked_verifier(task, remaining, entered, ignore_term), entered)
+
+    def test_late_verifier_pass_during_cancel_cleanup_is_discarded(self):
+        ctx = mp.get_context("fork")
+        entered, returned = ctx.Event(), ctx.Event()
+        result = self._cancel_blocked_verifier(
+            lambda task, remaining: pass_on_termination(task, remaining, entered, returned), entered)
+        self.assertTrue(returned.is_set())
+        self.assertEqual(result["actions"], [])
+
+    def test_cancel_after_verifier_result_before_commit_discards_evidence(self):
+        data = sample()
+        data["limits"]["wall_seconds"] = 30
+        data["text_slots"].append({"id": "email", "version": 1, "value": "a@example.test"})
+        data["criteria"] = [{"id": "sent", "kind": "postcondition", "predicate": "form_submitted_once",
+                             "args": {"name_slot": "name@1", "email_slot": "email@1"}}]
+        ctx = mp.get_context("fork")
+        entered, release = ctx.Event(), ctx.Event()
+        release.set()
+        sup = AttemptSupervisor(ExecutionTask.from_dict(data),
+                                lambda g, e: submitted_in_flight(g, e, entered, release), pass_verifier)
+        verify = sup._verify
+
+        def cancel_after_result(*args, **kwargs):
+            verification = verify(*args, **kwargs)
+            self.assertEqual(verification[0]["status"], "pass")
+            self.assertTrue(sup.cancel())
+            # An accepted cancellation still wins if the deadline expires next.
+            sup.gate.deadline = time.monotonic() - 1
+            return verification
+
+        with (patch.object(sup, "_verify", side_effect=cancel_after_result),
+              patch.object(sup.gate, "finish", wraps=sup.gate.finish) as finish):
+            result = sup.run()
+        finish.assert_called_once()
+        self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
+                         ("cancelled", "cancel_requested", "unknown"))
+        self.assertEqual(result["verification"][0]["status"], "unknown")
+        self.assertEqual(result["actions"][0]["effect"], "unknown")
+        self.assertEqual(result["actions"][0]["evidence_refs"], [])
+
+    def test_deadline_before_cancel_during_verification_keeps_precedence(self):
+        data = sample()
+        data["limits"]["wall_seconds"] = 30
+        sup = AttemptSupervisor(ExecutionTask.from_dict(data), finish_no_action, pass_verifier)
+        verify = sup._verify
+
+        def expire_after_result(*args, **kwargs):
+            verification = verify(*args, **kwargs)
+            sup.gate.deadline = time.monotonic() - 1
+            self.assertFalse(sup.cancel())
+            return verification
+
+        with patch.object(sup, "_verify", side_effect=expire_after_result):
+            result = sup.run()
+        self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
+                         ("incomplete", "deadline", "unknown"))
+
+    def test_finish_without_verifier_cannot_complete(self):
+        result = AttemptSupervisor(self.task(), finish_no_action).run()
+        self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
+                         ("incomplete", "verification_unknown", "unknown"))
+
+    def test_deadline_during_verification_reconciliation_prevents_completion(self):
+        data = sample()
+        data["limits"]["wall_seconds"] = 30
+        sup = AttemptSupervisor(ExecutionTask.from_dict(data), finish_no_action, pass_verifier)
+        reconcile = sup._reconcile
+
+        def expire_during_reconciliation(actions, verification):
+            validated = reconcile(actions, verification)
+            sup.gate.deadline = time.monotonic() - 1
+            return validated
+
+        with patch.object(sup, "_reconcile", side_effect=expire_during_reconciliation):
+            result = sup.run()
+        self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
+                         ("incomplete", "deadline", "unknown"))
 
     def test_unavailable_verifier_is_unknown_before_deadline(self):
         result = AttemptSupervisor(self.task(), finish_no_action, unavailable_verifier).run()

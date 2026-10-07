@@ -16,6 +16,8 @@ from reflexmesh.contracts.execution import ExecutionTask
 
 GRACE_SECONDS = 5.0
 KILL_SECONDS = 2.0
+VERIFIER_POLL_SECONDS = 0.05
+VERIFIER_STOP_SECONDS = 0.25
 STOP_CODES = {"cancel_requested": "cancelled", "deadline": "incomplete",
               "step_limit": "incomplete", "model_call_limit": "incomplete",
               "effect_unknown": "incomplete",
@@ -314,23 +316,51 @@ class AttemptSupervisor:
         self._cancel_requested = accepted or self.gate.terminal.value == 1
         return accepted
 
-    def _verify(self, remaining: float) -> list[dict]:
-        unknown = [{"id": c.id, "kind": "postcondition", "status": "unknown",
-                    "observed_at": None, "evidence_refs": []} for c in self.task.criteria]
+    def _unknown_verification(self) -> list[dict]:
+        return [{"id": c.id, "kind": "postcondition", "status": "unknown",
+                 "observed_at": None, "evidence_refs": []} for c in self.task.criteria]
+
+    def _verify(self, remaining: float, *, interruptible: bool = False) -> list[dict]:
+        unknown = self._unknown_verification()
         if not self.verifier or remaining <= 0:
             return unknown
+        deadline = time.monotonic() + remaining
+        if interruptible:
+            deadline = min(deadline, self.gate.deadline)
+            if self.gate.terminal.value in (1, 2):
+                return unknown
         results = self.context.Queue()
         verifier = self.context.Process(target=_verification_work,
                                         args=(self.verifier, self.task, remaining, self.observation, results))
         verifier.start()
+        value = None
         try:
-            value = results.get(timeout=remaining)
-        except (queue.Empty, EOFError):
-            value = None
+            while True:
+                # Completion verification must notice an accepted cancel even if
+                # the verifier never returns. Post-terminal evidence retains its
+                # separate, bounded grace window.
+                if interruptible and self.gate.terminal.value in (1, 2):
+                    break
+                wait = deadline - time.monotonic()
+                if wait <= 0:
+                    break
+                try:
+                    value = results.get(timeout=min(VERIFIER_POLL_SECONDS, wait))
+                    break
+                except queue.Empty:
+                    continue
+                except EOFError:
+                    break
         finally:
             if verifier.is_alive():
                 verifier.terminate()
-            verifier.join(timeout=0.25)
+            verifier.join(timeout=VERIFIER_STOP_SECONDS)
+            if verifier.is_alive():
+                verifier.kill()
+                verifier.join(timeout=VERIFIER_STOP_SECONDS)
+            results.close()
+        if interruptible and self.gate.terminal.value == 1:
+            return unknown
         if (type(value) is not list or len(value) != len(self.task.criteria) or
                 any(type(c) is not dict or c.get("status") not in ("pass", "fail", "unknown") or
                     c.get("id") != expected.id for c, expected in zip(value, self.task.criteria))):
@@ -439,15 +469,19 @@ class AttemptSupervisor:
                     status, reason = "cancelled", "cancel_requested"
                 elif terminal_gate == 2:
                     status, reason = "incomplete", "deadline"
-        verification = self._verify(max(0, self.gate.deadline - terminal_at)) if status == "verifying" else None
+        verification = (self._verify(max(0, self.gate.deadline - terminal_at), interruptible=True)
+                        if status == "verifying" else None)
         if status == "verifying":
             assessments = [c["status"] for c in verification]
-            validated = self._reconcile(actions, verification)
+            # Evaluate evidence on private rows until finish() serializes the
+            # decision against cancellation and the original wall deadline.
+            verified_actions = [dict(row) for row in actions]
+            validated = self._reconcile(verified_actions, verification)
             unknown_mutations = any(row.get("operation") not in validated and
-                                    row.get("operation") != "navigate" for row in actions)
+                                    row.get("operation") != "navigate" for row in verified_actions)
             if (assessments and all(v == "pass" for v in assessments) and
                     not self.gate.in_flight.value and len(actions) == self.gate.dispatches.value and
-                    not unknown_mutations and all(row["effect"] != "unknown" for row in actions)):
+                    not unknown_mutations and all(row["effect"] != "unknown" for row in verified_actions)):
                 try:
                     accepted = self.gate.finish()
                 except RuntimeStop:
@@ -463,7 +497,7 @@ class AttemptSupervisor:
                 status, reason = "failed", "postcondition_failed"
             else:
                 status, reason = "incomplete", "verification_unknown"
-            if status != "completed":
+            if status not in ("completed", "cancelled"):
                 try:
                     terminal_gate = self.gate.finish()
                 except RuntimeStop:
@@ -473,6 +507,10 @@ class AttemptSupervisor:
                         status, reason = "cancelled", "cancel_requested"
                     elif terminal_gate == 2:
                         status, reason = "incomplete", "deadline"
+            if status == "cancelled":
+                # A pass arriving after an accepted cancel must not refine the
+                # cancelled completion attempt, including action effects.
+                verification = self._unknown_verification()
         try:
             self.gate.stop("terminal")
         except RuntimeStop:
