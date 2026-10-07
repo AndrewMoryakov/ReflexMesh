@@ -66,10 +66,35 @@ class Criterion:
 
 @dataclass(frozen=True)
 class Limits:
-    wall_seconds: float
-    max_steps: int
-    max_model_calls: int
+    # None explicitly disables a budget; zero keeps its existing invalid meaning.
+    wall_seconds: float | None
+    max_steps: int | None
+    max_model_calls: int | None
     max_action_retries: int
+
+    @classmethod
+    def from_dict(cls, value: object) -> "Limits":
+        if value is None:
+            return cls(None, None, None, 0)
+        raw = _object(value, {"wall_seconds", "max_steps", "max_model_calls",
+                              "max_action_retries"}, "limits")
+        wall = raw["wall_seconds"]
+        if wall is not None:
+            try:
+                valid = type(wall) in (int, float) and math.isfinite(wall) and wall > 0
+            except OverflowError:
+                valid = False
+            if not valid:
+                raise ValidationError("wall_seconds must be positive and finite, or null")
+            wall = float(wall)
+        steps = (None if raw["max_steps"] is None else
+                 _integer(raw["max_steps"], "max_steps"))
+        calls = (None if raw["max_model_calls"] is None else
+                 _integer(raw["max_model_calls"], "max_model_calls"))
+        retries = _integer(raw["max_action_retries"], "max_action_retries", zero=True)
+        if retries != 0:
+            raise ValidationError("automatic action retries are unsupported")
+        return cls(wall, steps, calls, retries)
 
 
 @dataclass(frozen=True)
@@ -162,15 +187,6 @@ class ExecutionTask:
         if len({c.id for c in criteria}) != len(criteria):
             raise ValidationError("duplicate criterion id")
 
-        raw_limits = _object(d["limits"], {"wall_seconds", "max_steps", "max_model_calls",
-                                            "max_action_retries"}, "limits")
-        wall = raw_limits["wall_seconds"]
-        if type(wall) not in (int, float) or not math.isfinite(wall) or wall <= 0:
-            raise ValidationError("wall_seconds must be positive and finite")
-        steps = _integer(raw_limits["max_steps"], "max_steps")
-        calls = _integer(raw_limits["max_model_calls"], "max_model_calls")
-        retries = _integer(raw_limits["max_action_retries"], "max_action_retries", zero=True)
-        if retries != 0:
-            raise ValidationError("automatic action retries are unsupported")
+        limits = Limits.from_dict(d["limits"])
         return cls(task_id, revision, d["goal"], tuple(executors), origin, run_id, start_path,
-                   frozenset(permissions), tuple(slots), tuple(criteria), Limits(float(wall), steps, calls, retries))
+                   frozenset(permissions), tuple(slots), tuple(criteria), limits)

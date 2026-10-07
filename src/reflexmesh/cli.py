@@ -57,12 +57,16 @@ def main(argv: list[str] | None = None) -> int:
     run = sub.add_parser("run", help="execute one bounded browser subtask")
     run.add_argument("--input", default="-", metavar="FILE")
     run.add_argument("--output-dir", required=True, metavar="DIR")
-    run.add_argument("--routing-provider", choices=("stub", "jevrouter"), required=True)
+    run.add_argument("--routing-provider", choices=("stub", "jevrouter"), required=True,
+                     help="JevRouter internal calls are unmetered; max_model_calls caps local provider requests only")
     run.add_argument("--action-provider", choices=("script", "jev"), required=True)
     run.add_argument("--script", metavar="FILE")
     run.add_argument("--chrome", metavar="FILE", help="explicit Chromium/Chrome executable")
     run.add_argument("--jev-url", default="http://127.0.0.1:8787")
-    run.add_argument("--timeout", type=float, default=30.0)
+    run.add_argument("--timeout", type=float, default=30.0,
+                     help="router socket I/O timeout; total task time is limits.wall_seconds")
+    run.add_argument("--no-limits", action="store_true",
+                     help="explicitly disable task time, step and model-call budgets; cancellation remains active")
     try:
         args = parser.parse_args(argv)
         if args.command == "run":

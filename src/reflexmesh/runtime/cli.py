@@ -8,15 +8,16 @@ import json
 import signal
 import shutil
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from reflexmesh.adapters.system_one.fixture_browser import FixtureBrowser
 from reflexmesh.adapters.system_one.harness import HarnessStrategy
 from reflexmesh.adapters.system_one.script_selector import FixtureScriptProvider, validate_script
-from reflexmesh.contracts.execution import ExecutionTask, PREDICATES
+from reflexmesh.contracts.execution import ExecutionTask, Limits, PREDICATES
 from reflexmesh.contracts.task import Route, Task, ValidationError
-from reflexmesh.routing.stub import route_task
-from reflexmesh.routing.jev_router import route_task as jev_route, validate_config
+from reflexmesh.routing.jev_router import validate_config
+from reflexmesh.routing.router import Router, execution_router
 from reflexmesh.runtime.runner import AttemptSupervisor, WorkerResult
 from reflexmesh.verification.verifier import FixtureVerifier, read_fixture
 
@@ -67,8 +68,9 @@ def _script_provider(entries):
 class BrowserExecutionStrategy:
     """Run preflight, macro routing and the browser loop in one supervised worker."""
 
-    def __init__(self, task, args, entries):
+    def __init__(self, task, args, entries, *, router: Router | None = None):
         self.task, self.args, self.entries = task, args, entries
+        self.router = router if router is not None else execution_router(args.routing_provider, args.jev_url)
 
     def __call__(self, gate, events):
         task, args = self.task, self.args
@@ -78,7 +80,7 @@ class BrowserExecutionStrategy:
         if "browser.soh" not in task.allowed_executors:
             return WorkerResult("blocked", "executor_unavailable")
         try:
-            baseline = read_fixture(task, timeout=min(2.0, gate.remaining()))
+            baseline = read_fixture(task, timeout=gate.operation_timeout(2.0))
         except ValueError:
             return WorkerResult("blocked", "fixture_mismatch")
         except (OSError, json.JSONDecodeError):
@@ -86,13 +88,13 @@ class BrowserExecutionStrategy:
         events.put(("baseline", baseline))  # Private IPC; never written to the trace.
 
         routing_task = Task("0.1", task.task_id, task.goal, (Route.CUA,), (Route.CUA,))
-        if args.routing_provider == "jevrouter":
-            gate.reserve_call()
-            routing = jev_route(routing_task, endpoint=args.jev_url,
-                                timeout=min(args.timeout, gate.remaining()))
-        else:
-            gate.remaining()
-            routing = route_task(routing_task).to_dict()
+        accounting = self.router.capabilities.model_call_accounting
+        gate.begin_routing(accounting)
+        events.put(("router_capabilities", self.router.router_id, accounting))
+        outcome = self.router.route(routing_task, timeout=gate.operation_timeout(args.timeout),
+                                    reserve_call=gate.reserve_call)
+        routing = outcome.decision
+        events.put(("router_usage", outcome.usage.model_calls))
         events.put(("routing", routing))
         if routing["status"] == "needs_confirmation":
             return WorkerResult("blocked", "policy_denied")
@@ -120,6 +122,8 @@ class BrowserExecutionStrategy:
 def run_execution(args) -> int:
     try:
         task = ExecutionTask.from_dict(_load(args.input))
+        if getattr(args, "no_limits", False):
+            task = replace(task, limits=Limits(None, None, None, 0))
         if args.action_provider == "script":
             if not args.script:
                 raise ValidationError("script provider requires --script")
@@ -157,6 +161,7 @@ def run_execution(args) -> int:
                                                  for row in result.get("trace", result["actions"])), encoding="utf-8")
         # Evidence contains only identifiers and assessments, never raw fixture state or slots.
         evidence = [{"ref": ref, "criterion_id": row["id"], "status": row["status"],
+                     **({"scope": row["scope"]} if "scope" in row else {}),
                      "observed_at": row.get("observed_at")}
                     for row in result["verification"] for ref in row.get("evidence_refs", [])]
         evidence += [{"ref": ref, "action_id": row["id"], "effect": row["effect"]}

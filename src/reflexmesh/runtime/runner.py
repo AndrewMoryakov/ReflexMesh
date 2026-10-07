@@ -53,12 +53,15 @@ class AttemptGate:
     def __init__(self, ctx, task: ExecutionTask, started: float):
         self.lock = ctx.Lock()
         self.terminal = ctx.Value("i", 0, lock=False)
-        self.dispatches = ctx.Value("i", 0, lock=False)
-        self.in_flight = ctx.Value("i", 0, lock=False)
-        self.steps = ctx.Value("i", 0, lock=False)
-        self.calls = ctx.Value("i", 0, lock=False)
+        self.dispatches = ctx.Value("q", 0, lock=False)
+        self.in_flight = ctx.Value("q", 0, lock=False)
+        self.steps = ctx.Value("q", 0, lock=False)
+        self.calls = ctx.Value("q", 0, lock=False)
+        self.opaque_model_usage = ctx.Value("i", 0, lock=False)
+        self.router_invocations = ctx.Value("q", 0, lock=False)
         self.started = started
-        self.deadline = started + task.limits.wall_seconds
+        self.deadline = (None if task.limits.wall_seconds is None else
+                         started + task.limits.wall_seconds)
         self.max_steps = task.limits.max_steps
         self.max_calls = task.limits.max_model_calls
 
@@ -69,14 +72,14 @@ class AttemptGate:
     def _check(self):
         if self.terminal.value:
             raise RuntimeStop({1: "cancel_requested", 2: "deadline", 3: "terminal"}[self.terminal.value])
-        if time.monotonic() >= self.deadline:
+        if self.deadline_expired():
             self.terminal.value = 2
             raise RuntimeStop("deadline")
 
     def stop(self, reason: str) -> bool:
         self._acquire()
         try:
-            if self.terminal.value or time.monotonic() >= self.deadline:
+            if self.terminal.value or self.deadline_expired():
                 if not self.terminal.value:
                     self.terminal.value = 2
                 return False
@@ -90,7 +93,7 @@ class AttemptGate:
         self._acquire()
         try:
             if not self.terminal.value:
-                self.terminal.value = 2 if time.monotonic() >= self.deadline else 3
+                self.terminal.value = 2 if self.deadline_expired() else 3
             return self.terminal.value
         finally:
             self.lock.release()
@@ -99,29 +102,56 @@ class AttemptGate:
         self._acquire()
         try:
             self._check()
-            if self.steps.value >= self.max_steps:
+            if self.max_steps is not None and self.steps.value >= self.max_steps:
                 raise RuntimeStop("step_limit")
             self.steps.value += 1
         finally:
             self.lock.release()
 
     def reserve_call(self):
+        """Reserve one locally controlled provider request, before sending it."""
         self._acquire()
         try:
             self._check()
-            if self.calls.value >= self.max_calls:
+            if self.max_calls is not None and self.calls.value >= self.max_calls:
                 raise RuntimeStop("model_call_limit")
             self.calls.value += 1
         finally:
             self.lock.release()
 
-    def remaining(self) -> float:
+    def begin_routing(self, accounting: str):
+        """Persist accounting uncertainty before routing, even if its worker dies."""
+        if accounting not in ("none", "local", "opaque"):
+            raise RuntimeStop("adapter_contract_unsupported")
         self._acquire()
         try:
             self._check()
-            return max(0.0, self.deadline - time.monotonic())
+            self.router_invocations.value += 1
+            if accounting == "opaque":
+                self.opaque_model_usage.value = 1
         finally:
             self.lock.release()
+
+    def deadline_expired(self, now: float | None = None) -> bool:
+        return self.deadline is not None and (time.monotonic() if now is None else now) >= self.deadline
+
+    def wall_remaining(self, now: float | None = None) -> float | None:
+        """Read the allowance, including after terminal acceptance; None is unlimited."""
+        return (None if self.deadline is None else
+                max(0.0, self.deadline - (time.monotonic() if now is None else now)))
+
+    def remaining(self) -> float | None:
+        self._acquire()
+        try:
+            self._check()
+            return self.wall_remaining()
+        finally:
+            self.lock.release()
+
+    def operation_timeout(self, maximum: float) -> float:
+        """Bound an individual I/O operation without imposing a whole-task deadline."""
+        remaining = self.remaining()
+        return maximum if remaining is None else min(maximum, remaining)
 
     def commit_dispatch(self) -> int:
         self._acquire()
@@ -149,6 +179,8 @@ class AttemptGate:
         self._acquire()
         try:
             return {"steps": self.steps.value, "model_calls": self.calls.value,
+                    "opaque_model_usage": bool(self.opaque_model_usage.value),
+                    "router_invocations": self.router_invocations.value,
                     "dispatches": self.dispatches.value, "in_flight": self.in_flight.value,
                     "terminal": self.terminal.value}
         finally:
@@ -308,6 +340,8 @@ class AttemptSupervisor:
         self.observation = None
         self.trace = []
         self.routing = None
+        self.router_capabilities = None
+        self.router_usage = None
         self.executor_id = None
 
     def cancel(self):
@@ -322,13 +356,15 @@ class AttemptSupervisor:
         return [{"id": c.id, "kind": "postcondition", "status": "unknown",
                  "observed_at": None, "evidence_refs": []} for c in self.task.criteria]
 
-    def _verify(self, remaining: float, *, interruptible: bool = False) -> list[dict]:
+    def _verify(self, remaining: float | None, *, interruptible: bool = False) -> list[dict]:
         unknown = self._unknown_verification()
-        if not self.verifier or remaining <= 0:
+        if not self.verifier or (remaining is not None and remaining <= 0):
             return unknown
-        deadline = time.monotonic() + remaining
+        deadline = None if remaining is None else time.monotonic() + remaining
         if interruptible:
-            deadline = min(deadline, self.gate.deadline)
+            if self.gate.deadline is not None:
+                deadline = (self.gate.deadline if deadline is None else
+                            min(deadline, self.gate.deadline))
             if self.gate.terminal.value in (1, 2):
                 return unknown
         results = self.context.Queue()
@@ -343,13 +379,22 @@ class AttemptSupervisor:
                 # separate, bounded grace window.
                 if interruptible and self.gate.terminal.value in (1, 2):
                     break
-                wait = deadline - time.monotonic()
-                if wait <= 0:
+                wait = None if deadline is None else deadline - time.monotonic()
+                if wait is not None and wait <= 0:
                     break
                 try:
-                    value = results.get(timeout=min(VERIFIER_POLL_SECONDS, wait))
+                    value = results.get(timeout=VERIFIER_POLL_SECONDS if wait is None else
+                                        min(VERIFIER_POLL_SECONDS, wait))
                     break
                 except queue.Empty:
+                    if not verifier.is_alive():
+                        # It may have published and exited between the timed
+                        # read and the liveness check. Normal exit flushes IPC.
+                        try:
+                            value = results.get_nowait()
+                        except (queue.Empty, EOFError):
+                            pass
+                        break
                     continue
                 except EOFError:
                     break
@@ -380,6 +425,10 @@ class AttemptSupervisor:
                 self.verifier = self.verifier_factory(self.task, event[1])
         elif event[0] == "routing":
             self.routing = event[1]
+        elif event[0] == "router_capabilities":
+            self.router_capabilities = {"router_id": event[1], "model_call_accounting": event[2]}
+        elif event[0] == "router_usage":
+            self.router_usage = {"model_calls": event[1]}
         elif event[0] == "executor_selected":
             self.executor_id = event[1]
         elif event[0] == "proposal":
@@ -425,7 +474,7 @@ class AttemptSupervisor:
             now = time.monotonic()
             if self._cancel_requested or self.gate.terminal.value == 1:
                 status, reason = "cancelled", "cancel_requested"
-            elif now >= self.gate.deadline or self.gate.terminal.value == 2:
+            elif self.gate.deadline_expired(now) or self.gate.terminal.value == 2:
                 try:
                     self.gate.stop("deadline")
                 except RuntimeStop:
@@ -433,7 +482,9 @@ class AttemptSupervisor:
                 status, reason = "incomplete", "deadline"
             else:
                 try:
-                    event = self.events.get(timeout=min(0.05, max(0.001, self.gate.deadline - now)))
+                    remaining = self.gate.wall_remaining(now)
+                    event = self.events.get(timeout=0.05 if remaining is None else
+                                            min(0.05, max(0.001, remaining)))
                 except queue.Empty:
                     if not self.process.is_alive():
                         status, reason = "failed", "executor_error"
@@ -471,7 +522,7 @@ class AttemptSupervisor:
                     status, reason = "cancelled", "cancel_requested"
                 elif terminal_gate == 2:
                     status, reason = "incomplete", "deadline"
-        verification = (self._verify(max(0, self.gate.deadline - terminal_at), interruptible=True)
+        verification = (self._verify(self.gate.wall_remaining(terminal_at), interruptible=True)
                         if status == "verifying" else None)
         if status == "verifying":
             assessments = [c["status"] for c in verification]
@@ -539,14 +590,19 @@ class AttemptSupervisor:
             snapshots = self.gate.snapshot()
         except RuntimeStop:
             snapshots = {"steps": self.gate.steps.value, "model_calls": self.gate.calls.value,
+                         "opaque_model_usage": bool(self.gate.opaque_model_usage.value),
+                         "router_invocations": self.gate.router_invocations.value,
                          "dispatches": self.gate.dispatches.value, "in_flight": self.gate.in_flight.value}
             cleanup = "unknown"
         # A child can commit dispatch and die before the event reaches the parent.
         if snapshots["dispatches"] > len(actions):
             actions.extend({"id": i, "effect": "unknown"} for i in range(len(actions) + 1, snapshots["dispatches"] + 1))
-        budget_violation = (snapshots["steps"] > self.task.limits.max_steps or
-                            snapshots["model_calls"] > self.task.limits.max_model_calls)
+        limits = self.task.limits
+        budget_violation = ((limits.max_steps is not None and snapshots["steps"] > limits.max_steps) or
+                            (limits.max_model_calls is not None and
+                             snapshots["model_calls"] > limits.max_model_calls))
         verification.append({"id": "runtime.budget", "kind": "execution_constraint",
+                             "scope": "steps_and_locally_controlled_model_calls",
                              "status": "fail" if budget_violation else "pass", "observed_at": time.time(),
                              "evidence_refs": [f"runtime:{self.attempt_id}:budget"]})
         if budget_violation and status != "cancelled":
@@ -558,6 +614,7 @@ class AttemptSupervisor:
         return {"schema_version": "execution-result/0.1", "task_id": self.task.task_id,
                 "revision": self.task.revision, "attempt_id": self.attempt_id,
                 "executor_id": self.executor_id, "routing": self.routing,
+                "router_capabilities": self.router_capabilities, "router_usage": self.router_usage,
                 "attempt_status": status, "stop_reason": reason, "task_outcome": outcome,
                 "execution_outcome": "unknown" if snapshots["in_flight"] or any(
                     a["effect"] == "unknown" for a in actions) else
@@ -565,9 +622,19 @@ class AttemptSupervisor:
                     "error" if status == "failed" else "not_started",
                 "verification": verification, "actions": actions, "cleanup": cleanup,
                 "trace": self.trace,
-                "budget": {"steps": snapshots["steps"], "model_calls": snapshots["model_calls"],
+                "budget": {"steps": snapshots["steps"],
+                           "model_calls": None if snapshots["opaque_model_usage"] else snapshots["model_calls"],
+                           "local_model_calls": snapshots["model_calls"],
+                           "model_calls_reason": "router_internal_usage_unknown" if snapshots["opaque_model_usage"] else None,
+                           "model_call_limit_scope": "locally_controlled_provider_requests",
+                           "router_invocations": snapshots["router_invocations"],
                            "dispatches": snapshots["dispatches"],
-                           "remaining_steps": max(0, self.task.limits.max_steps - snapshots["steps"]),
-                           "remaining_model_calls": max(0, self.task.limits.max_model_calls - snapshots["model_calls"]),
-                           "remaining_wall_seconds": max(0, round(self.gate.deadline - time.monotonic(), 3)),
+                           "limits": {"wall_seconds": limits.wall_seconds, "max_steps": limits.max_steps,
+                                      "max_model_calls": limits.max_model_calls},
+                           "remaining_steps": (None if limits.max_steps is None else
+                                               max(0, limits.max_steps - snapshots["steps"])),
+                           "remaining_model_calls": (None if limits.max_model_calls is None else
+                                                     max(0, limits.max_model_calls - snapshots["model_calls"])),
+                           "remaining_wall_seconds": (None if self.gate.deadline is None else
+                                                      round(self.gate.wall_remaining(), 3)),
                            "elapsed_seconds": elapsed, "cost": None, "cost_reason": "not_measured"}}

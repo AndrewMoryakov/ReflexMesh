@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+
 from reflexmesh.runtime.runner import ControlledEnvironment, RuntimeStop, WorkerResult
 
 
@@ -13,7 +15,7 @@ class CountingProvider:
         if self.model:
             self.gate.reserve_call()
             if hasattr(self.inner, "_client"):
-                self.inner._client.timeout = max(0.01, min(30.0, self.gate.remaining()))
+                self.inner._client.timeout = max(0.01, self.gate.operation_timeout(30.0))
         self.events.put(("decision_request", "model" if self.model else "script"))
         return self.inner.decide(state, questions)
 
@@ -44,7 +46,11 @@ class HarnessStrategy:
         provider = CountingProvider(self.provider_factory(), gate, events, model=self.model)
         try:
             run = Controller(self.space_factory(), controlled, provider,
-                             max_steps=gate.max_steps,
+                             # The pinned controller compares against max_steps and
+                             # does not accept None. Infinity is confined to this
+                             # comparison; it is never sent to I/O or serialized.
+                             max_steps=math.inf if gate.max_steps is None else gate.max_steps,
+                             timeout_seconds=None,  # AttemptGate owns elapsed task time.
                              on_step=lambda step: events.put(("step", step.index, step.action,
                                                               step.verdict))).run(self.goal)
             if controlled.last_stop:
