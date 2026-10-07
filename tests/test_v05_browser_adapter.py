@@ -95,7 +95,8 @@ class AdapterContract(unittest.TestCase):
         adapter = self.setup_adapter()
         task = adapter.task
         result = AttemptSupervisor(task, lambda g, e: stale_candidate(g, e, adapter), pass_verifier).run()
-        self.assertEqual((result["attempt_status"], result["budget"]["dispatches"]), ("completed", 0))
+        self.assertEqual((result["attempt_status"], result["budget"]["dispatches"]), ("incomplete", 0))
+        self.assertEqual(result["stop_reason"], "verification_unknown")
         self.assertEqual(result["budget"]["steps"], 2)
         self.assertIn("reobserve", [row["kind"] for row in result["trace"]])
 

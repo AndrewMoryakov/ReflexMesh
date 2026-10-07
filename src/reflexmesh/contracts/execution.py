@@ -169,6 +169,8 @@ class ExecutionTask:
         for raw in raw_criteria:
             c = _object(raw, {"id", "kind", "predicate", "args"}, "criterion")
             cid = _ident(c["id"], "criterion id")
+            if cid.startswith("runtime."):
+                raise ValidationError("runtime. criterion IDs are reserved for required constraints")
             if c["kind"] != "postcondition" or type(c["predicate"]) is not str:
                 raise ValidationError("unsupported criterion kind")
             args = c["args"]

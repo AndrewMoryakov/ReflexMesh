@@ -17,6 +17,7 @@ from reflexmesh.contracts.execution import ExecutionTask
 from reflexmesh.contracts.task import ValidationError
 from reflexmesh.adapters.system_one.harness import CountingProvider
 from reflexmesh.runtime.runner import AttemptSupervisor, ControlledEnvironment, RuntimeStop, WorkerResult
+from reflexmesh.verification.constraints import REQUIRED_CONSTRAINTS
 
 
 def sample():
@@ -32,6 +33,14 @@ def sample():
 
 def pass_verifier(task, timeout):
     return [{"id": c.id, "status": "pass", "evidence_refs": ["fake://verified"]} for c in task.criteria]
+
+
+def synthetic_constraint_passes(*_):
+    """Test-only evidence for positive gate branches, never adapter acceptance."""
+    return [{"id": cid, "kind": "execution_constraint", "status": "pass",
+             "reason": "Synthetic gate-test evidence, not adapter acceptance.",
+             "observed_at": 1.0, "evidence_refs": [f"test-only:{cid}"]}
+            for cid in REQUIRED_CONSTRAINTS]
 
 
 def hung_verifier(task, timeout):
@@ -299,7 +308,8 @@ class Lifecycle(unittest.TestCase):
         return ExecutionTask.from_dict(sample())
 
     def test_verified_finish(self):
-        result = AttemptSupervisor(self.task(), finish_no_action, pass_verifier).run()
+        with patch("reflexmesh.runtime.runner.assess_constraints", side_effect=synthetic_constraint_passes):
+            result = AttemptSupervisor(self.task(), finish_no_action, pass_verifier).run()
         self.assertEqual((result["attempt_status"], result["task_outcome"]), ("completed", "pass"))
         self.assertEqual(result["budget"]["steps"], 1)
         self.assertEqual(result["actions"], [])
@@ -310,7 +320,8 @@ class Lifecycle(unittest.TestCase):
                          ("failed", "fail", "postcondition_failed"))
 
     def test_no_confident_action_can_be_verified(self):
-        result = AttemptSupervisor(self.task(), no_confident_action, pass_verifier).run()
+        with patch("reflexmesh.runtime.runner.assess_constraints", side_effect=synthetic_constraint_passes):
+            result = AttemptSupervisor(self.task(), no_confident_action, pass_verifier).run()
         self.assertEqual((result["attempt_status"], result["task_outcome"]), ("completed", "pass"))
 
     def test_current_page_already_satisfied_after_bootstrap(self):
@@ -318,7 +329,8 @@ class Lifecycle(unittest.TestCase):
         data["criteria"] = [{"id": "page", "kind": "postcondition", "predicate": "current_page",
                              "args": {"path": "/form", "target_id": "form"}}]
         task = ExecutionTask.from_dict(data)
-        result = AttemptSupervisor(task, lambda g, e: bootstrap_then_finish(g, e, task), pass_verifier).run()
+        with patch("reflexmesh.runtime.runner.assess_constraints", side_effect=synthetic_constraint_passes):
+            result = AttemptSupervisor(task, lambda g, e: bootstrap_then_finish(g, e, task), pass_verifier).run()
         self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
                          ("completed", "already_satisfied", "pass"))
         self.assertEqual((len(result["actions"]), result["actions"][0]["effect"]), (1, "applied"))
