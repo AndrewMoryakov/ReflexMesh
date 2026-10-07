@@ -12,6 +12,7 @@ from typing import Callable
 
 from reflexmesh.contracts.execution import ExecutionTask
 from reflexmesh.runtime.process_group import OwnedWorker
+from reflexmesh.verification.constraints import ConstraintAssessments, assess_constraints
 
 GRACE_SECONDS = 5.0
 KILL_SECONDS = 2.0
@@ -343,6 +344,17 @@ class AttemptSupervisor:
         self.router_capabilities = None
         self.router_usage = None
         self.executor_id = None
+        self._constraints = ConstraintAssessments()
+
+    def _assess_constraints(self, snapshot=None, *, retain_passes=False):
+        if snapshot is None:
+            try:
+                snapshot = self.gate.snapshot()
+            except RuntimeStop:
+                # Unlocked fallback counters cannot establish a passing assessment.
+                pass
+        self._constraints.update(assess_constraints(self.task, snapshot, self.attempt_id),
+                                 retain_passes=retain_passes)
 
     def cancel(self):
         try:
@@ -512,6 +524,7 @@ class AttemptSupervisor:
                 else:
                     self._record(event, actions)
         terminal_at = time.monotonic()
+        self._assess_constraints()
         if status != "verifying":
             try:
                 terminal_gate = self.gate.finish()
@@ -532,7 +545,9 @@ class AttemptSupervisor:
             validated = self._reconcile(verified_actions, verification)
             unknown_mutations = any(row.get("operation") not in validated and
                                     row.get("operation") != "navigate" for row in verified_actions)
+            self._assess_constraints()
             if (assessments and all(v == "pass" for v in assessments) and
+                    self._constraints.all_pass() and
                     not self.gate.in_flight.value and len(actions) == self.gate.dispatches.value and
                     not unknown_mutations and all(row["effect"] != "unknown" for row in verified_actions)):
                 try:
@@ -546,6 +561,8 @@ class AttemptSupervisor:
                             actions[0].get("operation") == "navigate" and
                             any(c.predicate == "current_page" for c in self.task.criteria)):
                         reason = "already_satisfied"
+            elif self._constraints.has_fail():
+                status, reason = "failed", "constraint_violated"
             elif "fail" in assessments:
                 status, reason = "failed", "postcondition_failed"
             else:
@@ -594,22 +611,23 @@ class AttemptSupervisor:
                          "router_invocations": self.gate.router_invocations.value,
                          "dispatches": self.gate.dispatches.value, "in_flight": self.gate.in_flight.value}
             cleanup = "unknown"
+            self._constraints.update(assess_constraints(self.task, None, self.attempt_id),
+                                     retain_passes=status == "completed")
+        else:
+            self._assess_constraints(snapshots, retain_passes=status == "completed")
         # A child can commit dispatch and die before the event reaches the parent.
         if snapshots["dispatches"] > len(actions):
             actions.extend({"id": i, "effect": "unknown"} for i in range(len(actions) + 1, snapshots["dispatches"] + 1))
         limits = self.task.limits
-        budget_violation = ((limits.max_steps is not None and snapshots["steps"] > limits.max_steps) or
-                            (limits.max_model_calls is not None and
-                             snapshots["model_calls"] > limits.max_model_calls))
-        verification.append({"id": "runtime.budget", "kind": "execution_constraint",
-                             "scope": "steps_and_locally_controlled_model_calls",
-                             "status": "fail" if budget_violation else "pass", "observed_at": time.time(),
-                             "evidence_refs": [f"runtime:{self.attempt_id}:budget"]})
-        if budget_violation and status != "cancelled":
-            status, reason = "failed", "constraint_violated"
-        outcome = ("pass" if status == "completed" else "fail" if status == "failed" and
+        verification.extend(self._constraints.rows())
+        # Late confirmed failures refine the outcome, never the accepted stop.
+        # A completed attempt retains its accepted evidence when a later read is
+        # missing, but cannot hide a newly confirmed violation behind that pass.
+        outcome = ("fail" if self._constraints.has_fail() else
+                   "pass" if status == "completed" and self._constraints.all_pass() else
+                   "fail" if status == "failed" and
                    reason in ("postcondition_failed", "constraint_violated") else
-                   "fail" if budget_violation else "unknown")
+                   "unknown")
         elapsed = round(time.monotonic() - self.started, 3)
         return {"schema_version": "execution-result/0.1", "task_id": self.task.task_id,
                 "revision": self.task.revision, "attempt_id": self.attempt_id,

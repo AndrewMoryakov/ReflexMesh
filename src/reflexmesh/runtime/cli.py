@@ -162,6 +162,7 @@ def run_execution(args) -> int:
         # Evidence contains only identifiers and assessments, never raw fixture state or slots.
         evidence = [{"ref": ref, "criterion_id": row["id"], "status": row["status"],
                      **({"scope": row["scope"]} if "scope" in row else {}),
+                     **({"reason": row["reason"]} if "reason" in row else {}),
                      "observed_at": row.get("observed_at")}
                     for row in result["verification"] for ref in row.get("evidence_refs", [])]
         evidence += [{"ref": ref, "action_id": row["id"], "effect": row["effect"]}
@@ -171,7 +172,8 @@ def run_execution(args) -> int:
             json.dumps(row, ensure_ascii=True) + "\n" for row in evidence), encoding="utf-8")
         (output / "result.json").write_text(json.dumps(result, ensure_ascii=True, indent=2), encoding="utf-8")
     except OSError:
-        result.update(attempt_status="failed", stop_reason="output_error", task_outcome="unknown")
+        result.update(attempt_status="failed", stop_reason="output_error",
+                      task_outcome="fail" if result.get("task_outcome") == "fail" else "unknown")
         print(json.dumps(result, ensure_ascii=True))
         return EXIT_CODES["failed"]
     print(json.dumps(result, ensure_ascii=True))

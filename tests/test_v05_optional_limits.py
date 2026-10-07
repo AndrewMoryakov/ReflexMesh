@@ -440,7 +440,7 @@ class OptionalBudgetLifecycle(unittest.TestCase):
                     return pass_verifier(task, timeout)
 
                 result = self.run_bounded(AttemptSupervisor(task, consume_two_each, verify))
-                self.assertEqual((result["attempt_status"], result["task_outcome"]), ("completed", "pass"))
+                self.assertEqual((result["attempt_status"], result["task_outcome"]), ("incomplete", "unknown"))
                 self.assertTrue(timeout_seen.is_set())
                 budget = result["budget"]
                 self.assertEqual(budget["limits"], {"wall_seconds": wall, "max_steps": steps,
@@ -455,12 +455,13 @@ class OptionalBudgetLifecycle(unittest.TestCase):
                     self.assertLessEqual(budget["remaining_wall_seconds"], wall)
                 self.assertEqual(result["verification"][-1]["status"], "pass")
 
-    def test_completed_unlimited_result_can_record_more_than_an_hour_elapsed(self):
+    def test_unlimited_result_can_record_more_than_an_hour_elapsed(self):
         supervisor = AttemptSupervisor(make_task(), finish_one, pass_verifier)
         supervisor.started -= 3601.0
         supervisor.gate.started = supervisor.started
         result = self.run_bounded(supervisor)
-        self.assertEqual(result["attempt_status"], "completed")
+        self.assertEqual((result["attempt_status"], result["stop_reason"]),
+                         ("incomplete", "verification_unknown"))
         self.assertGreaterEqual(result["budget"]["elapsed_seconds"], 3601.0)
         self.assertIsNone(result["budget"]["remaining_wall_seconds"])
 
