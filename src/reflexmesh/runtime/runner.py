@@ -4,15 +4,14 @@ from __future__ import annotations
 
 import multiprocessing as mp
 import inspect
-import os
 import queue
-import signal
 import time
 import uuid
 from dataclasses import dataclass
 from typing import Callable
 
 from reflexmesh.contracts.execution import ExecutionTask
+from reflexmesh.runtime.process_group import OwnedWorker
 
 GRACE_SECONDS = 5.0
 KILL_SECONDS = 2.0
@@ -269,8 +268,6 @@ class ControlledEnvironment:
 
 def _work(strategy, gate, events):
     try:
-        if hasattr(os, "setsid"):
-            os.setsid()  # Own the browser descendants when this worker must be terminated.
         result = strategy(gate, events)
         if not isinstance(result, WorkerResult):
             raise TypeError("worker must return WorkerResult")
@@ -279,6 +276,11 @@ def _work(strategy, gate, events):
         events.put(("stopped", exc.reason))
     except BaseException:
         events.put(("done", "executor_error", "worker_exception"))
+    finally:
+        # Raw-fork ownership deliberately bypasses multiprocessing's implicit
+        # child reaper; flush this worker's queue before os._exit instead.
+        events.close()
+        events.join_thread()
 
 
 def _verification_work(verifier, task, timeout, observation, result_queue):
@@ -300,7 +302,7 @@ class AttemptSupervisor:
         self.started = time.monotonic()
         self.gate = AttemptGate(self.context, task, self.started)
         self.events = self.context.Queue()
-        self.process = self.context.Process(target=_work, args=(strategy, self.gate, self.events), daemon=False)
+        self.process = OwnedWorker(self.context, _work, (strategy, self.gate, self.events))
         self.attempt_id = uuid.uuid4().hex
         self._cancel_requested = False
         self.observation = None
@@ -521,22 +523,9 @@ class AttemptSupervisor:
                 self._record(self.events.get(timeout=min(0.05, max(0.001, grace_end - time.monotonic()))), actions)
             except queue.Empty:
                 pass
-        cleanup = "closed"
-        if self.process.is_alive():
-            try:
-                os.killpg(self.process.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-            self.process.join(timeout=KILL_SECONDS)
-            if self.process.is_alive():
-                try:
-                    os.killpg(self.process.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-                self.process.join(timeout=0.1)
-            cleanup = "forced" if not self.process.is_alive() else "unknown"
-        if not self.process.is_alive():
-            self.process.join(timeout=0)
+        # The owned group can outlive its leader. Keep its PID reserved until
+        # TERM/KILL and live-member verification finish, independent of is_alive.
+        cleanup = self.process.cleanup(KILL_SECONDS)
         if verification is None:
             verification = self._verify(max(0, grace_end - time.monotonic()))
         while True:
