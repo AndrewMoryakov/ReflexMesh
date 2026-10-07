@@ -153,18 +153,24 @@ def run_execution(args) -> int:
         result = supervisor.run()
     finally:
         signal.signal(signal.SIGINT, previous)
-    result.update(trace_ref="trace.jsonl", evidence_refs=list(dict.fromkeys(
+    result.update(trace_ref="trace.jsonl", evidence_persistence="stored", evidence_refs=list(dict.fromkeys(
         [ref for row in result["verification"] for ref in row.get("evidence_refs", [])] +
         [ref for row in result["actions"] for ref in row.get("evidence_refs", [])])))
     try:
         (output / "trace.jsonl").write_text("".join(json.dumps({"event": row}, ensure_ascii=True) + "\n"
                                                  for row in result.get("trace", result["actions"])), encoding="utf-8")
         # Evidence contains only identifiers and assessments, never raw fixture state or slots.
+        # Slot refs resolve to actual retained, redacted receipts/coverage below;
+        # copying an assessment row alone is not driver-boundary evidence.
+        slot_records = result.get("slot_evidence", [])
+        slot_refs = {row["ref"] for row in slot_records if "ref" in row}
         evidence = [{"ref": ref, "criterion_id": row["id"], "status": row["status"],
                      **({"scope": row["scope"]} if "scope" in row else {}),
                      **({"reason": row["reason"]} if "reason" in row else {}),
                      "observed_at": row.get("observed_at")}
-                    for row in result["verification"] for ref in row.get("evidence_refs", [])]
+                    for row in result["verification"] for ref in row.get("evidence_refs", [])
+                    if ref not in slot_refs]
+        evidence += slot_records
         evidence += [{"ref": ref, "action_id": row["id"], "effect": row["effect"]}
                      for row in result["actions"] for ref in row.get("evidence_refs", [])
                      if ref.startswith("browser:")]
@@ -173,7 +179,16 @@ def run_execution(args) -> int:
         (output / "result.json").write_text(json.dumps(result, ensure_ascii=True, indent=2), encoding="utf-8")
     except OSError:
         result.update(attempt_status="failed", stop_reason="output_error",
-                      task_outcome="fail" if result.get("task_outcome") == "fail" else "unknown")
+                      task_outcome="fail" if result.get("task_outcome") == "fail" else "unknown",
+                      evidence_persistence="unavailable", trace_ref=None, evidence_refs=[], slot_evidence=[])
+        # Preserve a confirmed violation, but never advertise references to files
+        # whose complete publication failed. Partial files are not acceptance.
+        for row in result["verification"]:
+            row["evidence_refs"] = []
+            if row.get("status") == "pass":
+                row.update(status="unknown", reason="Evidence persistence failed.")
+        for row in result["actions"]:
+            row["evidence_refs"] = []
         print(json.dumps(result, ensure_ascii=True))
         return EXIT_CODES["failed"]
     print(json.dumps(result, ensure_ascii=True))

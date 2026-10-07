@@ -12,6 +12,8 @@ from typing import Callable
 
 from reflexmesh.contracts.execution import ExecutionTask
 from reflexmesh.runtime.process_group import OwnedWorker
+from reflexmesh.text.slots import SlotRegistry
+from reflexmesh.tracing.slot_evidence import SlotEvidence
 from reflexmesh.verification.constraints import ConstraintAssessments, assess_constraints
 
 GRACE_SECONDS = 5.0
@@ -51,7 +53,8 @@ class SkippedAction:
 class AttemptGate:
     """Small shared state; no browser/provider call may run under the lock."""
 
-    def __init__(self, ctx, task: ExecutionTask, started: float):
+    def __init__(self, ctx, task: ExecutionTask, started: float, *,
+                 slot_registry=None, slot_sink=None):
         self.lock = ctx.Lock()
         self.terminal = ctx.Value("i", 0, lock=False)
         self.dispatches = ctx.Value("q", 0, lock=False)
@@ -60,6 +63,13 @@ class AttemptGate:
         self.calls = ctx.Value("q", 0, lock=False)
         self.opaque_model_usage = ctx.Value("i", 0, lock=False)
         self.router_invocations = ctx.Value("q", 0, lock=False)
+        self.generation = ctx.Value("q", 0, lock=False)
+        self.sealed_generation = ctx.Value("q", -1, lock=False)
+        self.text_dispatches = ctx.Value("q", 0, lock=False)
+        self.nontext_dispatches = ctx.Value("q", 0, lock=False)
+        self.unknown_dispatches = ctx.Value("q", 0, lock=False)
+        self.slot_registry = slot_registry if slot_registry is not None else SlotRegistry.from_task(task)
+        self.slot_sink = slot_sink
         self.started = started
         self.deadline = (None if task.limits.wall_seconds is None else
                          started + task.limits.wall_seconds)
@@ -89,12 +99,19 @@ class AttemptGate:
         finally:
             self.lock.release()
 
-    def finish(self) -> int:
+    def finish(self, *, expected_generation: int | None = None) -> int:
         """Serialize verified completion against cancellation and deadline acceptance."""
         self._acquire()
         try:
             if not self.terminal.value:
-                self.terminal.value = 2 if self.deadline_expired() else 3
+                if self.deadline_expired():
+                    self.terminal.value = 2
+                elif expected_generation is not None and (
+                        self.generation.value != expected_generation or
+                        self.sealed_generation.value != expected_generation or self.in_flight.value):
+                    raise RuntimeStop("evidence_changed")
+                else:
+                    self.terminal.value = 3
             return self.terminal.value
         finally:
             self.lock.release()
@@ -154,17 +171,50 @@ class AttemptGate:
         remaining = self.remaining()
         return maximum if remaining is None else min(maximum, remaining)
 
-    def commit_dispatch(self) -> int:
+    def commit_dispatch(self, classification: str = "unknown") -> int:
         self._acquire()
         try:
             self._check()
+            if self.sealed_generation.value >= 0:
+                raise RuntimeStop("dispatches_sealed")
             if not self.steps.value:
                 raise RuntimeStop("step_limit")
             if self.in_flight.value:
                 raise RuntimeStop("effect_unknown")
             self.dispatches.value += 1
+            self.generation.value += 1
+            counter = {"text": self.text_dispatches, "nontext": self.nontext_dispatches}.get(
+                classification, self.unknown_dispatches)
+            counter.value += 1
             self.in_flight.value = self.dispatches.value
             return self.dispatches.value
+        finally:
+            self.lock.release()
+
+    def seal_dispatches(self) -> dict:
+        """Close coverage without accepting completion or excluding cancellation.
+
+        Existing calls can still return. No browser, IPC, or evidence operation
+        runs while this bounded lock is held.
+        """
+        self._acquire()
+        try:
+            self.sealed_generation.value = self.generation.value
+            return self._slot_snapshot_unlocked()
+        finally:
+            self.lock.release()
+
+    def _slot_snapshot_unlocked(self) -> dict:
+        return {"dispatches": self.dispatches.value, "generation": self.generation.value,
+                "sealed_generation": self.sealed_generation.value,
+                "text_dispatches": self.text_dispatches.value,
+                "nontext_dispatches": self.nontext_dispatches.value,
+                "unknown_dispatches": self.unknown_dispatches.value}
+
+    def slot_snapshot(self) -> dict:
+        self._acquire()
+        try:
+            return self._slot_snapshot_unlocked()
         finally:
             self.lock.release()
 
@@ -193,7 +243,14 @@ class ControlledEnvironment:
 
     def __init__(self, inner, gate: AttemptGate, events,
                  admit: Callable[[str, dict], str | None], *, bootstrap: bool = False):
+        # This enrollment is deliberately narrow. A duck-typed/fake environment
+        # cannot turn its own assertions into trusted boundary coverage.
+        from reflexmesh.adapters.system_one.fixture_browser import FixtureBrowser
+
         self.inner, self.gate, self.events, self.admit = inner, gate, events, admit
+        self._prepared_protocol = type(inner) is FixtureBrowser
+        if self._prepared_protocol:
+            inner.bind_runtime(gate.slot_registry, gate.slot_sink)
         self.bootstrap = bootstrap
         self.last_stop: str | None = None
         self.seen_mutations: set[tuple] = set()
@@ -209,7 +266,7 @@ class ControlledEnvironment:
         if reason:
             self.last_stop = reason
             raise RuntimeStop(reason)
-        action_id = self.gate.commit_dispatch()
+        action_id = self._commit("nontext" if self._prepared_protocol else "unknown")
         self.events.put(("dispatch", action_id, {"operation": "navigate"}))
         try:
             self.inner.reset(goal)
@@ -252,7 +309,19 @@ class ControlledEnvironment:
     def execute(self, action, params):
         # Never copy free-form provider parameters into the public trace.
         self.events.put(("proposal", {"action": action}))
-        reason = self.admit(action, params)
+        prepared = None
+        if self._prepared_protocol:
+            try:
+                prepared = self.inner.prepare(action, params)
+                # Preserve an explicitly injected additional policy. It sees a
+                # fresh copy of the admitted parameters and cannot mutate the
+                # private command that will actually be dispatched.
+                reason = (self.admit(prepared.action, dict(prepared._parameters))
+                          if self.admit != self.inner.admit else None)
+            except RuntimeStop as exc:
+                reason = exc.reason
+        else:
+            reason = self.admit(action, params)
         if reason == "stale_target":
             self.events.put(("reobserve", "stale_target"))
             return SkippedAction()
@@ -260,7 +329,9 @@ class ControlledEnvironment:
             self.last_stop = reason
             self.events.put(("rejected", reason))
             raise RuntimeStop(reason)
-        descriptor = self.inner.describe(action, params) if hasattr(self.inner, "describe") else {"operation": action}
+        descriptor = (prepared.descriptor() if prepared is not None else
+                      self.inner.describe(action, params) if hasattr(self.inner, "describe") else
+                      {"operation": action})
         operation_key = (descriptor.get("operation"), descriptor.get("target_id"), descriptor.get("slot_ref"))
         mutating = descriptor.get("operation") != "navigate"
         if mutating and self.uncertain_mutation:
@@ -272,7 +343,8 @@ class ControlledEnvironment:
             self.events.put(("rejected", "invalid_action"))
             raise RuntimeStop("invalid_action")
         try:
-            action_id = self.gate.commit_dispatch()
+            classification = ("text" if prepared.action == "type_text" else "nontext") if prepared else "unknown"
+            action_id = self._commit(classification, descriptor.get("slot_ref"))
         except RuntimeStop as exc:
             self.last_stop = exc.reason
             raise
@@ -280,7 +352,8 @@ class ControlledEnvironment:
             self.seen_mutations.add(operation_key)
         self.events.put(("dispatch", action_id, descriptor))
         try:
-            result = self.inner.execute(action, params)
+            result = (self.inner.execute_prepared(prepared, action_id) if prepared is not None else
+                      self.inner.execute(action, params))
         except Exception:
             # Driver exceptions do not prove the external effect did not happen.
             if mutating:
@@ -294,6 +367,14 @@ class ControlledEnvironment:
             return result
         finally:
             self.gate.settle(action_id)
+
+    def _commit(self, classification: str, slot_ref: str | None = None) -> int:
+        # Shared obligation counts change at commit, before any fallible IPC.
+        # A killed worker cannot erase a committed action by losing its event.
+        action_id = self.gate.commit_dispatch(classification)
+        if self.gate.slot_sink is not None:
+            self.gate.slot_sink.commit(action_id, classification, slot_ref)
+        return action_id
 
     def close(self):
         self.inner.close()
@@ -333,10 +414,16 @@ class AttemptSupervisor:
         self.verifier_factory = verifier_factory
         self.context = mp.get_context("fork")
         self.started = time.monotonic()
-        self.gate = AttemptGate(self.context, task, self.started)
+        self.attempt_id = uuid.uuid4().hex
+        registry = SlotRegistry.from_task(task)
+        self.slot_evidence = SlotEvidence(self.context, task, self.attempt_id, registry=registry)
+        self.gate = AttemptGate(self.context, task, self.started,
+                                slot_registry=registry, slot_sink=self.slot_evidence.sink)
+        # This lock-free high-water mark can reject foreign action IDs and
+        # retain actual failures after lock death; it can never establish pass.
+        self.slot_evidence.bind_dispatch_counter(self.gate.dispatches)
         self.events = self.context.Queue()
         self.process = OwnedWorker(self.context, _work, (strategy, self.gate, self.events))
-        self.attempt_id = uuid.uuid4().hex
         self._cancel_requested = False
         self.observation = None
         self.trace = []
@@ -345,15 +432,23 @@ class AttemptSupervisor:
         self.router_usage = None
         self.executor_id = None
         self._constraints = ConstraintAssessments()
+        self._assessment_generation = None
 
-    def _assess_constraints(self, snapshot=None, *, retain_passes=False):
-        if snapshot is None:
+    def _assess_constraints(self, snapshot=None, *, retain_passes=False, read_budget=True):
+        if snapshot is None and read_budget:
             try:
                 snapshot = self.gate.snapshot()
             except RuntimeStop:
                 # Unlocked fallback counters cannot establish a passing assessment.
                 pass
-        self._constraints.update(assess_constraints(self.task, snapshot, self.attempt_id),
+        try:
+            coverage = self.gate.slot_snapshot()
+        except RuntimeStop:
+            coverage = None
+        self._assessment_generation = (coverage["generation"] if coverage is not None and
+                                       coverage["sealed_generation"] == coverage["generation"] else None)
+        self._constraints.update(assess_constraints(self.task, snapshot, self.attempt_id,
+                                                   slot_evidence=self.slot_evidence, coverage=coverage),
                                  retain_passes=retain_passes)
 
     def cancel(self):
@@ -386,6 +481,7 @@ class AttemptSupervisor:
         value = None
         try:
             while True:
+                self.slot_evidence.drain()
                 # Completion verification must notice an accepted cancel even if
                 # the verifier never returns. Post-terminal evidence retains its
                 # separate, bounded grace window.
@@ -483,6 +579,7 @@ class AttemptSupervisor:
         terminal_at = None
         self.process.start()
         while status is None:
+            self.slot_evidence.drain()
             now = time.monotonic()
             if self._cancel_requested or self.gate.terminal.value == 1:
                 status, reason = "cancelled", "cancel_requested"
@@ -524,6 +621,12 @@ class AttemptSupervisor:
                 else:
                     self._record(event, actions)
         terminal_at = time.monotonic()
+        try:
+            self.gate.seal_dispatches()
+        except RuntimeStop:
+            # Coverage remains unknown. Cancellation and cleanup still use their
+            # ordinary bounded paths even if a dead worker held the gate lock.
+            pass
         self._assess_constraints()
         if status != "verifying":
             try:
@@ -548,12 +651,13 @@ class AttemptSupervisor:
             self._assess_constraints()
             if (assessments and all(v == "pass" for v in assessments) and
                     self._constraints.all_pass() and
+                    self._assessment_generation is not None and
                     not self.gate.in_flight.value and len(actions) == self.gate.dispatches.value and
                     not unknown_mutations and all(row["effect"] != "unknown" for row in verified_actions)):
                 try:
-                    accepted = self.gate.finish()
+                    accepted = self.gate.finish(expected_generation=self._assessment_generation)
                 except RuntimeStop:
-                    status, reason = "failed", "executor_error"
+                    status, reason = "incomplete", "verification_unknown"
                 else:
                     status, reason = ({3: ("completed", "verified"), 1: ("cancelled", "cancel_requested"),
                                        2: ("incomplete", "deadline")})[accepted]
@@ -587,6 +691,7 @@ class AttemptSupervisor:
             pass
         grace_end = terminal_at + GRACE_SECONDS
         while self.process.is_alive() and time.monotonic() < grace_end:
+            self.slot_evidence.drain()
             try:
                 self._record(self.events.get(timeout=min(0.05, max(0.001, grace_end - time.monotonic()))), actions)
             except queue.Empty:
@@ -611,8 +716,7 @@ class AttemptSupervisor:
                          "router_invocations": self.gate.router_invocations.value,
                          "dispatches": self.gate.dispatches.value, "in_flight": self.gate.in_flight.value}
             cleanup = "unknown"
-            self._constraints.update(assess_constraints(self.task, None, self.attempt_id),
-                                     retain_passes=status == "completed")
+            self._assess_constraints(retain_passes=status == "completed", read_budget=False)
         else:
             self._assess_constraints(snapshots, retain_passes=status == "completed")
         # A child can commit dispatch and die before the event reaches the parent.
@@ -629,6 +733,8 @@ class AttemptSupervisor:
                    reason in ("postcondition_failed", "constraint_violated") else
                    "unknown")
         elapsed = round(time.monotonic() - self.started, 3)
+        slot_records = self.slot_evidence.export()
+        self.slot_evidence.close()
         return {"schema_version": "execution-result/0.1", "task_id": self.task.task_id,
                 "revision": self.task.revision, "attempt_id": self.attempt_id,
                 "executor_id": self.executor_id, "routing": self.routing,
@@ -640,6 +746,7 @@ class AttemptSupervisor:
                     "error" if status == "failed" else "not_started",
                 "verification": verification, "actions": actions, "cleanup": cleanup,
                 "trace": self.trace,
+                "slot_evidence": slot_records,
                 "budget": {"steps": snapshots["steps"],
                            "model_calls": None if snapshots["opaque_model_usage"] else snapshots["model_calls"],
                            "local_model_calls": snapshots["model_calls"],

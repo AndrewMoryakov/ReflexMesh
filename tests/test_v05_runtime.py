@@ -35,7 +35,7 @@ def pass_verifier(task, timeout):
     return [{"id": c.id, "status": "pass", "evidence_refs": ["fake://verified"]} for c in task.criteria]
 
 
-def synthetic_constraint_passes(*_):
+def synthetic_constraint_passes(*_, **__):
     """Test-only evidence for positive gate branches, never adapter acceptance."""
     return [{"id": cid, "kind": "execution_constraint", "status": "pass",
              "reason": "Synthetic gate-test evidence, not adapter acceptance.",

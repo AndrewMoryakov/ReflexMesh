@@ -39,8 +39,11 @@ class HarnessStrategy:
 
     def __call__(self, gate, events):
         from systemone_harness.controller import Controller
+        from reflexmesh.adapters.system_one.fixture_browser import FixtureBrowser
 
         inner = self.environment_factory()
+        if type(inner) is FixtureBrowser:
+            inner.bind_runtime(gate.slot_registry, gate.slot_sink)
         controlled = ControlledEnvironment(inner, gate, events, self.admit or inner.admit,
                                            bootstrap=self.bootstrap)
         provider = CountingProvider(self.provider_factory(), gate, events, model=self.model)
