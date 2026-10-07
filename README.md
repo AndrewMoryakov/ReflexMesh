@@ -45,7 +45,7 @@ An AI agent that is asked to do something usually has several ways to do it: cal
 - **A routing decision, honestly labelled.** A strict Task goes in; a JSON decision comes out with a clear status (selected, refusal, confirmation needed, adapter error), a reason code and distinct exit codes. The default provider says it is a stub and executes nothing.
 - **Real routing through JevRouter, when you opt in.** A small routing model chooses among the routes the task allows; if no route fits it can say so, and an error is never papered over by the stub.
 - **Numbers rather than claims.** Routing was evaluated against a frozen protocol, and refusal behaviour separately; the reports state the dataset, the comparator and the limits.
-- **A worked example of a controlled runtime** (experimental). One browser subtask runs under permissions, step and model-call limits, a deadline and cancellation that the code owns, and counts as completed only if a verifier reading server-side state confirms it.
+- **A worked example of a controlled runtime** (experimental). One browser subtask runs under permissions, step and model-call limits, a deadline and cancellation that the code owns, and counts as completed only if a verifier confirms the goal from fixture evidence, including a browser observation for `current_page`.
 - **A written discipline.** Invariants, architecture decisions and staged specifications record what any future executor must keep.
 
 ### What it is not
@@ -53,7 +53,7 @@ An AI agent that is asked to do something usually has several ways to do it: cal
 - Not a finished agent framework, your own LLM, or a new RPA platform: it is a thin decision layer and an experimental runtime around existing components.
 - Not a task executor: no general task execution ships today. A selected route is a recommendation; the browser runtime is a controlled spike on a fixture site.
 - Not offline or cross-platform by promise: the Jev path assumes a cloud provider, and `reflexmesh run` needs a POSIX environment (Linux or WSL).
-- Not a measured claim about computer use: the routing study measured routing only, and the V0.5 runtime's execution quality and model cost are not yet measured.
+- Not a measured claim about computer use: the routing study measured routing only, and the V0.5 runtime has no completed execution-quality acceptance matrix or model-cost measurement.
 - Not an integration hub: the API/MCP, CLI, desktop, macro and workflow routes in the target picture are directions, not connectors.
 
 ### Glossary
@@ -93,8 +93,8 @@ Status labels: unlabeled = implemented in this repository; **experimental** = im
 
 - **`reflexmesh run`.** Executes one bounded browser subtask on a loopback fixture site; the input is a strict `execution-task/0.1`, the routing and action providers are explicit, and the result is one JSON plus `result.json`, `trace.jsonl` and `evidence.jsonl`. → [The execution runtime](#the-execution-runtime-experimental)
 - **Code-owned limits.** A wall-clock deadline, step and model-call limits, SIGINT cancellation, a worker process with a bounded grace period and recorded unknown effects. → [The execution runtime](#the-execution-runtime-experimental)
-- **Permissions, TextSlots and a verifier.** Seven named permissions, immutable versioned text slots and five postcondition predicates read by a verifier over fixture-server state; `completed` is assigned by the runtime, never by the harness. → [The execution runtime](#the-execution-runtime-experimental)
-- **A spike and a deterministic acceptance pass.** The V0.4 spike of SystemOneHarness + Browser Use under runtime veto, cancellation and deadline passed its checks; the V0.5 deterministic (U) acceptance passed 36 of 36 planned subcases, while the real-browser (B) and live-Jev (J) subcases are pending. → [Status](#status)
+- **Permissions, TextSlots and a verifier.** Seven named permissions, immutable versioned text slots and five postcondition predicates checked against fixture-server evidence or, for `current_page`, a browser observation; `completed` is assigned by the runtime, never by the harness. → [The execution runtime](#the-execution-runtime-experimental)
+- **A spike and recorded deterministic checks.** The V0.4 spike of SystemOneHarness + Browser Use under runtime veto, cancellation and deadline passed its checks; the historical V0.5 deterministic (U) report records 36 of 36 planned subcases, with [source-provenance and C12 coverage caveats](docs/research/V0.5-U-acceptance.md#static-review-addendum-2026-10-07); the real-browser (B) and live-Jev (J) acceptance subcases are pending. → [Status](#status)
 
 ### Documentation system
 
@@ -193,9 +193,10 @@ reflexmesh run --input task.json --output-dir ./evidence-001 \
 - **Input.** An `execution-task/0.1` JSON with `task_id`, `revision`, `goal`, `allowed_executors` (only `browser.soh` is implemented), a `fixture` (loopback origin and run id), `start_path`, `permissions`, `text_slots`, `criteria` and `limits` (`wall_seconds`, `max_steps`, `max_model_calls`, `max_action_retries`, which must be 0). Extra fields, duplicate keys and invalid references are rejected before any attempt.
 - **Permissions.** `navigate`, `type_text`, `toggle_setting`, `save_settings`, `submit_form`, `start_export`, `delete_account`; an action outside the task's list is refused before it reaches the browser.
 - **TextSlots.** Versioned immutable texts (`name@1`); actions refer to a slot rather than carrying text, and criteria can refer to slots.
-- **Criteria.** Postconditions evaluated by a read-only verifier against fixture-server state: `current_page`, `settings_saved`, `form_submitted_once`, `export_completed_once`, `account_intact`.
+- **Criteria.** Four postconditions use fixture-server state and events: `settings_saved`, `form_submitted_once`, `export_completed_once`, `account_intact`. `current_page` instead requires a matching browser observation of the current URL and target; a historical server GET is insufficient.
 - **Providers.** `--routing-provider stub|jevrouter` and `--action-provider script|jev`, both explicit; `script` is a deterministic test fixture supplied by `--script`.
 - **Outcome.** One JSON on stdout and `result.json`, `trace.jsonl`, `evidence.jsonl` in the output directory. `attempt_status` is `completed` (exit 0), `blocked` (3), `incomplete` (4), `failed` (5) or `cancelled` (130); input errors and output-directory preparation errors (before the attempt starts) exit 2, while a failure to write the output files after the run is reported as `failed` with stop reason `output_error` and exits 5. `task_outcome` is `pass` only for a completed attempt whose checks all pass. Success is never read from the harness's own status.
+- **Verification coverage.** Completion checks the implemented postconditions and action settlement. The only emitted execution-constraint assessment is `runtime.budget`; the required permission, immutable-slot, single-session, dispatch-order and no-uncertain-repeat assessments are not yet emitted. A `completed` result does not establish full V0.5 specification conformance ([review](docs/research/V0.5-review-2026-09-25.md#3-ограничения-выполнения-8)).
 - **Control.** A supervisor with a deadline that starts before availability checks, routing and startup; step and model-call counters; a dispatch and cancellation gate with a defined order; a worker process with bounded grace and cleanup; unresolved actions recorded as unknown effects rather than guessed.
 - **Platform and dependencies.** The first supported environment is Linux or WSL with a fresh browser process per attempt, a loopback fixture, and pinned optional dependencies (SystemOneHarness and Browser Use). The supervisor uses the POSIX `fork` start method, so `reflexmesh run` does not start on native Windows (measured on Windows with Python 3.13). The routing CLI and the V0.1–V0.3 tests are not affected.
 
@@ -211,7 +212,7 @@ Every claim below is tied to a dated report with its commit and environment; the
 | V0.3 routing | 75 labelled cases (RU and EN) over CUA / LLM / PERCEPTION: rules (1 pass) vs Jev and an LLM (`gpt-5.5` through pi), 3 passes each | Verdict "useful". Accuracy over the 60 single, ambiguous and paraphrase cases: Jev 1.00 (same as `gpt-5.5`) vs 0.65 for rules (0.13 on paraphrased tasks); p50 latency 0.60 s vs 6.44 s; about $0.00002 vs $0.002 per decision ([report](docs/research/V0.3-routing.md)) | One run, this catalogue; the `gpt-5.5` cost is a price-list estimate; Jev was weak on semantic refusal (correct refusal 25% vs 79% for the LLM on that 8-case subset) |
 | V0.3b refusal | 84 cases × 3 passes × four Jev variants, plus the LLM as reference | Offering a `NONE` candidate raised the correct-refusal rate from 22% (previous adapter) to 96% with no loss on ordinary tasks; implemented in the adapter ([report](docs/research/V0.3b-refusal.md)) | A harder set is an open question (ceiling effect for Jev and the LLM) |
 | V0.4 spike | SystemOneHarness + Browser Use under runtime veto, cancellation and deadline on a fixture site | 18 of 18 deterministic runs and 12 of 12 with Jev passed; a verifier over server state was right where the harness's own `completed` status was wrong in both directions ([report](docs/research/V0.4-spike.md)) | A fixture site, a specific environment, step-by-step mode |
-| V0.5 U acceptance | 36 deterministic subcases with fakes and fault injection | 36 of 36 passed on the evaluated commit ([note](docs/research/V0.5-U-acceptance.md)) | Real-browser (B) and live-Jev (J) subcases are pending; the gate is open |
+| V0.5 U acceptance | 36 deterministic subcase rows, 33 distinct test identifiers, with fakes and fault injection | Historical report records 36/36; its source SHA `1887114` is unavailable in GitHub. A separate reproduction on published `fe088e6` is reported ([provenance and coverage note](docs/research/V0.5-U-acceptance.md#static-review-addendum-2026-10-07)) | C12 log redaction covers only the executor-unavailable path. B and J acceptance remain pending; the gate is open |
 
 To re-run the routing studies, see the frozen protocols and datasets under `experiments/v03` and `experiments/v03b` and the run and score scripts `scripts/v03_run.py`, `scripts/v03_score.py`, `scripts/v03b_run.py`, `scripts/v03b_score.py`.
 
@@ -221,16 +222,16 @@ To re-run the routing studies, see the frozen protocols and datasets under `expe
 documents the controlled SystemOneHarness + Browser Use spike. The V0.5 execution
 code is in progress; its deterministic runtime and fixture checks do not yet close
 the real-browser or Jev acceptance gates. See the [V0.5 specification](docs/specs/V0.5.md)
-and [local run guide](docs/guides/V0.5-local-run.md). Earlier V0.2 live routing
+and [local run guide](docs/guides/V0.5-local-run.md). The [2026-10-07 static addendum](docs/research/V0.5-U-acceptance.md#static-review-addendum-2026-10-07) distinguishes recorded results, available source provenance and remaining coverage; no new execution is claimed. Earlier V0.2 live routing
 evidence remains in the [live report](docs/research/V0.2-live-openrouter.md).
 
 ### Known limits
 
 - **Declarations are not probes.** `capabilities` and `allowed_routes` are a routing filter, not a check that an executor is available and not full authorization.
-- **Routing only talks to loopback.** The only network path is outgoing HTTP to a local JevRouter; there is no proxy, redirect or retry, and no ReflexMesh task server. A socket I/O timeout is not an overall deadline.
+- **Routing only talks to loopback.** The routing adapter's network path is outgoing HTTP to a local JevRouter; there is no proxy, redirect or retry, and no ReflexMesh task server. A socket I/O timeout is not an overall deadline.
 - **A selected route is a recommendation.** `needs_confirmation` returns a proposal; there is no confirmation or follow-up execution mechanism. There is no automatic fallback to the stub.
 - **Evidence is scoped.** Test counts and configurations belong to the runs named in the reports; updating documentation is not a new run. Direct typesafe was not verified live.
-- **The runtime gate is open.** Real Browser Use selector-map and backend-node behaviour has only simulated tests; B (real browser) and J (live Jev) subcases are pending; a worker crash while holding the gate lock and full process-tree cleanup timing have not been demonstrated; model cost is unmeasured. The runtime needs Linux or WSL.
+- **The runtime gate is open.** An [independent review](docs/research/V0.5-review-2026-09-25.md) records one real-Chromium form smoke and selector-map/node-identity probes on `fe088e6`. These historical observations do not satisfy the required B acceptance matrix; B and J remain pending. Document/frame identity, enabled state, form destination, policy revision and the full execution-constraint assessments remain incomplete. A worker crash while holding the gate lock and full process-tree cleanup timing have not been demonstrated; model cost is unmeasured. The runtime needs Linux or WSL.
 - **Invariant coverage is partial.** Routing and CLI work without Pi; the rest of the invariants are requirements for later stages, and conformance of execution paths is not yet established.
 
 ### Roadmap at a glance
@@ -241,7 +242,7 @@ evidence remains in the [live report](docs/research/V0.2-live-openrouter.md).
 | V0.2 | JevRouter HTTP adapter, refusal reasons, trace | Live gate closed for OpenRouter |
 | V0.3 / V0.3b | Routing study; refusal study and the NONE candidate | Done (verdict "useful"); NONE implemented |
 | V0.4 | SystemOneHarness + Browser Use spike | Done |
-| V0.5 | Minimal controlled browser runtime | In progress; U passed, B and J pending |
+| V0.5 | Minimal controlled browser runtime | In progress; historical U 36/36 recorded with provenance/coverage caveats; B and J pending |
 | V0.6 | MCP interface, Pi integration, handoff | Not started |
 | V1.0 | First finished browser MVP from Pi/MCP | Planned |
 | V1.1–V2.0 | OCR, desktop, recovery, queue/UI, durable workflows, several executor classes | Preliminary order, not a promise |
