@@ -6,6 +6,7 @@ from urllib.parse import urljoin, urlsplit
 
 from reflexmesh.contracts.execution import ExecutionTask
 from reflexmesh.runtime.runner import RuntimeStop
+from reflexmesh.text.slots import PreparedAction, PreparedTextCommand, SlotRegistry
 
 OPERATIONS = {
     "home": "navigate", "profile": "navigate", "settings": "navigate",
@@ -30,11 +31,27 @@ class FixtureBrowser:
         self.task = task
         self.backend = BrowserEnvironment(headless=True, executable_path=chrome,
                                           start_url=task.origin + task.start_path,
-                                          text_values={s.reference: s.value for s in task.slots},
+                                          # SOH needs nonempty choices to enumerate fields.
+                                          # Values here are labels, never dispatch payloads.
+                                          text_values={s.reference: s.reference for s in task.slots},
                                           user_data_dir=None)
         self.targets: dict[str, tuple] = {}
         self.observation_url = ""
         self.unsupported = False
+        self._slot_registry = None
+        self._slot_sink = None
+
+    def bind_runtime(self, registry: SlotRegistry, sink) -> None:
+        """Accept only the supervisor's snapshot for this exact task revision/run."""
+        if (type(registry) is not SlotRegistry or
+                (registry.task_id, registry.revision, registry.run_id) !=
+                (self.task.task_id, self.task.revision, self.task.run_id) or
+                not callable(getattr(sink, "handoff", None))):
+            raise RuntimeStop("adapter_contract_unsupported")
+        current = getattr(self, "_slot_registry", None)
+        if current is not None and (current is not registry or self._slot_sink is not sink):
+            raise RuntimeStop("adapter_contract_unsupported")
+        self._slot_registry, self._slot_sink = registry, sink
 
     @staticmethod
     def action_space():
@@ -90,7 +107,9 @@ class FixtureBrowser:
             obs.candidates.pop("text_fields", None)
             obs.candidates.pop("text_values", None)
         else:
-            obs.candidates["text_values"] = {s.reference: s.reference for s in self.task.slots}
+            registry = getattr(self, "_slot_registry", None)
+            references = registry.references if registry is not None else tuple(s.reference for s in self.task.slots)
+            obs.candidates["text_values"] = {ref: ref for ref in references}
         for name in ("options", "tabs"):
             obs.candidates.pop(name, None)
         obs.fields["run_id"] = self.task.run_id
@@ -127,8 +146,9 @@ class FixtureBrowser:
             return "policy_denied"
         if operation == "navigate" and not self._valid_url(urljoin(self.observation_url, before[4])):
             return "policy_denied"
-        if action == "type_text" and (type(params["value"]) is not str or
-                                      params["value"] not in {s.reference for s in self.task.slots}):
+        registry = getattr(self, "_slot_registry", None)
+        references = registry.references if registry is not None else tuple(s.reference for s in self.task.slots)
+        if action == "type_text" and (type(params["value"]) is not str or params["value"] not in references):
             return "invalid_action"
         if not self._valid_url(self.observation_url):
             return "policy_denied"
@@ -141,6 +161,51 @@ class FixtureBrowser:
         if now != before:
             return "stale_target"
         return None
+
+    def prepare(self, action: str, params: dict) -> PreparedAction:
+        """Snapshot before admission; resolve exactly once after it succeeds."""
+        if type(action) is not str or type(params) is not dict:
+            raise RuntimeStop("invalid_action")
+        captured = dict(params)
+        keys = {"element"} if action == "click" else {"field", "value"}
+        if (action not in ("click", "type_text") or set(captured) != keys or
+                any(type(value) is not str for value in captured.values())):
+            raise RuntimeStop("invalid_action")
+        index = captured["element" if action == "click" else "field"]
+        target = self.targets.get(index)
+        parameters = tuple(captured.items())
+        reason = self.admit(action, dict(parameters))
+        if reason:
+            raise RuntimeStop(reason)
+        # The admitted node tuple and immutable parameters supply the descriptor
+        # and the driver, even if callers mutate their dictionaries afterwards.
+        if target is None:
+            raise RuntimeStop("invalid_action")
+        text = None
+        if action == "type_text":
+            registry = getattr(self, "_slot_registry", None)
+            if registry is None or getattr(self, "_slot_sink", None) is None:
+                raise RuntimeStop("adapter_contract_unsupported")
+            try:
+                text = PreparedTextCommand(int(index), registry.resolve(captured["value"]))
+            except ValueError:
+                raise RuntimeStop("invalid_action") from None
+        operation = OPERATIONS[target[1]]
+        destination = urljoin(self.observation_url, target[4]) if operation == "navigate" else None
+        return PreparedAction(action, operation, target[1], parameters, destination, text)
+
+    def execute_prepared(self, prepared: PreparedAction, action_id: int):
+        if type(prepared) is not PreparedAction:
+            raise RuntimeStop("adapter_contract_unsupported")
+        if prepared.action == "type_text":
+            from reflexmesh.adapters.system_one.text_dispatch import dispatch_text
+
+            if prepared._text is None or getattr(self, "_slot_sink", None) is None:
+                raise RuntimeStop("adapter_contract_unsupported")
+            return dispatch_text(self.backend, prepared._text, action_id, self._slot_sink)
+        if prepared.action != "click" or prepared._text is not None:
+            raise RuntimeStop("adapter_contract_unsupported")
+        return self.backend.execute(prepared.action, dict(prepared._parameters))
 
     def describe(self, action: str, params: dict) -> dict:
         if action == "navigate":
@@ -157,6 +222,10 @@ class FixtureBrowser:
         return info
 
     def execute(self, action, params):
+        # The legacy mutable backend path must never be usable for text, even
+        # outside the supervised prepared-command protocol.
+        if action == "type_text":
+            raise RuntimeStop("adapter_contract_unsupported")
         return self.backend.execute(action, params)
 
     def close(self):

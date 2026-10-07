@@ -191,7 +191,7 @@ class CompletionGate(unittest.TestCase):
     def test_constraint_failure_blocks_completion_and_survives_later_pass(self):
         calls = 0
 
-        def fail_then_pass(*args):
+        def fail_then_pass(*args, **kwargs):
             nonlocal calls
             calls += 1
             rows = synthetic_passes()
@@ -212,7 +212,7 @@ class CompletionGate(unittest.TestCase):
                     supervisor = AttemptSupervisor(task(), finish_no_action, pass_verifier)
                     calls = 0
 
-                    def stop_during_assessment(*args):
+                    def stop_during_assessment(*args, **kwargs):
                         nonlocal calls
                         calls += 1
                         rows = synthetic_passes()
@@ -262,7 +262,7 @@ class CompletionGate(unittest.TestCase):
         supervisor = AttemptSupervisor(task(), finish_no_action, pass_verifier)
         cleanup = supervisor.process.cleanup
 
-        def assess(request, snapshot, attempt_id):
+        def assess(request, snapshot, attempt_id, **kwargs):
             rows = synthetic_passes()
             rows[-1] = assess_constraints(request, snapshot, attempt_id)[-1]
             return rows
