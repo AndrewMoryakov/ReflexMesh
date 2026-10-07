@@ -7,7 +7,7 @@ import threading
 import time
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -16,7 +16,7 @@ from reflexmesh.contracts.execution import ExecutionTask
 from reflexmesh.contracts.task import Route, Task
 from reflexmesh.routing.stub import route_task
 from reflexmesh.runtime.cli import BrowserExecutionStrategy
-from reflexmesh.runtime.runner import AttemptSupervisor
+from reflexmesh.runtime.runner import AttemptSupervisor, WorkerResult
 from reflexmesh.adapters.system_one.harness import CountingProvider
 from test_v05_runtime import sample
 
@@ -40,7 +40,10 @@ class QuickProvider:
 
 
 def micro_after_macro(gate, events):
-    CountingProvider(QuickProvider(), gate, events, model=True).decide({}, {})
+    provider = CountingProvider(QuickProvider(), gate, events, model=True)
+    provider.decide({}, {})
+    provider.decide({}, {})
+    return WorkerResult("finish")
 
 
 def fake_harness(*args, **kwargs):
@@ -57,12 +60,15 @@ class PreflightLifecycle(unittest.TestCase):
         return SimpleNamespace(routing_provider="jevrouter", jev_url="http://127.0.0.1:8787",
                                timeout=30, chrome=None)
 
-    def test_macro_request_charged_and_routing_retained(self):
+    def test_opaque_macro_allowed_with_finite_local_budget_and_routing_retained(self):
         task = self.task()
         with patch("reflexmesh.runtime.cli.read_fixture", baseline), patch(
-                "reflexmesh.runtime.cli.jev_route", selected):
+                "reflexmesh.routing.router.jev_route", selected), patch(
+                "reflexmesh.runtime.cli.importlib.util.find_spec", return_value=None):
             result = AttemptSupervisor(task, BrowserExecutionStrategy(task, self.args(), None)).run()
-        self.assertEqual(result["budget"]["model_calls"], 1)
+        self.assertIsNone(result["budget"]["model_calls"])
+        self.assertEqual(result["budget"]["local_model_calls"], 0)
+        self.assertEqual(result["budget"]["model_calls_reason"], "router_internal_usage_unknown")
         self.assertEqual(result["routing"]["route"], "CUA")
         self.assertEqual(result["stop_reason"], "executor_unavailable")
         self.assertEqual(result["budget"]["dispatches"], 0)
@@ -77,7 +83,7 @@ class PreflightLifecycle(unittest.TestCase):
             return decision
 
         with patch("reflexmesh.runtime.cli.read_fixture", baseline), patch(
-                "reflexmesh.runtime.cli.jev_route", none):
+                "reflexmesh.routing.router.jev_route", none):
             result = AttemptSupervisor(task, BrowserExecutionStrategy(task, self.args(), None)).run()
         self.assertEqual((result["attempt_status"], result["stop_reason"], result["budget"]["dispatches"]),
                          ("blocked", "no_route", 0))
@@ -97,53 +103,71 @@ class PreflightLifecycle(unittest.TestCase):
                          ("blocked", "unsupported_criterion"))
         self.assertEqual(result["budget"]["dispatches"], 0)
 
-    def test_macro_call_exhausts_budget_before_micro_request(self):
+    def test_opaque_macro_does_not_spend_local_budget_and_micro_calls_are_limited(self):
         data = sample()
         data["limits"]["max_model_calls"] = 1
         task = ExecutionTask.from_dict(data)
         args = self.args()
         args.chrome = sys.executable
+        browser_module = ModuleType("systemone_harness.envs.browser")
+        browser_module.default_chrome = lambda: sys.executable
         with patch("reflexmesh.runtime.cli.read_fixture", baseline), patch(
-                "reflexmesh.runtime.cli.jev_route", selected), patch(
+                "reflexmesh.routing.router.jev_route", selected), patch(
                 "reflexmesh.runtime.cli.importlib.util.find_spec", return_value=object()), patch(
-                "reflexmesh.runtime.cli.HarnessStrategy", fake_harness):
+                "reflexmesh.runtime.cli.HarnessStrategy", fake_harness), patch.dict(
+                sys.modules, {"systemone_harness.envs.browser": browser_module}):
             result = AttemptSupervisor(task, BrowserExecutionStrategy(task, args, None)).run()
         self.assertEqual((result["attempt_status"], result["stop_reason"],
                           result["budget"]["model_calls"], result["budget"]["dispatches"]),
-                         ("incomplete", "model_call_limit", 1, 0))
+                         ("incomplete", "model_call_limit", None, 0))
+        self.assertEqual(result["budget"]["local_model_calls"], 1)
+        self.assertEqual(result["budget"]["remaining_model_calls"], 0)
+        self.assertEqual(result["budget"]["model_call_limit_scope"], "locally_controlled_provider_requests")
+        budget_row = next(row for row in result["verification"] if row["id"] == "runtime.budget")
+        self.assertEqual(budget_row["scope"], "steps_and_locally_controlled_model_calls")
 
     def test_cancel_during_macro_cannot_start_execution(self):
-        entered, release = mp.get_context("fork").Event(), mp.get_context("fork").Event()
+        for wall in (1.5, None):
+            with self.subTest(wall=wall):
+                entered, release = mp.get_context("fork").Event(), mp.get_context("fork").Event()
 
-        def pending_route(task, **kwargs):
-            entered.set()
-            release.wait(1)
-            return selected(task)
+                def pending_route(task, **kwargs):
+                    entered.set()
+                    release.wait(1)
+                    return selected(task)
 
-        task = self.task(1.5)
-        sup = AttemptSupervisor(task, BrowserExecutionStrategy(task, self.args(), None))
+                task = self.task(wall)
+                sup = AttemptSupervisor(task, BrowserExecutionStrategy(task, self.args(), None))
+                cancelled = []
 
-        def cancel():
-            self.assertTrue(entered.wait(1))
-            sup.cancel()
-            release.set()
+                def cancel():
+                    ready = entered.wait(1)
+                    cancelled.append((ready, sup.cancel()))
+                    release.set()
 
-        with patch("reflexmesh.runtime.cli.read_fixture", baseline), patch(
-                "reflexmesh.runtime.cli.jev_route", pending_route):
-            worker = threading.Thread(target=cancel)
-            worker.start()
-            result = sup.run()
-            worker.join(2)
-        self.assertEqual((result["attempt_status"], result["stop_reason"]),
-                         ("cancelled", "cancel_requested"))
-        self.assertEqual(result["budget"]["model_calls"], 1)
-        self.assertEqual(result["budget"]["dispatches"], 0)
+                with patch("reflexmesh.runtime.cli.read_fixture", baseline), patch(
+                        "reflexmesh.routing.router.jev_route", pending_route), patch(
+                        "reflexmesh.runtime.cli.importlib.util.find_spec", return_value=None):
+                    worker = threading.Thread(target=cancel, daemon=True)
+                    worker.start()
+                    result = sup.run()
+                    worker.join(2)
+                self.assertFalse(worker.is_alive())
+                self.assertEqual(cancelled, [(True, True)])
+                self.assertEqual((result["attempt_status"], result["stop_reason"]),
+                                 ("cancelled", "cancel_requested"))
+                self.assertIsNone(result["budget"]["model_calls"])
+                self.assertEqual(result["budget"]["local_model_calls"], 0)
+                self.assertEqual(result["budget"]["model_calls_reason"], "router_internal_usage_unknown")
+                self.assertEqual(result["budget"]["dispatches"], 0)
+                if wall is None:
+                    self.assertIsNone(result["budget"]["remaining_wall_seconds"])
 
     def test_hung_fixture_is_bounded_before_macro(self):
         task = self.task(0.1)
         started = time.monotonic()
         with patch("reflexmesh.runtime.cli.read_fixture", slow_fixture), patch(
-                "reflexmesh.runtime.cli.jev_route", selected):
+                "reflexmesh.routing.router.jev_route", selected):
             result = AttemptSupervisor(task, BrowserExecutionStrategy(task, self.args(), None)).run()
         self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "deadline"))
         self.assertEqual(result["budget"]["model_calls"], 0)

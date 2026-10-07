@@ -9,8 +9,10 @@ import urllib.request
 from reflexmesh.contracts.execution import ExecutionTask
 
 
-def read_fixture(task: ExecutionTask, timeout: float) -> dict:
-    with urllib.request.urlopen(task.origin + "/__state", timeout=max(0.01, min(timeout, 2))) as response:
+def read_fixture(task: ExecutionTask, timeout: float | None) -> dict:
+    # This is a per-read network timeout, not a cap on total task duration.
+    with urllib.request.urlopen(task.origin + "/__state", timeout=2.0 if timeout is None else
+                                max(0.01, min(timeout, 2))) as response:
         value = json.load(response)
     if type(value) is not dict or value.get("run_id") != task.run_id:
         raise ValueError("fixture_mismatch")
@@ -27,7 +29,7 @@ class FixtureVerifier:
             raise ValueError("fixture_mismatch")
         self.baseline = baseline
 
-    def __call__(self, task: ExecutionTask, timeout: float, observation: dict | None = None) -> list[dict]:
+    def __call__(self, task: ExecutionTask, timeout: float | None, observation: dict | None = None) -> list[dict]:
         try:
             current = read_fixture(task, timeout)
             observed_at = time.time()
