@@ -230,6 +230,31 @@ class CleanupUnitTests(unittest.TestCase):
         self.assertEqual(worker.ready.value, 0)
         worker.target.assert_not_called()
 
+    def test_fixture_release_polling_accepts_a_lock_free_flag(self):
+        clock, release = Clock(), SimpleNamespace(value=0)
+
+        def release_after_poll(seconds):
+            clock.sleep(seconds)
+            release.value = 1
+
+        # The plain flag deliberately has no Event.wait/set or Condition
+        # bookkeeping that can be stranded when a waiting worker is killed.
+        with patch.object(os, "fork", return_value=70002), \
+                patch.object(time, "monotonic", clock.monotonic), \
+                patch.object(time, "sleep", side_effect=release_after_poll):
+            orphan_descendant(None, release, None)
+        self.assertEqual(release.value, 1)
+        self.assertLessEqual(clock.now, 0.02)
+
+    def test_fixture_release_polling_stops_at_its_deadline(self):
+        clock, release = Clock(), SimpleNamespace(value=0)
+        with patch.object(os, "fork", return_value=70002), \
+                patch.object(time, "monotonic", clock.monotonic), \
+                patch.object(time, "sleep", clock.sleep):
+            orphan_descendant(None, release, None)
+        self.assertEqual(release.value, 0)
+        self.assertEqual(clock.now, 5)
+
 
 def orphan_descendant(ready, release, child_pid):
     pid = os.fork()
@@ -239,7 +264,9 @@ def orphan_descendant(ready, release, child_pid):
         ready.set()
         while True:
             time.sleep(0.02)
-    release.wait(5)
+    deadline = time.monotonic() + 5
+    while not release.value and time.monotonic() < deadline:
+        time.sleep(min(0.02, max(0, deadline - time.monotonic())))
 
 
 @unittest.skipUnless(sys.platform.startswith("linux") and hasattr(os, "pidfd_open"),
@@ -253,7 +280,10 @@ class CleanupProcessTests(unittest.TestCase):
 
     def _exercise_cleanup(self, *, leader_dead):
         ctx = mp.get_context("fork")
-        ready, release = ctx.Event(), ctx.Event()
+        ready = ctx.Event()
+        # Event.set() can deadlock after TERM kills its Condition waiter.
+        # A lock-free flag is safe to publish even after that worker is gone.
+        release = ctx.Value("b", 0, lock=False)
         child_pid = ctx.Value("i", 0)
         worker = OwnedWorker(ctx, orphan_descendant, (ready, release, child_pid))
         pidfd = None
@@ -263,7 +293,7 @@ class CleanupProcessTests(unittest.TestCase):
             self.assertGreater(child_pid.value, 0)
             pidfd = os.pidfd_open(child_pid.value)
             if leader_dead:
-                release.set()
+                release.value = 1
                 deadline = time.monotonic() + 2
                 while worker.is_alive() and time.monotonic() < deadline:
                     time.sleep(0.01)
@@ -286,7 +316,7 @@ class CleanupProcessTests(unittest.TestCase):
             except FileNotFoundError:
                 pass
         finally:
-            release.set()
+            release.value = 1
             if pidfd is not None:
                 try:
                     signal.pidfd_send_signal(pidfd, signal.SIGKILL)
