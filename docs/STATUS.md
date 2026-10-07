@@ -1,6 +1,9 @@
 # Текущее состояние ReflexMesh
 
-Дата проверки: 2026-09-24. Ранний контрактный baseline:
+Статическая сверка: 2026-10-07, кодовая база
+[82b56ba](https://github.com/AndrewMoryakov/ReflexMesh/commit/82b56ba5d33ba7e9612d537c833003738b4b0df5).
+Новых тестовых, браузерных или модельных прогонов при этой сверке не выполнялось.
+Историческая проверка routing от 2026-09-24 использовала ранний контрактный baseline
 [62ccf0d](https://github.com/AndrewMoryakov/ReflexMesh/commit/62ccf0d29c5d0e599f92561b4d8da3f980d63719).
 Последующий live-прогон и расширенные сценарии имеют собственные commit и среду в отчётах.
 Live gate V0.2 закрыт 2026-09-24 для `openrouter:~typesafe/jev-latest` на коммите 7c03412 ([отчёт](research/V0.2-live-openrouter.md)).
@@ -20,7 +23,9 @@ Live gate V0.2 закрыт 2026-09-24 для `openrouter:~typesafe/jev-latest` 
 | V0.2 | HTTP-клиент JevRouter; решение 0.2; фильтрация, отказы и trace | [Отчёт V0.2](research/V0.2-validation.md): всего 21 тест; настоящий upstream server в demo |
 | V0.2 live | ReflexMesh → JevRouter → OpenRouter → `typesafe/jev-1.13-20260917` | [Live-отчёт](research/V0.2-live-openrouter.md): 5/5 пунктов pass, вызовы подтверждены ledger OpenRouter; typesafe напрямую не проверен. [Расширенные сценарии](research/V0.2-live-extended-openrouter.md): все три маршрута, RU/EN, пары, 5 повторов, live-ошибка провайдера |
 | Upstream | JevRouter на закреплённом commit f944acb | Проверено HTTP/contract и live через OpenRouter |
-| Платформы | Linux/Python 3.12.14/Node 24.19.0; Windows 11/Python 3.13.15/Node 24.15.0 | 25 тестов проходят на обеих платформах (Windows-специфичный timeout в тесте исправлен в 599b58d) |
+| V0.4 | SystemOneHarness + Browser Use под контролем runtime на фикстуре | [Исторический spike](research/V0.4-spike.md): 18/18 детерминированных и 12/12 Jev-прогонов; ограниченный стенд и среда |
+| V0.5, экспериментально | `reflexmesh run`, supervisor/worker, отмена/dispatch, лимиты, TextSlots, SOH-адаптер и fixture verifier реализованы в репозитории | Исторически записано U 36/36; исходный SHA `1887114` недоступен. [Отдельное ревью](research/V0.5-review-2026-09-25.md) сообщает воспроизведение U на `fe088e6` и один Chromium smoke, не зачтённый в B. [Оговорки о происхождении и покрытии](research/V0.5-U-acceptance.md#static-review-addendum-2026-10-07); B/J acceptance открыт |
+| Платформы V0.1/V0.2 routing | Linux/Python 3.12.14/Node 24.19.0; Windows 11/Python 3.13.15/Node 24.15.0 | В историческом прогоне 25 тестов прошли на обеих платформах (Windows-специфичный timeout в тесте исправлен в 599b58d) |
 
 Числа тестов и конфигурации относятся к указанным в отчётах прогонам;
 актуализация документации сама по себе не является новым runtime-прогоном.
@@ -30,10 +35,11 @@ HTTP-пути; выбранный маршрут никогда не означ�
 ## Пока отсутствует
 
 - Live-подтверждение прямого провайдера typesafe.
-- V0.5 acceptance remains open. Initial supervisor, cancellation/dispatch gate, TextSlot
-  input validation, isolated test fixture, verifier predicates, and optional SOH adapter
-  are implemented locally. The [implementation progress report](research/V0.5-implementation-progress.md)
-  identifies exactly which checks ran and which browser/live checks remain pending.
+- Завершённая приёмка V0.5. Экспериментальный runtime уже есть в коде, но B/J-матрицы
+  с необходимыми повторами не закрыты. Исторический U-результат не подтверждает
+  полное покрытие: C12 проверяет очистку логов только при `executor_unavailable`,
+  до браузерных действий, и пропускается при установленном Browser Use.
+  См. [дополнение к U-отчёту](research/V0.5-U-acceptance.md#static-review-addendum-2026-10-07).
 - Cua and desktop actions; recovery and a durable execution receipts store.
 - MCP Task API, Pi-интеграция, HTTP Task API.
 - OCR/VLM, ClawBridge, Skyvern, Ui.Vision, Jev meso-supervisor.
@@ -53,14 +59,18 @@ V0.3 выполнен по [утверждённому протоколу](specs
 поднимает корректный отказ Jev до 96% без потерь на обычных задачах; реализовано в адаптере
 ([ADR-0003](architecture/ADR-0003-none-candidate-refusal.md), [live-проверка](research/ADR-0003-live-check.md)). The next open gate in the [roadmap](ROADMAP.md) is V0.5.
 Правила INV-03 уточнены через [ADR-0002](architecture/ADR-0002-routing-effects-and-loop-control.md).
-Новых execution-свидетельств эти документы не добавляют; live-свидетельства
-отдельно опубликованы для OpenRouter.
+Эта статическая актуализация не добавляет новых execution-свидетельств.
+Исторические V0.4-прогоны и V0.5 smoke описаны отдельно; smoke не закрывает B/J.
 
 ## Известные границы реализации
 
 - capabilities/allowed_routes — объявления и routing-фильтр, не проверка доступности исполнителей или полноценная авторизация.
-- Только исходящий HTTP к loopback JevRouter, без proxy/redirect/retry; нет сервера задач ReflexMesh.
-- Socket I/O timeout не является общим wall-clock deadline. Его нельзя выдавать за выполнение INV-10 для будущего runtime.
+- Адаптер routing делает исходящий HTTP к loopback JevRouter без proxy/redirect/retry; сервера задач ReflexMesh нет. Экспериментальный `run` дополнительно использует браузер, HTTP-фикстуру и выбранный action provider.
+- Socket I/O timeout адаптера routing не является общим wall-clock deadline. У `run` есть отдельный deadline супервизора; полное соответствие V0.5/INV-10 остаётся открытым.
+- Runtime V0.5 использует POSIX `fork` и требует Linux/WSL; исторические Windows-проверки routing не подтверждают поддержку `run` на native Windows.
+- Четыре постусловия verifier используют состояние/события сервера: `settings_saved`, `form_submitted_once`, `export_completed_once`, `account_intact`. Для `current_page` нужно соответствующее наблюдение браузера с текущим URL и целью; исторического GET недостаточно.
+- Из обязательных execution constraints выводится только `runtime.budget`. Оценки разрешений, неизменности слотов, единоличного владения сессией, порядка dispatch и отсутствия повторов неясных действий пока не выводятся. Поэтому `completed` не подтверждает полное соответствие спецификации.
+- Реальные selector-map/node-identity пробы и smoke описаны в [ревью V0.5](research/V0.5-review-2026-09-25.md). Идентичность документа/фрейма, enabled, назначение формы и ревизия политики остаются неполными; приёмочные B/J-повторы ещё нужны.
 - `is_stub=false` и provenance от локального сервиса не доказывают обращение к модели.
 - `needs_confirmation` возвращает предложение; механизма подтверждения и последующего исполнения пока нет.
 - Отказ, ошибка и выбранный маршрут имеют разные исходы; автоматического fallback на stub нет.
@@ -69,10 +79,10 @@ V0.3 выполнен по [утверждённому протоколу](specs
 
 | INV | Текущий уровень |
 |---|---|
-| 01, 03, 07 | CLI/routing работают без Pi; исполнение отделено, но самого исполнения нет |
-| 04, 13 | Фильтрация объявленных маршрутов и проверка ответа; не полная execution-policy |
-| 14 | Частичная routing-трасса; не полный журнал попыток и свидетельств |
-| 16 | Routing: измерено по протоколу V0.3 ([отчёт](research/V0.3-routing.md)); computer-use не измерялся |
+| 01, 03, 07 | CLI/routing работают без Pi; routing отделён от экспериментального браузерного `run`, общий исполнитель задач отсутствует |
+| 04, 13 | Routing-фильтрация и проверки ответа; runtime дополнительно проверяет fixture permissions, но полный adapter/policy contract не подтверждён |
+| 14 | Routing-трасса и экспериментальные `result.json`, `trace.jsonl`, `evidence.jsonl`; полный audit contract и очистка логов обычного исполнения не подтверждены |
+| 16 | Routing измерен в V0.3/V0.3b; есть ограниченные V0.4 browser-прогоны и V0.5 smoke. Приёмочная матрица качества выполнения V0.5 не завершена, стоимость модели не измерена |
 | Остальные | Требования к следующим этапам; соответствие execution-путей не подтверждено |
 
 ## Аудит документации
