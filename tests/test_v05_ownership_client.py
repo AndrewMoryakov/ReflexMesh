@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from reflexmesh.contracts.execution import ExecutionTask
 from reflexmesh.runtime.ownership import FixtureOwnership, OwnershipError
+from reflexmesh.runtime.ownership import _ERROR_BODY_BYTES
 
 
 PRIVATE_VALUE = "  Do not export this value: 雪\t\r\n"
@@ -371,7 +372,7 @@ class OwnershipClient(unittest.TestCase):
         self.assertNotEqual(owner.export()[-1]["response_binding"]["claim_id"], "mutated-copy")
 
     def test_http_errors_and_malformed_json_are_sanitized_and_not_retried(self):
-        for status, expected in ((409, "fixture_busy"), (403, "ownership_authentication_failed"),
+        for status, expected in ((409, "ownership_protocol_error"), (403, "ownership_authentication_failed"),
                                  (404, "ownership_unsupported"), (500, "ownership_protocol_error"),
                                  (307, "ownership_protocol_error")):
             with self.subTest(status=status):
@@ -391,6 +392,87 @@ class OwnershipClient(unittest.TestCase):
         with patch("reflexmesh.runtime.ownership.urllib.request.build_opener", return_value=opener):
             with self.assertRaisesRegex(OwnershipError, "ownership_response_invalid"):
                 owner.acquire(0.2)
+
+    def test_claim_conflict_codes_are_exact_allowlisted_server_errors(self):
+        for code, expected in (("fixture_mismatch", "fixture_mismatch"),
+                               ("fixture_owned", "fixture_busy"),
+                               ("claim_revoked", "ownership_conflict")):
+            with self.subTest(code=code):
+                owner = self.owner()
+                body = io.BytesIO(json.dumps({"error": code}).encode())
+                opener = Mock()
+                opener.open.side_effect = urllib.error.HTTPError(
+                    task().origin + "/__claim", 409, PRIVATE_VALUE, {}, body)
+                with patch("reflexmesh.runtime.ownership.urllib.request.build_opener", return_value=opener):
+                    with self.assertRaises(OwnershipError) as error:
+                        owner.acquire(0.2)
+                    self.assertEqual(error.exception.reason, expected)
+                    with self.assertRaisesRegex(OwnershipError, "ownership_acquisition_already_attempted"):
+                        owner.acquire(0.2)
+                self.assertEqual(opener.open.call_count, 1)
+                self.assertTrue(body.closed)
+                self.assertEqual(owner.acquisition_attempted.value, 1)
+                self.assertIsNone(owner.binding)
+                self.assertFalse(owner.export())
+
+    def test_claim_error_envelope_rejects_malformed_oversized_and_private_values(self):
+        for case in ("arbitrary", "private_value", "owner_secret", "browser_secret", "extra_field",
+                     "list", "null", "boolean", "duplicate", "truncated", "invalid_utf8",
+                     "oversized", "oversized_valid_prefix"):
+            with self.subTest(case=case):
+                owner = self.owner()
+                cases = {
+                    "arbitrary": b'{"error":"caller_selected_stop_reason"}',
+                    "private_value": json.dumps({"error": PRIVATE_VALUE}).encode(),
+                    "owner_secret": json.dumps({"error": owner._owner_secret}).encode(),
+                    "browser_secret": json.dumps({"error": owner.browser_secret}).encode(),
+                    "extra_field": json.dumps({"error": "fixture_mismatch", "secret": owner.browser_secret}).encode(),
+                    "list": b'["fixture_mismatch"]', "null": b'{"error":null}',
+                    "boolean": b'{"error":true}',
+                    "duplicate": b'{"error":"fixture_owned","error":"fixture_mismatch"}',
+                    "truncated": b'{"error":"fixture_mismatch"', "invalid_utf8": b'\xff',
+                    "oversized": b' ' * (_ERROR_BODY_BYTES + 1) + b'{"error":"fixture_mismatch"}',
+                    "oversized_valid_prefix": b'{"error":"fixture_mismatch"}' + b' ' * _ERROR_BODY_BYTES,
+                }
+                body = io.BytesIO(cases[case])
+                opener = Mock()
+                opener.open.side_effect = urllib.error.HTTPError(
+                    task().origin + "/__claim", 409, PRIVATE_VALUE, {}, body)
+                with patch("reflexmesh.runtime.ownership.urllib.request.build_opener", return_value=opener):
+                    with self.assertRaises(OwnershipError) as error:
+                        owner.acquire(0.2)
+                self.assertEqual(error.exception.reason, "ownership_protocol_error")
+                self.assertEqual(opener.open.call_count, 1)
+                self.assertTrue(body.closed)
+                self.assertFalse(owner.export())
+                public = str(error.exception) + repr(error.exception) + owner.view().reason + json.dumps(owner.export())
+                for private in (PRIVATE_VALUE, owner._owner_secret, owner.browser_secret):
+                    self.assertNotIn(private, public)
+
+    def test_claim_error_body_read_is_single_bounded_and_read_failure_is_sanitized(self):
+        owner = self.owner()
+        stream = Mock()
+        stream.read.return_value = b'{"error":"fixture_mismatch"}'
+        opener = Mock()
+        opener.open.side_effect = urllib.error.HTTPError(task().origin + "/__claim", 409, "Conflict", {}, stream)
+        with patch("reflexmesh.runtime.ownership.urllib.request.build_opener", return_value=opener):
+            with self.assertRaisesRegex(OwnershipError, "fixture_mismatch"):
+                owner.acquire(0.2)
+        stream.read.assert_called_once_with(_ERROR_BODY_BYTES + 1)
+        for error in (OSError(PRIVATE_VALUE), ValueError(PRIVATE_VALUE)):
+            with self.subTest(error_type=type(error)):
+                owner = self.owner()
+                stream = Mock()
+                stream.read.side_effect = error
+                opener = Mock()
+                opener.open.side_effect = urllib.error.HTTPError(
+                    task().origin + "/__claim", 409, "Conflict", {}, stream)
+                with patch("reflexmesh.runtime.ownership.urllib.request.build_opener", return_value=opener):
+                    with self.assertRaisesRegex(OwnershipError, "ownership_protocol_error") as caught:
+                        owner.acquire(0.2)
+                self.assertNotIn(PRIVATE_VALUE, str(caught.exception))
+                self.assertEqual(opener.open.call_count, 1)
+                stream.read.assert_called_once_with(_ERROR_BODY_BYTES + 1)
 
     def test_invalid_timeout_makes_no_network_request(self):
         for timeout in (0, -1, True, float("inf"), float("nan"), 10 ** 10000):

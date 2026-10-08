@@ -13,6 +13,7 @@ pass here. This is an in-process trusted-producer boundary, not a Python sandbox
 from __future__ import annotations
 
 import copy
+import http.client
 import json
 import math
 import secrets
@@ -35,6 +36,12 @@ _FIXTURE_PATHS = frozenset({"/", "/profile", "/reports", "/settings", "/form",
 _BROWSER_VIOLATIONS = frozenset({"browser_session_changed", "browser_profile_changed",
                                   "browser_configuration_changed"})
 _WITNESS_BYTES = 16384
+_ERROR_BODY_BYTES = 1024
+_CLAIM_CONFLICT_REASONS = {
+    "fixture_mismatch": "fixture_mismatch",
+    "fixture_owned": "fixture_busy",
+    "claim_revoked": "ownership_conflict",
+}
 _REASONS = frozenset({
     "fixture_busy", "fixture_mismatch", "ownership_unsupported", "ownership_unavailable",
     "ownership_protocol_error", "ownership_authentication_failed", "ownership_conflict",
@@ -179,6 +186,20 @@ class FixtureOwnership:
             self._error("ownership_protocol_error")
         self._gate = gate
 
+    def _claim_conflict_reason(self, response) -> str:
+        """Read one bounded error envelope; never expose arbitrary response text."""
+        try:
+            raw = response.read(_ERROR_BODY_BYTES + 1)
+            if type(raw) is not bytes or len(raw) > _ERROR_BODY_BYTES:
+                return "ownership_protocol_error"
+            value = json.loads(raw.decode("utf-8"), object_pairs_hook=_strict_object)
+            if type(value) is not dict or set(value) != {"error"} or type(value["error"]) is not str:
+                return "ownership_protocol_error"
+            return _CLAIM_CONFLICT_REASONS.get(value["error"], "ownership_protocol_error")
+        except (OSError, http.client.HTTPException, ValueError, TypeError, UnicodeError,
+                OverflowError, RecursionError):
+            return "ownership_protocol_error"
+
     def _request(self, path: str, payload: dict, timeout: float | None) -> dict:
         if timeout is None:
             timeout = 2.0
@@ -199,15 +220,17 @@ class FixtureOwnership:
             return value
         except urllib.error.HTTPError as exc:
             code = exc.code
-            exc.close()
-            if code == 409:
-                reason = "fixture_busy" if path == "/__claim" else "ownership_conflict"
-            elif code in (401, 403):
-                reason = "ownership_authentication_failed"
-            elif code in (404, 405, 501):
-                reason = "ownership_unsupported"
-            else:
-                reason = "ownership_protocol_error"
+            try:
+                if code == 409:
+                    reason = self._claim_conflict_reason(exc) if path == "/__claim" else "ownership_conflict"
+                elif code in (401, 403):
+                    reason = "ownership_authentication_failed"
+                elif code in (404, 405, 501):
+                    reason = "ownership_unsupported"
+                else:
+                    reason = "ownership_protocol_error"
+            finally:
+                exc.close()
             self._error(reason)
         except OwnershipError:
             raise

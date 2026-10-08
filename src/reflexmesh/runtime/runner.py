@@ -13,6 +13,7 @@ from typing import Callable
 from reflexmesh.contracts.execution import ExecutionTask
 from reflexmesh.runtime.process_group import OwnedWorker
 from reflexmesh.runtime.ownership import FixtureOwnership, OwnershipError
+from reflexmesh.runtime.profile_owner import AttemptProfiles
 from reflexmesh.text.slots import SlotRegistry
 from reflexmesh.tracing.slot_evidence import SlotEvidence
 from reflexmesh.verification.constraints import ConstraintAssessments, assess_constraints
@@ -21,6 +22,7 @@ GRACE_SECONDS = 5.0
 KILL_SECONDS = 2.0
 VERIFIER_POLL_SECONDS = 0.05
 VERIFIER_STOP_SECONDS = 0.25
+PROFILE_CLEANUP_SECONDS = 2.0
 STOP_CODES = {"cancel_requested": "cancelled", "deadline": "incomplete",
               "step_limit": "incomplete", "model_call_limit": "incomplete",
               "effect_unknown": "incomplete",
@@ -55,7 +57,7 @@ class AttemptGate:
     """Small shared state; no browser/provider call may run under the lock."""
 
     def __init__(self, ctx, task: ExecutionTask, started: float, *,
-                 slot_registry=None, slot_sink=None, fixture_owner=None):
+                 slot_registry=None, slot_sink=None, fixture_owner=None, profile_client=None):
         self.lock = ctx.Lock()
         self.terminal = ctx.Value("i", 0, lock=False)
         self.dispatches = ctx.Value("q", 0, lock=False)
@@ -72,6 +74,7 @@ class AttemptGate:
         self.slot_registry = slot_registry if slot_registry is not None else SlotRegistry.from_task(task)
         self.slot_sink = slot_sink
         self.fixture_owner = fixture_owner
+        self.profile_client = profile_client
         self.started = started
         self.deadline = (None if task.limits.wall_seconds is None else
                          started + task.limits.wall_seconds)
@@ -252,6 +255,7 @@ class ControlledEnvironment:
         self.inner, self.gate, self.events, self.admit = inner, gate, events, admit
         self._prepared_protocol = type(inner) is FixtureBrowser
         if self._prepared_protocol:
+            inner.bind_profile_owner(gate.profile_client)
             inner.bind_ownership(gate.fixture_owner)
             inner.bind_runtime(gate.slot_registry, gate.slot_sink)
         self.bootstrap = bootstrap
@@ -424,12 +428,14 @@ class AttemptSupervisor:
         self.started = time.monotonic()
         self.attempt_id = uuid.uuid4().hex
         self.fixture_owner = FixtureOwnership(self.context, task, self.attempt_id)
+        self.profiles = AttemptProfiles(self.context)
         registry = SlotRegistry.from_task(task)
         self.slot_evidence = SlotEvidence(self.context, task, self.attempt_id, registry=registry)
         self.gate = AttemptGate(self.context, task, self.started,
                                 slot_registry=registry, slot_sink=self.slot_evidence.sink,
-                                fixture_owner=self.fixture_owner)
+                                fixture_owner=self.fixture_owner, profile_client=self.profiles.client)
         self.fixture_owner.bind_gate(self.gate)
+        self.profiles.client.bind_gate(self.gate)
         # This lock-free high-water mark can reject foreign action IDs and
         # retain actual failures after lock death; it can never establish pass.
         self.slot_evidence.bind_dispatch_counter(self.gate.dispatches)
@@ -645,6 +651,7 @@ class AttemptSupervisor:
         self.process.start()
         while status is None:
             self.slot_evidence.drain()
+            self.profiles.service()
             now = time.monotonic()
             if self._cancel_requested or self.gate.terminal.value == 1:
                 status, reason = "cancelled", "cancel_requested"
@@ -686,6 +693,7 @@ class AttemptSupervisor:
                 else:
                     self._record(event, actions)
         terminal_at = time.monotonic()
+        self.profiles.close_requests()
         if status != "verifying":
             self._fence_fixture()
         try:
@@ -767,6 +775,7 @@ class AttemptSupervisor:
         # The owned group can outlive its leader. Keep its PID reserved until
         # TERM/KILL and live-member verification finish, independent of is_alive.
         cleanup = self.process.cleanup(KILL_SECONDS)
+        worker_cleanup = cleanup
         if verification is None:
             verification = self._verify(max(0, grace_end - time.monotonic()))
         while True:
@@ -790,6 +799,14 @@ class AttemptSupervisor:
             self._assess_constraints(retain_passes=status == "completed", read_budget=False)
         else:
             self._assess_constraints(snapshots, retain_passes=status == "completed")
+        # Gate evidence can be unavailable after lock death even when process
+        # absence is already proved. Use that actual cleanup proof for deletion;
+        # preserve aggregate uncertainty independently for fixture release.
+        profile_cleanup = self.profiles.cleanup(worker_cleanup, PROFILE_CLEANUP_SECONDS)
+        if profile_cleanup["status"] not in ("not_created", "removed"):
+            # Process absence alone does not establish complete resource cleanup.
+            # Keep the fixture fenced if its owned profile could not be removed.
+            cleanup = "unknown"
         if self.fixture_owner.acquisition_attempted.value:
             try:
                 # Only source-backed absence of the owned group allows reuse.
@@ -827,6 +844,7 @@ class AttemptSupervisor:
                     "returned" if snapshots["dispatches"] else
                     "error" if status == "failed" else "not_started",
                 "verification": verification, "actions": actions, "cleanup": cleanup,
+                "worker_cleanup": worker_cleanup, "profile_cleanup": profile_cleanup,
                 "trace": self.trace,
                 "slot_evidence": slot_records,
                 "ownership_evidence": self.fixture_owner.export(),

@@ -114,6 +114,7 @@ def bound_adapter(task, registry, sink):
     # Slot-handoff unit seam only. Ownership is deliberately unevidenced;
     # exercise the real slot boundary without inventing a browser claim.
     adapter.bind_ownership = lambda owner: None
+    adapter.bind_profile_owner = lambda client: None
     adapter._assert_ownership = lambda **kwargs: None
     adapter.bind_runtime(registry, sink)
     adapter.observe()

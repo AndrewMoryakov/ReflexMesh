@@ -188,6 +188,7 @@ def fixture_adapter(task, **backend_options):
     # Slot-only fault injection; the synthetic driver cannot attest ownership.
     # Keep its guard bypass local and leave runtime.ownership unknown.
     adapter.bind_ownership = lambda owner: None
+    adapter.bind_profile_owner = lambda client: None
     adapter._assert_ownership = lambda **kwargs: None
     return adapter
 

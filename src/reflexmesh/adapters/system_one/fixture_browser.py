@@ -6,8 +6,6 @@ import inspect
 import logging
 import os
 import stat
-import tempfile
-import uuid
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
 
@@ -41,6 +39,7 @@ class FixtureBrowser:
         # SOH creates an event-loop thread in its constructor. Defer both that
         # work and the private profile until reset, after harness setup succeeds.
         self.backend = None
+        self._profile_client = None
         self._fixture_owner = None
         self._claim_snapshot = None
         self._bound_identity = None
@@ -109,6 +108,9 @@ class FixtureBrowser:
         """
         if getattr(self, "_ownership_failure", None) or getattr(self, "_closed", False):
             raise self._ownership_stop()
+        client = getattr(self, "_profile_client", None)
+        if client is not None and not client.belongs_to(self.task, owner):
+            raise self._ownership_stop()
         current = getattr(self, "_fixture_owner", None)
         if current is not None:
             if current is not owner:
@@ -126,6 +128,18 @@ class FixtureBrowser:
             raise
         except Exception:
             raise self._ownership_stop() from None
+
+    def bind_profile_owner(self, client) -> None:
+        """Enroll the supervisor's exact attempt capability, allocating nothing."""
+        from reflexmesh.runtime.profile_owner import ProfileClient
+
+        current = getattr(self, "_profile_client", None)
+        if (type(client) is not ProfileClient or
+                not client.belongs_to(self.task, getattr(self, "_fixture_owner", None)) or
+                (current is not None and current is not client) or
+                getattr(self, "_closed", False) or getattr(self, "_ownership_failure", None)):
+            raise self._ownership_stop()
+        self._profile_client = client
 
     def _check_profile(self, path) -> None:
         if not isinstance(path, (str, Path)) or not path:
@@ -287,16 +301,19 @@ class FixtureBrowser:
                 if self.backend is None:
                     from systemone_harness.envs.browser import BrowserEnvironment
 
-                    # Allocate only when bootstrap actually starts. Provider,
-                    # action-space and controller setup failures leave no temp
-                    # profile or SOH event-loop thread to clean up.
-                    # Browser Use 5c892e01 recognizes this private temp prefix
-                    # and skips its automatic Chrome-profile copy path.
-                    self._profile_path = Path(tempfile.mkdtemp(
-                        prefix="browser-use-user-data-dir-reflexmesh-")).resolve(strict=True)
-                    info = self._profile_path.lstat()
-                    self._profile_stat = (info.st_dev, info.st_ino)
-                    self._profile_id = uuid.uuid4().hex  # Public identity, never a credential.
+                    # Request only at bootstrap. The supervisor already owns
+                    # the exact root before this private receipt can arrive;
+                    # lost IPC, constructor failure and SIGKILL cannot orphan
+                    # an unregistered worker-created temp profile.
+                    client = self._profile_client
+                    if client is None or not client.belongs_to(self.task, self._fixture_owner):
+                        raise self._ownership_stop()
+                    lease = client.claim(timeout=2.0)
+                    self._profile_path = lease.path
+                    self._profile_stat = (lease.device, lease.inode)
+                    self._profile_id = lease.profile_id
+                    # Do not adopt a replacement's identity after handoff.
+                    self._check_profile(self._profile_path)
                     self.backend = BrowserEnvironment(
                         headless=True, executable_path=self._chrome, cdp_url=None,
                         start_url=self.task.origin + self.task.start_path,

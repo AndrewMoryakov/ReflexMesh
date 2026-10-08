@@ -8,12 +8,14 @@ This is regression source, not evidence that the pinned SDK accepts the path.
 import asyncio
 import json
 import multiprocessing as mp
-import shutil
 import stat
 import sys
+import threading
+import time
 import urllib.request
 import uuid
 from contextlib import contextmanager
+from dataclasses import replace
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
@@ -23,8 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from reflexmesh.adapters.system_one.fixture_browser import FixtureBrowser
 from reflexmesh.adapters.system_one.harness import HarnessStrategy
 from reflexmesh.runtime.ownership import FixtureOwnership
-from reflexmesh.runtime.runner import RuntimeStop
-from reflexmesh.text.slots import SlotRegistry
+from reflexmesh.runtime.profile_owner import AttemptProfiles
+from reflexmesh.runtime.runner import AttemptGate, RuntimeStop
 from test_v05_fixture import FixtureServerCase
 
 
@@ -181,26 +183,52 @@ def lose_session(backend):
 class BrowserOwnership(FixtureServerCase):
     def setUp(self):
         super().setUp()
-        self.execution_task = self.task()
+        task = self.task()
+        self.execution_task = replace(task, limits=replace(task.limits, wall_seconds=None))
         self.owner = FixtureOwnership(mp.get_context("fork"), self.execution_task, str(uuid.uuid4()))
         self.browsers = []
+        self.profiles = []
+        self.profile_pumps = []
 
     def tearDown(self):
         try:
-            for browser in self.browsers:
-                # Every backend in this file is fake. The test knows there is
-                # no live browser and can remove its own private temp fixture.
-                path = browser._profile_path
-                if path is not None:
-                    shutil.rmtree(path, ignore_errors=True)
+            for stop, thread in self.profile_pumps:
+                stop.set()
+                thread.join(1)
+            for profiles in self.profiles:
+                # Only this direct adapter unit fixture supplies "closed":
+                # all its backends are fake and no browser was ever started.
+                # Real group-proof integration lives in profile_cleanup tests.
+                profiles.cleanup("closed", allowance=1)
         finally:
             super().tearDown()
+
+    def enroll_profile(self, browser):
+        context = mp.get_context("fork")
+        profiles = AttemptProfiles(context)
+        self.profiles.append(profiles)
+        gate = AttemptGate(context, self.execution_task, time.monotonic(),
+                           fixture_owner=self.owner, profile_client=profiles.client,
+                           slot_sink=SimpleNamespace(handoff=lambda *args, **kwargs: None))
+        profiles.client.bind_gate(gate)
+        browser.bind_profile_owner(profiles.client)
+        stop = threading.Event()
+
+        def service():
+            while not stop.wait(0.001):
+                profiles.service()
+
+        thread = threading.Thread(target=service, daemon=True)
+        thread.start()
+        self.profile_pumps.append((stop, thread))
+        return gate
 
     def browser(self, *, acquire=True):
         if acquire:
             self.owner.acquire(1)
         browser = FixtureBrowser(self.execution_task)
         self.browsers.append(browser)
+        self.enroll_profile(browser)
         browser.bind_ownership(self.owner)
         return browser
 
@@ -229,6 +257,50 @@ class BrowserOwnership(FixtureServerCase):
             with self.assertRaises(RuntimeStop):
                 browser.bind_ownership(forged)
         self.assertEqual(made, [])
+
+    def test_missing_profile_capability_blocks_before_backend_construction(self):
+        self.owner.acquire(1)
+        browser = FixtureBrowser(self.execution_task)
+        browser.bind_ownership(self.owner)
+        with fake_pinned_backend(self.execution_task, self.owner) as made:
+            with self.assertRaises(RuntimeStop):
+                browser.reset("Start")
+        self.assertEqual(made, [])
+        self.assertIsNone(browser._profile_path)
+
+    def test_foreign_attempt_profile_capability_cannot_enroll(self):
+        browser = self.browser()
+        context = mp.get_context("fork")
+        foreign = FixtureOwnership(context, self.execution_task, uuid.uuid4().hex)
+        profiles = AttemptProfiles(context)
+        gate = AttemptGate(context, self.execution_task, time.monotonic(),
+                           fixture_owner=foreign, profile_client=profiles.client)
+        profiles.client.bind_gate(gate)
+        with self.assertRaises(RuntimeStop):
+            browser.bind_profile_owner(profiles.client)
+        self.assertIsNone(profiles._keeper)
+        self.assertIsNone(browser._profile_path)
+
+    def test_backend_constructor_failure_keeps_parent_cleanup_authority(self):
+        def fail_after_writing_profile(backend):
+            (Path(backend.user_data_dir) / "partial-browser-data").write_text("private cookie data")
+            raise OSError("constructor failed at " + backend.user_data_dir)
+
+        with fake_pinned_backend(self.execution_task, self.owner,
+                                 configure=fail_after_writing_profile):
+            browser = self.browser()
+            with self.assertRaises(RuntimeStop) as error:
+                browser.reset("Start")
+        self.assertEqual(str(error.exception), "ownership_unavailable")
+        self.assertIsNone(browser.backend)
+        path = browser._profile_path
+        self.assertTrue((path / "partial-browser-data").exists())
+        # The fake constructor started no process. Actual worker cleanup proof
+        # is covered separately by the supervised lifecycle regressions.
+        result = self.profiles[-1].cleanup("closed", allowance=1)
+        self.assertEqual(result["status"], "removed")
+        self.assertFalse(path.exists())
+        self.assertNotIn(str(path), json.dumps(result))
 
     def test_each_backend_has_new_private_explicit_profile(self):
         with fake_pinned_backend(self.execution_task, self.owner):
@@ -300,7 +372,7 @@ class BrowserOwnership(FixtureServerCase):
 
     def test_binding_and_bootstrap_admission_allocate_nothing(self):
         with fake_pinned_backend(self.execution_task, self.owner) as made, patch(
-                "reflexmesh.adapters.system_one.fixture_browser.tempfile.mkdtemp") as allocate:
+                "reflexmesh.runtime.profile_owner.os.mkdir") as allocate:
             browser = self.browser()
             browser.bind_ownership(self.owner)
             self.assertIsNone(browser.admit("navigate", {"bootstrap": True}))
@@ -310,6 +382,8 @@ class BrowserOwnership(FixtureServerCase):
             with self.assertRaises(RuntimeStop):
                 browser.reset("Closed before start")
             allocate.assert_not_called()
+            self.assertEqual(browser._profile_client.requested.value, 0)
+            self.assertIsNone(self.profiles[-1]._keeper)
         self.assertEqual(made, [])
 
     def test_nonbootstrap_entrypoints_cannot_start_an_enrolled_browser(self):
@@ -318,7 +392,7 @@ class BrowserOwnership(FixtureServerCase):
                       lambda b: b.execute("click", {"element": "0"}),
                       lambda b: b.execute_prepared(None, 1))
         with fake_pinned_backend(self.execution_task, self.owner) as made, patch(
-                "reflexmesh.adapters.system_one.fixture_browser.tempfile.mkdtemp") as allocate:
+                "reflexmesh.runtime.profile_owner.os.mkdir") as allocate:
             for operation in operations:
                 browser = self.browser(acquire=False)
                 with self.subTest(operation=operation), self.assertRaises(RuntimeStop) as error:
@@ -326,6 +400,8 @@ class BrowserOwnership(FixtureServerCase):
                 self.assertEqual(error.exception.reason, "ownership_unavailable")
                 self.assertIsNone(browser.backend)
                 self.assertIsNone(browser._profile_path)
+                self.assertEqual(browser._profile_client.requested.value, 0)
+                self.assertIsNone(self.profiles[-1]._keeper)
             allocate.assert_not_called()
         self.assertEqual(made, [])
 
@@ -336,10 +412,7 @@ class BrowserOwnership(FixtureServerCase):
                 with self.subTest(stage=stage, retry=retry):
                     browser = FixtureBrowser(self.execution_task)
                     self.browsers.append(browser)
-                    gate = SimpleNamespace(
-                        fixture_owner=self.owner, max_steps=1,
-                        slot_registry=SlotRegistry.from_task(self.execution_task),
-                        slot_sink=SimpleNamespace(handoff=lambda *args, **kwargs: None))
+                    gate = self.enroll_profile(browser)
                     provider = SimpleNamespace(closed=False)
 
                     def close_provider():
@@ -376,13 +449,15 @@ class BrowserOwnership(FixtureServerCase):
                                                provider_factory, None)
                     with fake_pinned_backend(self.execution_task, self.owner) as made, patch.dict(
                             sys.modules, {"systemone_harness.controller": controller}), patch(
-                            "reflexmesh.adapters.system_one.fixture_browser.tempfile.mkdtemp") as allocate:
+                            "reflexmesh.runtime.profile_owner.os.mkdir") as allocate:
                         with self.assertRaisesRegex(RuntimeError, stage + " setup failed"):
                             strategy(gate, SimpleNamespace(put=lambda value: None))
                         allocate.assert_not_called()
                     self.assertEqual(made, [])
                     self.assertIsNone(browser.backend)
                     self.assertIsNone(browser._profile_path)
+                    self.assertEqual(gate.profile_client.requested.value, 0)
+                    self.assertIsNone(self.profiles[-1]._keeper)
                     self.assertTrue(browser._closed)
                     self.assertEqual(provider.closed, stage != "provider")
         self.assertEqual(self.public_state()["phase"], "active")
