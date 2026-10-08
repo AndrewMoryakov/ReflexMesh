@@ -30,6 +30,7 @@ from reflexmesh.cli import main
 from reflexmesh.contracts.execution import ExecutionTask, Limits
 from reflexmesh.contracts.task import ValidationError
 from reflexmesh.runtime.cli import BrowserExecutionStrategy, run_execution
+from reflexmesh.runtime.ownership import FixtureOwnership
 from reflexmesh.runtime.runner import (
     GRACE_SECONDS,
     KILL_SECONDS,
@@ -40,6 +41,7 @@ from reflexmesh.runtime.runner import (
     WorkerResult,
 )
 from reflexmesh.verification.verifier import FixtureVerifier, read_fixture
+from test_v05_preflight import baseline as claim_receipt
 
 
 def task_data():
@@ -304,15 +306,17 @@ class OptionalGateLimits(unittest.TestCase):
     def test_preflight_and_execution_have_no_hidden_sixty_second_cap(self):
         now = [1000.0]
         task = make_task()
-        gate = AttemptGate(mp.get_context("fork"), task, now[0])
+        context = mp.get_context("fork")
+        owner = FixtureOwnership(context, task, "unlimited-preflight")
+        gate = AttemptGate(context, task, now[0], fixture_owner=owner)
         events = queue.Queue()
         args = SimpleNamespace(routing_provider="stub", chrome=sys.executable, timeout=30.0,
                                jev_url="http://127.0.0.1:8787")
 
-        def slow_preflight(task, timeout):
+        def slow_preflight(task, timeout, owner=None):
             self.assertEqual(timeout, 2.0)
             now[0] += 3601.0
-            return {"run_id": task.run_id, "state": {}, "log": [], "sequence": 0}
+            return claim_receipt(task, timeout, owner)
 
         def later_execution(gate, events):
             now[0] += 3601.0
@@ -321,7 +325,7 @@ class OptionalGateLimits(unittest.TestCase):
 
         with (fake_harness_modules(),
               patch("reflexmesh.runtime.runner.time", SimpleNamespace(monotonic=lambda: now[0])),
-              patch("reflexmesh.runtime.cli.read_fixture", side_effect=slow_preflight) as read,
+              patch("reflexmesh.runtime.cli.claim_fixture", side_effect=slow_preflight) as read,
               patch("reflexmesh.runtime.cli.importlib.util.find_spec", return_value=object()),
               patch("reflexmesh.runtime.cli.HarnessStrategy", return_value=later_execution) as harness):
             result = BrowserExecutionStrategy(task, args, [])(gate, events)
@@ -334,16 +338,18 @@ class OptionalGateLimits(unittest.TestCase):
     def test_finite_preflight_time_still_counts_against_task_deadline(self):
         now = [1000.0]
         task = make_task(wall=3600)
-        gate = AttemptGate(mp.get_context("fork"), task, now[0])
+        context = mp.get_context("fork")
+        owner = FixtureOwnership(context, task, "finite-preflight")
+        gate = AttemptGate(context, task, now[0], fixture_owner=owner)
         args = SimpleNamespace(routing_provider="stub", chrome=sys.executable, timeout=30.0,
                                jev_url="http://127.0.0.1:8787")
 
-        def slow_preflight(task, timeout):
+        def slow_preflight(task, timeout, owner=None):
             now[0] += 3601.0
-            return {"run_id": task.run_id, "state": {}, "log": [], "sequence": 0}
+            return claim_receipt(task, timeout, owner)
 
         with (patch("reflexmesh.runtime.runner.time", SimpleNamespace(monotonic=lambda: now[0])),
-              patch("reflexmesh.runtime.cli.read_fixture", side_effect=slow_preflight),
+              patch("reflexmesh.runtime.cli.claim_fixture", side_effect=slow_preflight),
               patch("reflexmesh.runtime.cli.HarnessStrategy") as harness):
             with self.assertRaises(RuntimeStop) as stopped:
                 BrowserExecutionStrategy(task, args, [])(gate, queue.Queue())
@@ -614,10 +620,17 @@ class OptionalVerificationTimeout(unittest.TestCase):
 
     def test_fixture_verifier_accepts_none_without_arithmetic_or_timeout_sentinel(self):
         task = make_task()
-        baseline = {"run_id": task.run_id, "sequence": 0, "state": {}, "log": []}
-        current = {**baseline, "sequence": 1, "state": {"account_deleted": False}}
-        with patch("reflexmesh.verification.verifier.read_fixture", return_value=current) as read:
-            result = FixtureVerifier(task, baseline)(task, None)
+        owner = FixtureOwnership(mp.get_context("fork"), task, "unlimited-verifier")
+        receipt = claim_receipt(task, None, owner)
+        baseline = receipt["baseline"]
+        current = {**baseline, "sequence": 1, "state": {"account_deleted": False},
+                   "binding": {**receipt["binding"], "session_id": "test-session",
+                               "profile_id": "test-profile"},
+                   "baseline": baseline, "phase": "active", "effects": [], "pending_effects": []}
+        # Timeout forwarding seam only; the actual client authentication and
+        # fixture attribution are exercised by separate real-HTTP regressions.
+        with patch.object(owner, "read", return_value=current) as read:
+            result = FixtureVerifier(task, baseline, ownership=owner)(task, None)
         self.assertEqual(result[0]["status"], "pass")
         self.assertIsNone(read.call_args.args[1] if len(read.call_args.args) > 1
                           else read.call_args.kwargs["timeout"])

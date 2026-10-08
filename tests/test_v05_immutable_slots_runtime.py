@@ -34,6 +34,7 @@ from reflexmesh.runtime.runner import (
 from reflexmesh.text.slots import PreparedTextCommand, ResolvedSlot, SlotRegistry
 from reflexmesh.tracing.slot_evidence import SlotEvidence
 from reflexmesh.verification.constraints import REQUIRED_CONSTRAINTS, assess_constraints
+from test_v05_preflight import baseline
 
 
 PRIVATE_VALUE = "PRIVATE_SLOT_SENTINEL_7a9d\n  exact whitespace  "
@@ -184,6 +185,10 @@ def fixture_adapter(task, **backend_options):
     adapter.task = task
     adapter.backend = FakeTextBackend(task, **backend_options)
     adapter.targets, adapter.observation_url, adapter.unsupported = {}, "", False
+    # Slot-only fault injection; the synthetic driver cannot attest ownership.
+    # Keep its guard bypass local and leave runtime.ownership unknown.
+    adapter.bind_ownership = lambda owner: None
+    adapter._assert_ownership = lambda **kwargs: None
     return adapter
 
 
@@ -644,8 +649,7 @@ class ImmutableSlotLifecycle(unittest.TestCase):
             return {"schema_version": "decision/0.1", "task_id": request.task_id,
                     "status": "abstained", "route": None, "reason": "test_no_route"}
 
-        with (patch("reflexmesh.runtime.cli.read_fixture", return_value={
-                "run_id": task.run_id, "sequence": 0, "state": {}, "log": []}),
+        with (patch("reflexmesh.runtime.cli.claim_fixture", baseline),
               patch("reflexmesh.routing.router.jev_route", side_effect=two_stage_route)):
             result = self.run_bounded(AttemptSupervisor(task, BrowserExecutionStrategy(task, args, None)))
         self.assertEqual((result["attempt_status"], result["stop_reason"]), ("blocked", "no_route"))

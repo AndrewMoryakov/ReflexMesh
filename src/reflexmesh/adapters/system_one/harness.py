@@ -42,12 +42,14 @@ class HarnessStrategy:
         from reflexmesh.adapters.system_one.fixture_browser import FixtureBrowser
 
         inner = self.environment_factory()
-        if type(inner) is FixtureBrowser:
-            inner.bind_runtime(gate.slot_registry, gate.slot_sink)
-        controlled = ControlledEnvironment(inner, gate, events, self.admit or inner.admit,
-                                           bootstrap=self.bootstrap)
-        provider = CountingProvider(self.provider_factory(), gate, events, model=self.model)
+        controlled = provider = None
         try:
+            if type(inner) is FixtureBrowser:
+                inner.bind_ownership(gate.fixture_owner)
+                inner.bind_runtime(gate.slot_registry, gate.slot_sink)
+            controlled = ControlledEnvironment(inner, gate, events, self.admit or inner.admit,
+                                               bootstrap=self.bootstrap)
+            provider = CountingProvider(self.provider_factory(), gate, events, model=self.model)
             run = Controller(self.space_factory(), controlled, provider,
                              # The pinned controller compares against max_steps and
                              # does not accept None. Infinity is confined to this
@@ -69,5 +71,11 @@ class HarnessStrategy:
                 return WorkerResult("finish", run.reason)
             return WorkerResult("executor_error", run.reason)
         finally:
-            provider.close()
-            controlled.close()
+            try:
+                if provider is not None:
+                    provider.close()
+            finally:
+                if controlled is not None:
+                    controlled.close()
+                else:
+                    inner.close()

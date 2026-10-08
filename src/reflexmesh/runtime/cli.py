@@ -19,7 +19,8 @@ from reflexmesh.contracts.task import Route, Task, ValidationError
 from reflexmesh.routing.jev_router import validate_config
 from reflexmesh.routing.router import Router, execution_router
 from reflexmesh.runtime.runner import AttemptSupervisor, WorkerResult
-from reflexmesh.verification.verifier import FixtureVerifier, read_fixture
+from reflexmesh.runtime.ownership import OwnershipError
+from reflexmesh.verification.verifier import FixtureVerifier
 
 EXIT_CODES = {"completed": 0, "blocked": 3, "incomplete": 4, "failed": 5, "cancelled": 130}
 
@@ -65,6 +66,11 @@ def _script_provider(entries):
     return FixtureScriptProvider(entries)
 
 
+def claim_fixture(task, timeout, owner):
+    """The fixture captures its baseline inside the exclusive claim transaction."""
+    return owner.acquire(timeout)
+
+
 class BrowserExecutionStrategy:
     """Run preflight, macro routing and the browser loop in one supervised worker."""
 
@@ -80,12 +86,15 @@ class BrowserExecutionStrategy:
         if "browser.soh" not in task.allowed_executors:
             return WorkerResult("blocked", "executor_unavailable")
         try:
-            baseline = read_fixture(task, timeout=gate.operation_timeout(2.0))
+            receipt = claim_fixture(task, timeout=gate.operation_timeout(2.0), owner=gate.fixture_owner)
+        except OwnershipError as exc:
+            return WorkerResult("blocked", exc.reason)
         except ValueError:
             return WorkerResult("blocked", "fixture_mismatch")
         except (OSError, json.JSONDecodeError):
             return WorkerResult("blocked", "executor_unavailable")
-        events.put(("baseline", baseline))  # Private IPC; never written to the trace.
+        events.put(("fixture_claim", receipt))  # Private IPC; never written to the trace.
+        gate.remaining()
 
         routing_task = Task("0.1", task.task_id, task.goal, (Route.CUA,), (Route.CUA,))
         accounting = self.router.capabilities.model_call_accounting
@@ -155,7 +164,8 @@ def run_execution(args) -> int:
         signal.signal(signal.SIGINT, previous)
     result.update(trace_ref="trace.jsonl", evidence_persistence="stored", evidence_refs=list(dict.fromkeys(
         [ref for row in result["verification"] for ref in row.get("evidence_refs", [])] +
-        [ref for row in result["actions"] for ref in row.get("evidence_refs", [])])))
+        [ref for row in result["actions"] for ref in row.get("evidence_refs", [])] +
+        [row["ref"] for row in result.get("ownership_evidence", []) if "ref" in row])))
     try:
         (output / "trace.jsonl").write_text("".join(json.dumps({"event": row}, ensure_ascii=True) + "\n"
                                                  for row in result.get("trace", result["actions"])), encoding="utf-8")
@@ -163,14 +173,17 @@ def run_execution(args) -> int:
         # Slot refs resolve to actual retained, redacted receipts/coverage below;
         # copying an assessment row alone is not driver-boundary evidence.
         slot_records = result.get("slot_evidence", [])
-        slot_refs = {row["ref"] for row in slot_records if "ref" in row}
+        ownership_records = result.get("ownership_evidence", [])
+        fixture_records = list({row["fixture_snapshot"]["ref"]: row["fixture_snapshot"]
+                                for row in result["verification"] if "fixture_snapshot" in row}.values())
+        retained_refs = {row["ref"] for row in slot_records + ownership_records + fixture_records if "ref" in row}
         evidence = [{"ref": ref, "criterion_id": row["id"], "status": row["status"],
                      **({"scope": row["scope"]} if "scope" in row else {}),
                      **({"reason": row["reason"]} if "reason" in row else {}),
                      "observed_at": row.get("observed_at")}
                     for row in result["verification"] for ref in row.get("evidence_refs", [])
-                    if ref not in slot_refs]
-        evidence += slot_records
+                    if ref not in retained_refs]
+        evidence += slot_records + ownership_records + fixture_records
         evidence += [{"ref": ref, "action_id": row["id"], "effect": row["effect"]}
                      for row in result["actions"] for ref in row.get("evidence_refs", [])
                      if ref.startswith("browser:")]
@@ -180,11 +193,13 @@ def run_execution(args) -> int:
     except OSError:
         result.update(attempt_status="failed", stop_reason="output_error",
                       task_outcome="fail" if result.get("task_outcome") == "fail" else "unknown",
-                      evidence_persistence="unavailable", trace_ref=None, evidence_refs=[], slot_evidence=[])
+                      evidence_persistence="unavailable", trace_ref=None, evidence_refs=[], slot_evidence=[],
+                      ownership_evidence=[])
         # Preserve a confirmed violation, but never advertise references to files
         # whose complete publication failed. Partial files are not acceptance.
         for row in result["verification"]:
             row["evidence_refs"] = []
+            row.pop("fixture_snapshot", None)
             if row.get("status") == "pass":
                 row.update(status="unknown", reason="Evidence persistence failed.")
         for row in result["actions"]:

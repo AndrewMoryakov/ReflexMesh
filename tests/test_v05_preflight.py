@@ -21,17 +21,22 @@ from reflexmesh.adapters.system_one.harness import CountingProvider
 from test_v05_runtime import sample
 
 
-def baseline(task, timeout):
-    return {"run_id": task.run_id, "sequence": 0, "state": {}, "log": []}
+def baseline(task, timeout, owner=None):
+    # Synthetic preflight receipt for routing/budget tests only. Do not mark
+    # acquisition_attempted: no server was contacted and no ownership is proved.
+    return {"binding": {**owner.identity, "instance_id": "preflight-fixture", "owner_epoch": 1},
+            "baseline": {"run_id": task.run_id, "instance_id": "preflight-fixture",
+                         "sequence": 0, "state": {}, "log": []},
+            "phase": "active"}
 
 
 def selected(task, **kwargs):
     return route_task(Task("0.1", task.task_id, task.goal, (Route.CUA,), (Route.CUA,))).to_dict()
 
 
-def slow_fixture(task, timeout):
+def slow_fixture(task, timeout, owner=None):
     time.sleep(100)
-    return baseline(task, timeout)
+    return baseline(task, timeout, owner)
 
 
 class QuickProvider:
@@ -62,7 +67,7 @@ class PreflightLifecycle(unittest.TestCase):
 
     def test_opaque_macro_allowed_with_finite_local_budget_and_routing_retained(self):
         task = self.task()
-        with patch("reflexmesh.runtime.cli.read_fixture", baseline), patch(
+        with patch("reflexmesh.runtime.cli.claim_fixture", baseline), patch(
                 "reflexmesh.routing.router.jev_route", selected), patch(
                 "reflexmesh.runtime.cli.importlib.util.find_spec", return_value=None):
             result = AttemptSupervisor(task, BrowserExecutionStrategy(task, self.args(), None)).run()
@@ -82,13 +87,13 @@ class PreflightLifecycle(unittest.TestCase):
             decision.update(status="abstained", route=None)
             return decision
 
-        with patch("reflexmesh.runtime.cli.read_fixture", baseline), patch(
+        with patch("reflexmesh.runtime.cli.claim_fixture", baseline), patch(
                 "reflexmesh.routing.router.jev_route", none):
             result = AttemptSupervisor(task, BrowserExecutionStrategy(task, self.args(), None)).run()
         self.assertEqual((result["attempt_status"], result["stop_reason"], result["budget"]["dispatches"]),
                          ("blocked", "no_route", 0))
 
-        with patch("reflexmesh.runtime.cli.read_fixture", side_effect=ValueError("wrong run")):
+        with patch("reflexmesh.runtime.cli.claim_fixture", side_effect=ValueError("wrong run")):
             result = AttemptSupervisor(task, BrowserExecutionStrategy(task, self.args(), None)).run()
         self.assertEqual((result["stop_reason"], result["budget"]["model_calls"]),
                          ("fixture_mismatch", 0))
@@ -97,7 +102,7 @@ class PreflightLifecycle(unittest.TestCase):
         data = sample()
         data["criteria"][0]["predicate"] = "unsupported"
         task = ExecutionTask.from_dict(data)
-        with patch("reflexmesh.runtime.cli.read_fixture", side_effect=AssertionError("must not read")):
+        with patch("reflexmesh.runtime.cli.claim_fixture", side_effect=AssertionError("must not claim")):
             result = AttemptSupervisor(task, BrowserExecutionStrategy(task, self.args(), None)).run()
         self.assertEqual((result["attempt_status"], result["stop_reason"]),
                          ("blocked", "unsupported_criterion"))
@@ -111,7 +116,7 @@ class PreflightLifecycle(unittest.TestCase):
         args.chrome = sys.executable
         browser_module = ModuleType("systemone_harness.envs.browser")
         browser_module.default_chrome = lambda: sys.executable
-        with patch("reflexmesh.runtime.cli.read_fixture", baseline), patch(
+        with patch("reflexmesh.runtime.cli.claim_fixture", baseline), patch(
                 "reflexmesh.routing.router.jev_route", selected), patch(
                 "reflexmesh.runtime.cli.importlib.util.find_spec", return_value=object()), patch(
                 "reflexmesh.runtime.cli.HarnessStrategy", fake_harness), patch.dict(
@@ -145,7 +150,7 @@ class PreflightLifecycle(unittest.TestCase):
                     cancelled.append((ready, sup.cancel()))
                     release.set()
 
-                with patch("reflexmesh.runtime.cli.read_fixture", baseline), patch(
+                with patch("reflexmesh.runtime.cli.claim_fixture", baseline), patch(
                         "reflexmesh.routing.router.jev_route", pending_route), patch(
                         "reflexmesh.runtime.cli.importlib.util.find_spec", return_value=None):
                     worker = threading.Thread(target=cancel, daemon=True)
@@ -166,7 +171,7 @@ class PreflightLifecycle(unittest.TestCase):
     def test_hung_fixture_is_bounded_before_macro(self):
         task = self.task(0.1)
         started = time.monotonic()
-        with patch("reflexmesh.runtime.cli.read_fixture", slow_fixture), patch(
+        with patch("reflexmesh.runtime.cli.claim_fixture", slow_fixture), patch(
                 "reflexmesh.routing.router.jev_route", selected):
             result = AttemptSupervisor(task, BrowserExecutionStrategy(task, self.args(), None)).run()
         self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "deadline"))

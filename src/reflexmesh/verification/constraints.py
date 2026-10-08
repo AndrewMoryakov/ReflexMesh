@@ -7,6 +7,7 @@ import time
 
 from reflexmesh.contracts.execution import ExecutionTask
 from reflexmesh.tracing.slot_evidence import SlotEvidence
+from reflexmesh.runtime.ownership import FixtureOwnership
 
 
 # This set is not supplied by tasks, routers, workers, or postcondition verifiers.
@@ -38,7 +39,8 @@ def unknown_assessment(constraint_id: str) -> dict:
 
 def assess_constraints(task: ExecutionTask, snapshot: dict | None, attempt_id: str,
                        slot_evidence: SlotEvidence | None = None,
-                       coverage: dict | None = None) -> list[dict]:
+                       coverage: dict | None = None,
+                       ownership: FixtureOwnership | None = None) -> list[dict]:
     """Assess only evidence currently available to the supervisor.
 
     Admission guards and settled effects do not establish full adapter contracts.
@@ -46,6 +48,11 @@ def assess_constraints(task: ExecutionTask, snapshot: dict | None, attempt_id: s
     Wall-deadline admission is separately serialized by AttemptGate.finish().
     """
     rows = [unknown_assessment(cid) for cid in REQUIRED_CONSTRAINTS]
+    if type(ownership) is FixtureOwnership:
+        view = ownership.view()
+        if view.identity == (task.task_id, task.revision, attempt_id, task.run_id):
+            rows[2].update(status=view.status, reason=view.reason,
+                           observed_at=view.observed_at, evidence_refs=list(view.evidence_refs))
     # This capability is created by the supervisor. A dict supplied by worker
     # events or a postcondition verifier cannot install a constraint assertion.
     if type(slot_evidence) is SlotEvidence:
