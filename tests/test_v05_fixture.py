@@ -2,6 +2,7 @@
 
 import copy
 import json
+import multiprocessing as mp
 import os
 from pathlib import Path
 import socket
@@ -13,10 +14,12 @@ import time
 import unittest
 import urllib.parse
 import urllib.request
+import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from reflexmesh.contracts.execution import ExecutionTask
+from reflexmesh.runtime.ownership import FixtureOwnership
 from reflexmesh.verification.verifier import FixtureVerifier, read_fixture
 from test_v05_runtime import sample
 
@@ -27,13 +30,17 @@ def available_port():
         return sock.getsockname()[1]
 
 
-class FixtureChecks(unittest.TestCase):
+class FixtureServerCase(unittest.TestCase):
+    """Real HTTP fixture support; HTTP clients below are not real browsers."""
+
+    slow_seconds = 0.2
+
     def setUp(self):
         self.port = available_port()
         self.run_id = "fixture-test"
         self.process = subprocess.Popen([sys.executable, str(ROOT / "experiments/v05/site/server.py"),
                                          "--port", str(self.port), "--run-id", self.run_id,
-                                         "--slow-seconds", "0.2"],
+                                         "--slow-seconds", str(self.slow_seconds)],
                                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.origin = f"http://127.0.0.1:{self.port}"
         for _ in range(50):
@@ -60,6 +67,22 @@ class FixtureChecks(unittest.TestCase):
                              "args": args if args is not None else {}}]
         return ExecutionTask.from_dict(data)
 
+    def claim(self, task):
+        owner = FixtureOwnership(mp.get_context("fork"), task, str(uuid.uuid4()))
+        receipt = owner.acquire(1)
+        owner.bind_session("http-test-session", "http-test-profile", timeout=1)
+        return owner, receipt["baseline"]
+
+    def request(self, owner, path, data=None, *, timeout=1):
+        # Simulate the fixture-bound cookie for protocol/verifier tests only.
+        # This does not establish Browser Use session/profile acceptance.
+        request = urllib.request.Request(self.origin + path, data=data,
+                                         headers={"Cookie": "ReflexMeshOwner=" + owner.browser_secret})
+        return urllib.request.urlopen(request, timeout=timeout)
+
+
+class FixtureChecks(FixtureServerCase):
+
     def test_submission_count_and_exact_slot_values(self):
         data = copy.deepcopy(sample())
         data["fixture"] = {"origin": self.origin, "run_id": self.run_id}
@@ -67,33 +90,35 @@ class FixtureChecks(unittest.TestCase):
                              "args": {"name_slot": "name@1", "email_slot": "email@1"}}]
         data["text_slots"].append({"id": "email", "version": 1, "value": "test@example.com"})
         task = ExecutionTask.from_dict(data)
-        baseline = read_fixture(task, 1)
-        verifier = FixtureVerifier(task, baseline)
+        owner, baseline = self.claim(task)
+        verifier = FixtureVerifier(task, baseline, ownership=owner)
         self.assertEqual(verifier(task, 1)[0]["status"], "fail")
         values = urllib.parse.urlencode({"name": "secret-text", "email": "test@example.com"}).encode()
-        urllib.request.urlopen(urllib.request.Request(self.origin + "/form", data=values), timeout=1).close()
+        self.request(owner, "/form", values).close()
         self.assertEqual(verifier(task, 1)[0]["status"], "pass")
-        urllib.request.urlopen(urllib.request.Request(self.origin + "/form", data=values), timeout=1).close()
+        self.request(owner, "/form", values).close()
         self.assertEqual(verifier(task, 1)[0]["status"], "fail")
 
     def test_historic_navigation_does_not_prove_current_page(self):
         task = self.task("current_page", {"path": "/reports", "target_id": "reports"})
-        verifier = FixtureVerifier(task, read_fixture(task, 1))
-        urllib.request.urlopen(self.origin + "/reports", timeout=1).close()
-        urllib.request.urlopen(self.origin + "/form", timeout=1).close()
-        observation = {"run_id": self.run_id, "url": self.origin + "/form", "target_ids": ["form"]}
+        owner, baseline = self.claim(task)
+        verifier = FixtureVerifier(task, baseline, ownership=owner)
+        self.request(owner, "/reports").close()
+        self.request(owner, "/form").close()
+        observation = {"run_id": self.run_id, "url": self.origin + "/form", "target_ids": ["form"],
+                       "ownership": owner.binding}
         self.assertEqual(verifier(task, 1, observation)[0]["status"], "fail")
         self.assertEqual(verifier(task, 1, None)[0]["status"], "unknown")
 
     def test_delayed_old_export_cannot_satisfy_new_fixture(self):
         old_task = self.task("export_completed_once")
-        old_verifier = FixtureVerifier(old_task, read_fixture(old_task, 1))
+        old_owner, old_baseline = self.claim(old_task)
+        old_verifier = FixtureVerifier(old_task, old_baseline, ownership=old_owner)
         sent = threading.Event()
 
         def delayed_post():
             sent.set()
-            urllib.request.urlopen(urllib.request.Request(self.origin + "/slow/export", data=b""),
-                                   timeout=2).close()
+            self.request(old_owner, "/slow/export", b"", timeout=2).close()
 
         thread = threading.Thread(target=delayed_post)
         thread.start()
@@ -112,16 +137,18 @@ class FixtureChecks(unittest.TestCase):
             new_task = ExecutionTask.from_dict(data)
             for _ in range(50):
                 try:
-                    new_baseline = read_fixture(new_task, 0.1)
+                    urllib.request.urlopen(new_task.origin + "/__state", timeout=0.1).close()
                     break
                 except OSError:
                     time.sleep(0.02)
             else:
                 self.fail("new fixture did not start")
+            new_owner, new_baseline = self.claim(new_task)
             thread.join(2)
             self.assertFalse(thread.is_alive())
             self.assertEqual(old_verifier(old_task, 1)[0]["status"], "pass")
-            self.assertEqual(FixtureVerifier(new_task, new_baseline)(new_task, 1)[0]["status"], "fail")
+            self.assertEqual(FixtureVerifier(new_task, new_baseline, ownership=new_owner)(
+                new_task, 1)[0]["status"], "fail")
         finally:
             new_process.terminate()
             new_process.wait(timeout=2)

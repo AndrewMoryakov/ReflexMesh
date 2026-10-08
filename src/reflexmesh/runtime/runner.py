@@ -12,6 +12,8 @@ from typing import Callable
 
 from reflexmesh.contracts.execution import ExecutionTask
 from reflexmesh.runtime.process_group import OwnedWorker
+from reflexmesh.runtime.ownership import FixtureOwnership, OwnershipError
+from reflexmesh.runtime.profile_owner import AttemptProfiles
 from reflexmesh.text.slots import SlotRegistry
 from reflexmesh.tracing.slot_evidence import SlotEvidence
 from reflexmesh.verification.constraints import ConstraintAssessments, assess_constraints
@@ -20,6 +22,7 @@ GRACE_SECONDS = 5.0
 KILL_SECONDS = 2.0
 VERIFIER_POLL_SECONDS = 0.05
 VERIFIER_STOP_SECONDS = 0.25
+PROFILE_CLEANUP_SECONDS = 2.0
 STOP_CODES = {"cancel_requested": "cancelled", "deadline": "incomplete",
               "step_limit": "incomplete", "model_call_limit": "incomplete",
               "effect_unknown": "incomplete",
@@ -54,7 +57,7 @@ class AttemptGate:
     """Small shared state; no browser/provider call may run under the lock."""
 
     def __init__(self, ctx, task: ExecutionTask, started: float, *,
-                 slot_registry=None, slot_sink=None):
+                 slot_registry=None, slot_sink=None, fixture_owner=None, profile_client=None):
         self.lock = ctx.Lock()
         self.terminal = ctx.Value("i", 0, lock=False)
         self.dispatches = ctx.Value("q", 0, lock=False)
@@ -70,6 +73,8 @@ class AttemptGate:
         self.unknown_dispatches = ctx.Value("q", 0, lock=False)
         self.slot_registry = slot_registry if slot_registry is not None else SlotRegistry.from_task(task)
         self.slot_sink = slot_sink
+        self.fixture_owner = fixture_owner
+        self.profile_client = profile_client
         self.started = started
         self.deadline = (None if task.limits.wall_seconds is None else
                          started + task.limits.wall_seconds)
@@ -250,6 +255,8 @@ class ControlledEnvironment:
         self.inner, self.gate, self.events, self.admit = inner, gate, events, admit
         self._prepared_protocol = type(inner) is FixtureBrowser
         if self._prepared_protocol:
+            inner.bind_profile_owner(gate.profile_client)
+            inner.bind_ownership(gate.fixture_owner)
             inner.bind_runtime(gate.slot_registry, gate.slot_sink)
         self.bootstrap = bootstrap
         self.last_stop: str | None = None
@@ -267,7 +274,8 @@ class ControlledEnvironment:
             self.last_stop = reason
             raise RuntimeStop(reason)
         action_id = self._commit("nontext" if self._prepared_protocol else "unknown")
-        self.events.put(("dispatch", action_id, {"operation": "navigate"}))
+        self.events.put(("dispatch", action_id, {"operation": "navigate", "bootstrap": True,
+                                                **self._ownership_descriptor()}))
         try:
             self.inner.reset(goal)
         except Exception:
@@ -300,7 +308,7 @@ class ControlledEnvironment:
         return obs
 
     def _record_observation(self, obs):
-        safe = {k: obs.fields[k] for k in ("url", "run_id", "target_ids")
+        safe = {k: obs.fields[k] for k in ("url", "run_id", "target_ids", "ownership")
                 if hasattr(obs, "fields") and k in obs.fields}
         if safe:
             safe["captured_at"] = time.time()
@@ -350,7 +358,7 @@ class ControlledEnvironment:
             raise
         if mutating:
             self.seen_mutations.add(operation_key)
-        self.events.put(("dispatch", action_id, descriptor))
+        self.events.put(("dispatch", action_id, {**descriptor, **self._ownership_descriptor()}))
         try:
             result = (self.inner.execute_prepared(prepared, action_id) if prepared is not None else
                       self.inner.execute(action, params))
@@ -375,6 +383,10 @@ class ControlledEnvironment:
         if self.gate.slot_sink is not None:
             self.gate.slot_sink.commit(action_id, classification, slot_ref)
         return action_id
+
+    def _ownership_descriptor(self) -> dict:
+        owner = self.gate.fixture_owner
+        return {"ownership": owner.binding} if self._prepared_protocol and type(owner) is FixtureOwnership else {}
 
     def close(self):
         self.inner.close()
@@ -415,10 +427,15 @@ class AttemptSupervisor:
         self.context = mp.get_context("fork")
         self.started = time.monotonic()
         self.attempt_id = uuid.uuid4().hex
+        self.fixture_owner = FixtureOwnership(self.context, task, self.attempt_id)
+        self.profiles = AttemptProfiles(self.context)
         registry = SlotRegistry.from_task(task)
         self.slot_evidence = SlotEvidence(self.context, task, self.attempt_id, registry=registry)
         self.gate = AttemptGate(self.context, task, self.started,
-                                slot_registry=registry, slot_sink=self.slot_evidence.sink)
+                                slot_registry=registry, slot_sink=self.slot_evidence.sink,
+                                fixture_owner=self.fixture_owner, profile_client=self.profiles.client)
+        self.fixture_owner.bind_gate(self.gate)
+        self.profiles.client.bind_gate(self.gate)
         # This lock-free high-water mark can reject foreign action IDs and
         # retain actual failures after lock death; it can never establish pass.
         self.slot_evidence.bind_dispatch_counter(self.gate.dispatches)
@@ -433,6 +450,7 @@ class AttemptSupervisor:
         self.executor_id = None
         self._constraints = ConstraintAssessments()
         self._assessment_generation = None
+        self._fixture_fence_attempted = False
 
     def _assess_constraints(self, snapshot=None, *, retain_passes=False, read_budget=True):
         if snapshot is None and read_budget:
@@ -448,7 +466,8 @@ class AttemptSupervisor:
         self._assessment_generation = (coverage["generation"] if coverage is not None and
                                        coverage["sealed_generation"] == coverage["generation"] else None)
         self._constraints.update(assess_constraints(self.task, snapshot, self.attempt_id,
-                                                   slot_evidence=self.slot_evidence, coverage=coverage),
+                                                   slot_evidence=self.slot_evidence, coverage=coverage,
+                                                   ownership=self.fixture_owner),
                                  retain_passes=retain_passes)
 
     def cancel(self):
@@ -528,7 +547,19 @@ class AttemptSupervisor:
                         "decision_request", "step", "stopped", "done", "observation", "proposal"):
             self.trace.append({"seq": len(self.trace) + 1, "kind": event[0], "data": list(event[1:])})
         seq = len(self.trace)
-        if event[0] == "baseline":
+        if event[0] == "fixture_claim":
+            try:
+                self.fixture_owner.adopt(event[1])
+                from reflexmesh.verification.verifier import FixtureVerifier
+
+                if self.verifier_factory is FixtureVerifier and self.verifier is None:
+                    self.verifier = FixtureVerifier(self.task, event[1]["baseline"],
+                                                    ownership=self.fixture_owner)
+            except (OwnershipError, ValueError, KeyError, TypeError):
+                # A lost or malformed claim receipt cannot install a verifier.
+                # The shared attempted marker still requires terminal fencing.
+                pass
+        elif event[0] == "baseline":
             if self.verifier_factory and self.verifier is None:
                 self.verifier = self.verifier_factory(self.task, event[1])
         elif event[0] == "routing":
@@ -552,26 +583,66 @@ class AttemptSupervisor:
                     row["return_seq"] = seq
         elif event[0] == "observation":
             self.observation = event[1]
-            for row in actions:
-                if (row.get("operation") == "navigate" and row.get("driver_returned") and
-                        row.get("effect") == "unknown" and
-                        event[1].get("url") == row.get("destination", self.task.origin + self.task.start_path)):
-                    row["effect"] = "applied"
-                    row["evidence_refs"] = [f"browser:{self.attempt_id}:{seq}"]
+            self._observation_seq = seq
+            self._reconcile_navigation(actions)
+
+    def _reconcile_navigation(self, actions):
+        observation = self.observation
+        if observation is None:
+            return
+        for row in actions:
+            if (row.get("operation") == "navigate" and row.get("driver_returned") and
+                    row.get("effect") == "unknown" and
+                    type(row.get("return_seq")) is int and
+                    self._observation_seq > row["return_seq"] > row.get("dispatch_seq", -1) and
+                    observation.get("url") == row.get("destination", self.task.origin + self.task.start_path) and
+                    self._same_owner(row.get("ownership"), observation.get("ownership"),
+                                     bootstrap=row.get("bootstrap") is True and row.get("id") == 1)):
+                row["effect"] = "applied"
+                row["evidence_refs"] = [f"browser:{self.attempt_id}:{self._observation_seq}"]
 
     def _reconcile(self, actions, verification):
         covered = {"form_submitted_once": {"submit_form", "type_text"},
                    "settings_saved": {"save_settings", "toggle_setting"},
                    "export_completed_once": {"start_export"}}
-        validated = set().union(*(covered.get(c.predicate, set())
-                                  for c, row in zip(self.task.criteria, verification) if row["status"] == "pass"))
-        refs = list(dict.fromkeys(ref for row in verification if row["status"] == "pass"
-                                  for ref in row.get("evidence_refs", [])))
+        validated = set()
         for row in actions:
-            if row.get("operation") in validated:
+            matches = [assessment for criterion, assessment in zip(self.task.criteria, verification)
+                       if assessment["status"] == "pass" and
+                       row.get("operation") in assessment.get("verified_operations", covered.get(criterion.predicate, set())) and
+                       self._same_owner(row.get("ownership"), assessment.get("ownership"))]
+            if matches:
                 row["effect"] = "applied"
-                row["evidence_refs"] = refs
+                row["evidence_refs"] = list(dict.fromkeys(ref for assessment in matches
+                                                         for ref in assessment.get("evidence_refs", [])))
+                validated.add(row.get("operation"))
         return validated
+
+    def _same_owner(self, action_binding, evidence_binding, *, bootstrap=False):
+        # Generic strategies without a fixture claim retain their synthetic test
+        # contract. The production browser path always has a claim marker.
+        if not self.fixture_owner.acquisition_attempted.value:
+            return action_binding is None and evidence_binding is None
+        expected = self.fixture_owner.verified_binding
+        if (type(expected) is not dict or not {"session_id", "profile_id"} <= set(expected) or
+                type(action_binding) is not dict or type(evidence_binding) is not dict or
+                set(evidence_binding) != set(expected) or
+                any(type(evidence_binding[k]) is not type(value) or evidence_binding[k] != value
+                    for k, value in expected.items())):
+            return False
+        action_expected = {key: value for key, value in expected.items()
+                           if not bootstrap or key not in ("session_id", "profile_id")}
+        return (set(action_binding) == set(action_expected) and
+                all(type(action_binding[k]) is type(value) and action_binding[k] == value
+                    for k, value in action_expected.items()))
+
+    def _fence_fixture(self):
+        if self.fixture_owner.acquisition_attempted.value and not self._fixture_fence_attempted:
+            self._fixture_fence_attempted = True
+            try:
+                self.fixture_owner.revoke(timeout=0.25)
+            except (OwnershipError, OSError, ValueError):
+                pass  # The server never expires or reassigns an uncertain claim.
 
     def run(self) -> dict:
         status = reason = None
@@ -580,6 +651,7 @@ class AttemptSupervisor:
         self.process.start()
         while status is None:
             self.slot_evidence.drain()
+            self.profiles.service()
             now = time.monotonic()
             if self._cancel_requested or self.gate.terminal.value == 1:
                 status, reason = "cancelled", "cancel_requested"
@@ -621,6 +693,9 @@ class AttemptSupervisor:
                 else:
                     self._record(event, actions)
         terminal_at = time.monotonic()
+        self.profiles.close_requests()
+        if status != "verifying":
+            self._fence_fixture()
         try:
             self.gate.seal_dispatches()
         except RuntimeStop:
@@ -689,6 +764,7 @@ class AttemptSupervisor:
             self.gate.stop("terminal")
         except RuntimeStop:
             pass
+        self._fence_fixture()
         grace_end = terminal_at + GRACE_SECONDS
         while self.process.is_alive() and time.monotonic() < grace_end:
             self.slot_evidence.drain()
@@ -699,6 +775,7 @@ class AttemptSupervisor:
         # The owned group can outlive its leader. Keep its PID reserved until
         # TERM/KILL and live-member verification finish, independent of is_alive.
         cleanup = self.process.cleanup(KILL_SECONDS)
+        worker_cleanup = cleanup
         if verification is None:
             verification = self._verify(max(0, grace_end - time.monotonic()))
         while True:
@@ -707,10 +784,13 @@ class AttemptSupervisor:
             except queue.Empty:
                 break
         # Late evidence can refine an effect, but the accepted terminal status never changes.
+        self._reconcile_navigation(actions)
         self._reconcile(actions, verification)
+        synchronized_snapshot = True
         try:
             snapshots = self.gate.snapshot()
         except RuntimeStop:
+            synchronized_snapshot = False
             snapshots = {"steps": self.gate.steps.value, "model_calls": self.gate.calls.value,
                          "opaque_model_usage": bool(self.gate.opaque_model_usage.value),
                          "router_invocations": self.gate.router_invocations.value,
@@ -719,6 +799,25 @@ class AttemptSupervisor:
             self._assess_constraints(retain_passes=status == "completed", read_budget=False)
         else:
             self._assess_constraints(snapshots, retain_passes=status == "completed")
+        # Gate evidence can be unavailable after lock death even when process
+        # absence is already proved. Use that actual cleanup proof for deletion;
+        # preserve aggregate uncertainty independently for fixture release.
+        profile_cleanup = self.profiles.cleanup(worker_cleanup, PROFILE_CLEANUP_SECONDS)
+        if profile_cleanup["status"] not in ("not_created", "removed"):
+            # Process absence alone does not establish complete resource cleanup.
+            # Keep the fixture fenced if its owned profile could not be removed.
+            cleanup = "unknown"
+        if self.fixture_owner.acquisition_attempted.value:
+            try:
+                # Only source-backed absence of the owned group allows reuse.
+                # Unknown cleanup leaves the claim quarantined indefinitely.
+                if cleanup in ("closed", "forced"):
+                    self.fixture_owner.release(cleanup, timeout=0.25)
+            except (OwnershipError, OSError, ValueError):
+                pass
+        if self.fixture_owner.acquisition_attempted.value:
+            self._assess_constraints(snapshots if synchronized_snapshot else None,
+                                     retain_passes=status == "completed", read_budget=synchronized_snapshot)
         # A child can commit dispatch and die before the event reaches the parent.
         if snapshots["dispatches"] > len(actions):
             actions.extend({"id": i, "effect": "unknown"} for i in range(len(actions) + 1, snapshots["dispatches"] + 1))
@@ -745,8 +844,10 @@ class AttemptSupervisor:
                     "returned" if snapshots["dispatches"] else
                     "error" if status == "failed" else "not_started",
                 "verification": verification, "actions": actions, "cleanup": cleanup,
+                "worker_cleanup": worker_cleanup, "profile_cleanup": profile_cleanup,
                 "trace": self.trace,
                 "slot_evidence": slot_records,
+                "ownership_evidence": self.fixture_owner.export(),
                 "budget": {"steps": snapshots["steps"],
                            "model_calls": None if snapshots["opaque_model_usage"] else snapshots["model_calls"],
                            "local_model_calls": snapshots["model_calls"],

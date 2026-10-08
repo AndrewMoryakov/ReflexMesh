@@ -58,6 +58,11 @@ class AdapterContract(unittest.TestCase):
         adapter.targets = {}
         adapter.unsupported = False
         adapter.observation_url = ""
+        # Target-identity unit seam only: these synthetic backends have no
+        # browser owner. Bypass only ownership guards, never assert its pass.
+        adapter.bind_ownership = lambda owner: None
+        adapter.bind_profile_owner = lambda client: None
+        adapter._assert_ownership = lambda **kwargs: None
         return adapter
 
     def test_filtered_candidate_and_node_replacement(self):

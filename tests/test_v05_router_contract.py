@@ -47,7 +47,7 @@ class RouterBudgetContract(unittest.TestCase):
                                timeout=30, chrome=None)
 
     def run_strategy(self, task, router=None):
-        with patch("reflexmesh.runtime.cli.read_fixture", baseline), patch(
+        with patch("reflexmesh.runtime.cli.claim_fixture", baseline), patch(
                 "reflexmesh.runtime.cli.importlib.util.find_spec", return_value=None):
             return AttemptSupervisor(task, BrowserExecutionStrategy(
                 task, self.args(), None, router=router)).run()

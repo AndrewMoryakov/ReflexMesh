@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import inspect
+import logging
+import os
+import stat
+from pathlib import Path
 from urllib.parse import urljoin, urlsplit
 
 from reflexmesh.contracts.execution import ExecutionTask
@@ -16,6 +21,9 @@ OPERATIONS = {
     "start-export": "start_export", "delete-account": "delete_account",
 }
 PATHS = {"/", "/profile", "/reports", "/settings", "/form", "/danger", "/slow"}
+CLAIM_FIELDS = frozenset({"task_id", "task_revision", "attempt_id", "run_id", "claim_id",
+                          "instance_id", "owner_epoch"})
+SESSION_FIELDS = CLAIM_FIELDS | {"session_id", "profile_id"}
 
 
 class FixtureBrowser:
@@ -26,20 +34,244 @@ class FixtureBrowser:
     """
 
     def __init__(self, task: ExecutionTask, *, chrome: str | None = None):
-        from systemone_harness.envs.browser import BrowserEnvironment
-
         self.task = task
-        self.backend = BrowserEnvironment(headless=True, executable_path=chrome,
-                                          start_url=task.origin + task.start_path,
-                                          # SOH needs nonempty choices to enumerate fields.
-                                          # Values here are labels, never dispatch payloads.
-                                          text_values={s.reference: s.reference for s in task.slots},
-                                          user_data_dir=None)
+        self._chrome = chrome
+        # SOH creates an event-loop thread in its constructor. Defer both that
+        # work and the private profile until reset, after harness setup succeeds.
+        self.backend = None
+        self._profile_client = None
+        self._fixture_owner = None
+        self._claim_snapshot = None
+        self._bound_identity = None
+        self._owned_session = self._owned_profile = None
+        self._profile_path = self._profile_stat = None
+        self._profile_id = None
+        self._session_cdp_url = None
+        self._owner_cdp_client = None
+        self._cookie_ready = False
+        self._ownership_failure = None
+        self._closed = False
         self.targets: dict[str, tuple] = {}
         self.observation_url = ""
         self.unsupported = False
         self._slot_registry = None
         self._slot_sink = None
+
+    def _ownership_stop(self, reason=None):
+        reason = reason or ("ownership_lost" if getattr(self, "_cookie_ready", False)
+                            else "ownership_unavailable")
+        self._ownership_failure = reason
+        return RuntimeStop(reason)
+
+    def _ownership_changed(self, reason, *, session_id=None):
+        """Persist a concrete post-bind mismatch before worker-local unwinding.
+
+        A missing field, a transport error or an unsupported SDK never calls
+        this producer. Absolute paths, endpoints and credentials stay private.
+        """
+        if getattr(self, "_cookie_ready", False):
+            try:
+                self._fixture_owner._record_browser_violation(
+                    reason, session_id=session_id, profile_id=self._profile_id)
+            except Exception:
+                # Failed evidence capture must still stop dispatch, but cannot
+                # manufacture a trusted negative assessment.
+                pass
+        return self._ownership_stop()
+
+    def _claim_binding(self) -> dict:
+        from reflexmesh.runtime.ownership import FixtureOwnership
+
+        owner = getattr(self, "_fixture_owner", None)
+        if type(owner) is not FixtureOwnership or owner.is_active is not True:
+            raise self._ownership_stop()
+        binding = owner.binding
+        if (type(binding) is not dict or set(binding) not in (CLAIM_FIELDS, SESSION_FIELDS) or
+                any(type(binding[key]) is not str or not binding[key] or len(binding[key]) > 128
+                    for key in CLAIM_FIELDS - {"task_revision", "owner_epoch"}) or
+                any(type(binding[key]) is not int or binding[key] <= 0
+                    for key in ("task_revision", "owner_epoch")) or
+                (binding["task_id"], binding["task_revision"], binding["run_id"]) !=
+                (self.task.task_id, self.task.revision, self.task.run_id)):
+            raise self._ownership_stop()
+        claim = {key: binding[key] for key in CLAIM_FIELDS}
+        if self._claim_snapshot is not None and claim != self._claim_snapshot:
+            raise self._ownership_stop()
+        return dict(binding)
+
+    def bind_ownership(self, owner) -> None:
+        """Enroll the acquired capability without allocating browser resources.
+
+        This binds fixture effects to one attempt/session, not to an individual
+        action or an opaque internal retry. Other OS/controller access remains
+        outside this narrow contract.
+        """
+        if getattr(self, "_ownership_failure", None) or getattr(self, "_closed", False):
+            raise self._ownership_stop()
+        client = getattr(self, "_profile_client", None)
+        if client is not None and not client.belongs_to(self.task, owner):
+            raise self._ownership_stop()
+        current = getattr(self, "_fixture_owner", None)
+        if current is not None:
+            if current is not owner:
+                raise self._ownership_stop()
+            self._assert_ownership(allow_unstarted=True)
+            return
+        self._fixture_owner = owner
+        try:
+            binding = self._claim_binding()
+            if set(binding) != CLAIM_FIELDS:
+                raise self._ownership_stop()
+            self._claim_snapshot = dict(binding)
+            self._assert_ownership(allow_unstarted=True)
+        except RuntimeStop:
+            raise
+        except Exception:
+            raise self._ownership_stop() from None
+
+    def bind_profile_owner(self, client) -> None:
+        """Enroll the supervisor's exact attempt capability, allocating nothing."""
+        from reflexmesh.runtime.profile_owner import ProfileClient
+
+        current = getattr(self, "_profile_client", None)
+        if (type(client) is not ProfileClient or
+                not client.belongs_to(self.task, getattr(self, "_fixture_owner", None)) or
+                (current is not None and current is not client) or
+                getattr(self, "_closed", False) or getattr(self, "_ownership_failure", None)):
+            raise self._ownership_stop()
+        self._profile_client = client
+
+    def _check_profile(self, path) -> None:
+        if not isinstance(path, (str, Path)) or not path:
+            raise self._ownership_stop()
+        actual = Path(path)
+        private = self._profile_path
+        if private is None:
+            raise self._ownership_stop()
+        if (actual.is_symlink() or private.is_symlink() or
+                actual.resolve(strict=True) != private):
+            raise self._ownership_changed("browser_profile_changed")
+        info = private.lstat()
+        if (not stat.S_ISDIR(info.st_mode) or info.st_mode & 0o077 or
+                info.st_uid != os.geteuid() or (info.st_dev, info.st_ino) != self._profile_stat):
+            raise self._ownership_changed("browser_profile_changed")
+
+    def _session_identity(self):
+        if (self.backend.cdp_url is not None or
+                self.backend.start_url != self.task.origin + self.task.start_path):
+            raise self._ownership_changed("browser_configuration_changed")
+        self._check_profile(self.backend.user_data_dir)
+        session = self.backend._session
+        if session is None:
+            raise self._ownership_stop()
+        session_id = session.id
+        profile = session.browser_profile
+        if type(session_id) is not str or not session_id or len(session_id) > 128:
+            raise self._ownership_stop()
+        if profile.is_local is False or profile.use_cloud is True:
+            raise self._ownership_changed("browser_configuration_changed")
+        if profile.is_local is not True or profile.use_cloud is not False:
+            raise self._ownership_stop()
+        self._check_profile(profile.user_data_dir)
+        # A locally launched Browser Use session gets its own CDP URL at start.
+        # The SOH constructor's cdp_url must remain None; capture, then pin the
+        # resulting connection rather than forbidding that normal local URL.
+        cdp_url = session.cdp_url
+        if type(cdp_url) is not str or not cdp_url:
+            raise self._ownership_stop()
+        return session, profile, session_id, cdp_url
+
+    def _assert_ownership(self, *, allow_unstarted=False) -> dict | None:
+        """Recheck actual backend state; no caller-supplied ownership assertion."""
+        try:
+            if getattr(self, "_ownership_failure", None) or getattr(self, "_closed", False):
+                raise self._ownership_stop()
+            binding = self._claim_binding()
+            if self.backend is None:
+                if (allow_unstarted and self._bound_identity is None and
+                        self._profile_path is None and not self._cookie_ready and
+                        set(binding) == CLAIM_FIELDS):
+                    return None
+                raise self._ownership_stop()
+            if (self.backend.cdp_url is not None or
+                    self.backend.start_url != self.task.origin + self.task.start_path):
+                raise self._ownership_changed("browser_configuration_changed")
+            self._check_profile(self.backend.user_data_dir)
+            if self._bound_identity is None:
+                if (not allow_unstarted or self.backend._session is not None or
+                        set(binding) != CLAIM_FIELDS):
+                    raise self._ownership_stop()
+                return None
+            session, profile, session_id, cdp_url = self._session_identity()
+            if (session is not self._owned_session or
+                    session_id != self._bound_identity["session_id"]):
+                raise self._ownership_changed("browser_session_changed", session_id=session_id)
+            if profile is not self._owned_profile:
+                raise self._ownership_changed("browser_profile_changed", session_id=session_id)
+            if cdp_url != self._session_cdp_url:
+                raise self._ownership_changed("browser_configuration_changed", session_id=session_id)
+            if (binding != self._bound_identity or
+                    (not self._cookie_ready and not allow_unstarted)):
+                raise self._ownership_stop()
+            self._fixture_owner.assert_session(session_id, self._profile_id)
+            if self._cookie_ready:
+                self._check_private_transport(self._owner_cdp_client)
+            return dict(self._bound_identity)
+        except RuntimeStop:
+            raise
+        except Exception:
+            raise self._ownership_stop() from None
+
+    def _check_private_transport(self, client):
+        # websockets DEBUG can log the entire CDP frame, including cookies in
+        # network events. Check both cached transport state and current logging.
+        if (getattr(client.ws, "debug", None) is not False or
+                any(logging.getLogger(name).isEnabledFor(logging.DEBUG)
+                    for name in ("cdp_use.client", "websockets.client", "websockets.protocol"))):
+            raise self._ownership_stop()
+
+    async def _install_owner_cookie(self):
+        """Pinned CDP handoff, kept outside observations, model input and trace."""
+        self._assert_ownership(allow_unstarted=True)
+        session = self._owned_session
+        get_cdp = session.get_or_create_cdp_session
+        if not inspect.iscoroutinefunction(inspect.unwrap(get_cdp)):
+            raise self._ownership_stop()
+        cdp = await get_cdp()
+        self._assert_ownership(allow_unstarted=True)
+        cdp_session_id = cdp.session_id
+        network = cdp.cdp_client.send.Network
+        set_cookie, get_cookies = network.setCookie, network.getCookies
+        if type(cdp_session_id) is not str or not cdp_session_id:
+            raise self._ownership_stop()
+        for method in (set_cookie, get_cookies):
+            if not inspect.iscoroutinefunction(inspect.unwrap(method)):
+                raise self._ownership_stop()
+            inspect.signature(method).bind(params={}, session_id=cdp_session_id)
+        self._check_private_transport(cdp.cdp_client)
+        self._owner_cdp_client = cdp.cdp_client
+        secret = self._fixture_owner.browser_secret
+        if type(secret) is not str or not secret:
+            raise self._ownership_stop()
+        response = await set_cookie(params={
+            "name": "ReflexMeshOwner", "value": secret, "url": self.task.origin,
+            "path": "/", "httpOnly": True, "sameSite": "Strict",
+            # Deliberately no expires: this is a session cookie.
+        }, session_id=cdp_session_id)
+        if type(response) is not dict or response.get("success") is not True:
+            raise self._ownership_stop()
+        readback = await get_cookies(params={"urls": [self.task.origin + "/"]},
+                                     session_id=cdp_session_id)
+        if type(readback) is not dict or type(readback.get("cookies")) is not list:
+            raise self._ownership_stop()
+        matches = [cookie for cookie in readback["cookies"]
+                   if type(cookie) is dict and cookie.get("name") == "ReflexMeshOwner"]
+        if (len(matches) != 1 or matches[0].get("value") != secret or
+                matches[0].get("domain") != "127.0.0.1" or matches[0].get("path") != "/" or
+                matches[0].get("httpOnly") is not True or matches[0].get("sameSite") != "Strict" or
+                matches[0].get("session") is not True):
+            raise self._ownership_stop()
+        self._assert_ownership(allow_unstarted=True)
 
     def bind_runtime(self, registry: SlotRegistry, sink) -> None:
         """Accept only the supervisor's snapshot for this exact task revision/run."""
@@ -63,7 +295,57 @@ class FixtureBrowser:
         return space
 
     def reset(self, goal):
+        self._assert_ownership(allow_unstarted=True)
+        if self._bound_identity is None:
+            try:
+                if self.backend is None:
+                    from systemone_harness.envs.browser import BrowserEnvironment
+
+                    # Request only at bootstrap. The supervisor already owns
+                    # the exact root before this private receipt can arrive;
+                    # lost IPC, constructor failure and SIGKILL cannot orphan
+                    # an unregistered worker-created temp profile.
+                    client = self._profile_client
+                    if client is None or not client.belongs_to(self.task, self._fixture_owner):
+                        raise self._ownership_stop()
+                    lease = client.claim(timeout=2.0)
+                    self._profile_path = lease.path
+                    self._profile_stat = (lease.device, lease.inode)
+                    self._profile_id = lease.profile_id
+                    # Do not adopt a replacement's identity after handoff.
+                    self._check_profile(self._profile_path)
+                    self.backend = BrowserEnvironment(
+                        headless=True, executable_path=self._chrome, cdp_url=None,
+                        start_url=self.task.origin + self.task.start_path,
+                        # These remain labels; immutable payloads use the slot boundary.
+                        text_values={s.reference: s.reference for s in self.task.slots},
+                        user_data_dir=str(self._profile_path))
+                    self._assert_ownership(allow_unstarted=True)
+                if (not callable(self.backend._run) or
+                        not inspect.iscoroutinefunction(inspect.unwrap(self.backend._start))):
+                    raise self._ownership_stop()
+                # SOH ab8e8f08 _start starts a blank session. Its reset is the
+                # first fixture navigation and must happen only AFTER binding.
+                self.backend._run(self.backend._start())
+                session, profile, session_id, cdp_url = self._session_identity()
+                expected = {**self._claim_snapshot, "session_id": session_id,
+                            "profile_id": self._profile_id}
+                receipt = self._fixture_owner.bind_session(session_id, self._profile_id, timeout=2.0)
+                if type(receipt) is not dict or receipt.get("binding") != expected:
+                    raise self._ownership_stop()
+                self._bound_identity = dict(expected)
+                self._owned_session, self._owned_profile = session, profile
+                self._session_cdp_url = cdp_url
+                self.backend._run(self._install_owner_cookie())
+                self._cookie_ready = True
+            except RuntimeStop:
+                raise
+            except Exception:
+                # CDP validation/transport errors may contain cookie values.
+                raise self._ownership_stop() from None
+        self._assert_ownership()
         self.backend.reset(goal)
+        self._assert_ownership()
 
     def _map(self) -> dict[str, tuple]:
         nodes = self.backend._run(self.backend._session.get_selector_map())
@@ -87,7 +369,9 @@ class FixtureBrowser:
         return result
 
     def observe(self):
+        self._assert_ownership()
         obs = self.backend.observe()
+        self._assert_ownership()
         self.observation_url = str(obs.fields.get("url", ""))
         self.unsupported = False
         if not self._valid_url(self.observation_url):
@@ -114,6 +398,7 @@ class FixtureBrowser:
             obs.candidates.pop(name, None)
         obs.fields["run_id"] = self.task.run_id
         obs.fields["target_ids"] = [node[1] for node in self.targets.values()]
+        obs.fields["ownership"] = self._assert_ownership()
         return obs
 
     def _valid_url(self, url: str) -> bool:
@@ -125,6 +410,7 @@ class FixtureBrowser:
             return False
 
     def admit(self, action: str, params: dict) -> str | None:
+        self._assert_ownership(allow_unstarted=action == "navigate" and params == {"bootstrap": True})
         if action == "navigate" and params == {"bootstrap": True}:
             return None if "navigate" in self.task.permissions and self.task.start_path in PATHS else "policy_denied"
         if self.unsupported:
@@ -153,9 +439,11 @@ class FixtureBrowser:
         if not self._valid_url(self.observation_url):
             return "policy_denied"
         live = self.backend.observe()
+        self._assert_ownership()
         if not self._valid_url(str(live.fields.get("url", ""))):
             return "stale_target"
         now = self._map().get(index)
+        self._assert_ownership()
         if self.unsupported:
             return "adapter_contract_unsupported"
         if now != before:
@@ -195,6 +483,7 @@ class FixtureBrowser:
         return PreparedAction(action, operation, target[1], parameters, destination, text)
 
     def execute_prepared(self, prepared: PreparedAction, action_id: int):
+        self._assert_ownership()
         if type(prepared) is not PreparedAction:
             raise RuntimeStop("adapter_contract_unsupported")
         if prepared.action == "type_text":
@@ -202,10 +491,14 @@ class FixtureBrowser:
 
             if prepared._text is None or getattr(self, "_slot_sink", None) is None:
                 raise RuntimeStop("adapter_contract_unsupported")
-            return dispatch_text(self.backend, prepared._text, action_id, self._slot_sink)
+            result = dispatch_text(self.backend, prepared._text, action_id, self._slot_sink)
+            self._assert_ownership()
+            return result
         if prepared.action != "click" or prepared._text is not None:
             raise RuntimeStop("adapter_contract_unsupported")
-        return self.backend.execute(prepared.action, dict(prepared._parameters))
+        result = self.backend.execute(prepared.action, dict(prepared._parameters))
+        self._assert_ownership()
+        return result
 
     def describe(self, action: str, params: dict) -> dict:
         if action == "navigate":
@@ -222,11 +515,22 @@ class FixtureBrowser:
         return info
 
     def execute(self, action, params):
+        self._assert_ownership()
         # The legacy mutable backend path must never be usable for text, even
         # outside the supervised prepared-command protocol.
         if action == "type_text":
             raise RuntimeStop("adapter_contract_unsupported")
-        return self.backend.execute(action, params)
+        result = self.backend.execute(action, params)
+        self._assert_ownership()
+        return result
 
     def close(self):
-        self.backend.close()
+        self._closed = True
+        try:
+            if self.backend is not None:
+                self.backend.close()
+        except Exception:
+            raise self._ownership_stop("ownership_lost") from None
+        # Pinned SOH close is best-effort and can swallow kill errors. Do not
+        # release/revoke ownership or delete a potentially live profile here.
+        # The supervisor fences effects and confirms process-group cleanup.
