@@ -10,7 +10,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Callable
 
-from reflexmesh.contracts.execution import ExecutionTask
+from reflexmesh.contracts.execution import ExecutionTask, PERMISSIONS
 from reflexmesh.runtime.process_group import OwnedWorker
 from reflexmesh.runtime.ownership import FixtureOwnership, OwnershipError
 from reflexmesh.runtime.profile_owner import AttemptProfiles
@@ -28,6 +28,15 @@ STOP_CODES = {"cancel_requested": "cancelled", "deadline": "incomplete",
               "effect_unknown": "incomplete",
               "policy_denied": "blocked", "invalid_action": "blocked",
               "adapter_contract_unsupported": "blocked", "no_admissible_action": "blocked"}
+# Stable bit positions for the shared permission mask; the vocabulary is closed in V0.5.
+OPERATION_BITS = {name: 1 << index for index, name in enumerate(sorted(PERMISSIONS))}
+
+
+def permission_mask(operations) -> int:
+    mask = 0
+    for name in operations:
+        mask |= OPERATION_BITS.get(name, 0)
+    return mask
 
 
 class RuntimeStop(Exception):
@@ -71,6 +80,8 @@ class AttemptGate:
         self.text_dispatches = ctx.Value("q", 0, lock=False)
         self.nontext_dispatches = ctx.Value("q", 0, lock=False)
         self.unknown_dispatches = ctx.Value("q", 0, lock=False)
+        self.policy_revision = ctx.Value("q", 1, lock=False)
+        self.permission_mask = ctx.Value("q", permission_mask(task.permissions), lock=False)
         self.slot_registry = slot_registry if slot_registry is not None else SlotRegistry.from_task(task)
         self.slot_sink = slot_sink
         self.fixture_owner = fixture_owner
@@ -176,7 +187,35 @@ class AttemptGate:
         remaining = self.remaining()
         return maximum if remaining is None else min(maximum, remaining)
 
-    def commit_dispatch(self, classification: str = "unknown") -> int:
+    def revision(self) -> int:
+        self._acquire()
+        try:
+            return self.policy_revision.value
+        finally:
+            self.lock.release()
+
+    def permitted(self, operation: str) -> bool:
+        self._acquire()
+        try:
+            return bool(self.permission_mask.value & OPERATION_BITS.get(operation, 0))
+        finally:
+            self.lock.release()
+
+    def revoke(self, operation: str) -> int:
+        """Withdraw one permission; returns the new policy revision, 0 if refused."""
+        self._acquire()
+        try:
+            if self.terminal.value or operation not in OPERATION_BITS:
+                return 0
+            self.permission_mask.value &= ~OPERATION_BITS[operation]
+            self.policy_revision.value += 1
+            return self.policy_revision.value
+        finally:
+            self.lock.release()
+
+    def commit_dispatch(self, classification: str = "unknown", *,
+                        operation: str | None = None, revision: int | None = None) -> int:
+        """Dispatch boundary. `revision` is the policy revision the candidate was observed under."""
         self._acquire()
         try:
             self._check()
@@ -186,6 +225,10 @@ class AttemptGate:
                 raise RuntimeStop("step_limit")
             if self.in_flight.value:
                 raise RuntimeStop("effect_unknown")
+            if operation in OPERATION_BITS and not self.permission_mask.value & OPERATION_BITS[operation]:
+                raise RuntimeStop("policy_denied")
+            if revision is not None and revision != self.policy_revision.value:
+                raise RuntimeStop("stale_policy")
             self.dispatches.value += 1
             self.generation.value += 1
             counter = {"text": self.text_dispatches, "nontext": self.nontext_dispatches}.get(
@@ -238,7 +281,7 @@ class AttemptGate:
                     "opaque_model_usage": bool(self.opaque_model_usage.value),
                     "router_invocations": self.router_invocations.value,
                     "dispatches": self.dispatches.value, "in_flight": self.in_flight.value,
-                    "terminal": self.terminal.value}
+                    "terminal": self.terminal.value, "policy_revision": self.policy_revision.value}
         finally:
             self.lock.release()
 
@@ -262,6 +305,8 @@ class ControlledEnvironment:
         self.last_stop: str | None = None
         self.seen_mutations: set[tuple] = set()
         self.uncertain_mutation = False
+        # Policy revision under which the current candidate set was observed.
+        self.observed_revision: int | None = None
 
     def reset(self, goal):
         if not self.bootstrap:
@@ -273,7 +318,14 @@ class ControlledEnvironment:
         if reason:
             self.last_stop = reason
             raise RuntimeStop(reason)
-        action_id = self._commit("nontext" if self._prepared_protocol else "unknown")
+        self.observed_revision = self.gate.revision()
+        try:
+            action_id = self._commit("nontext" if self._prepared_protocol else "unknown",
+                                     operation="navigate")
+        except RuntimeStop as exc:
+            # There is no candidate to re-observe before the first navigation.
+            self.last_stop = "policy_denied" if exc.reason == "stale_policy" else exc.reason
+            raise RuntimeStop(self.last_stop) from None
         self.events.put(("dispatch", action_id, {"operation": "navigate", "bootstrap": True,
                                                 **self._ownership_descriptor()}))
         try:
@@ -289,6 +341,7 @@ class ControlledEnvironment:
     def observe(self):
         try:
             self.gate.reserve_step()
+            self.observed_revision = self.gate.revision()
         except RuntimeStop as exc:
             self.last_stop = exc.reason
             raise
@@ -340,6 +393,12 @@ class ControlledEnvironment:
         descriptor = (prepared.descriptor() if prepared is not None else
                       self.inner.describe(action, params) if hasattr(self.inner, "describe") else
                       {"operation": action})
+        operation = descriptor.get("operation")
+        if operation in OPERATION_BITS and not self.gate.permitted(operation):
+            # Revoked after the candidate was selected; nothing has been dispatched.
+            self.last_stop = "policy_denied"
+            self.events.put(("rejected", "policy_denied"))
+            raise RuntimeStop("policy_denied")
         operation_key = (descriptor.get("operation"), descriptor.get("target_id"), descriptor.get("slot_ref"))
         mutating = descriptor.get("operation") != "navigate"
         if mutating and self.uncertain_mutation:
@@ -352,8 +411,14 @@ class ControlledEnvironment:
             raise RuntimeStop("invalid_action")
         try:
             classification = ("text" if prepared.action == "type_text" else "nontext") if prepared else "unknown"
-            action_id = self._commit(classification, descriptor.get("slot_ref"))
+            action_id = self._commit(classification, descriptor.get("slot_ref"), operation=operation)
         except RuntimeStop as exc:
+            if exc.reason == "stale_policy":
+                # The policy changed after this candidate was observed but still permits it.
+                self.events.put(("reobserve", "stale_policy"))
+                return SkippedAction()
+            if exc.reason == "policy_denied":
+                self.events.put(("rejected", "policy_denied"))
             self.last_stop = exc.reason
             raise
         if mutating:
@@ -376,10 +441,12 @@ class ControlledEnvironment:
         finally:
             self.gate.settle(action_id)
 
-    def _commit(self, classification: str, slot_ref: str | None = None) -> int:
+    def _commit(self, classification: str, slot_ref: str | None = None, *,
+                operation: str | None = None) -> int:
         # Shared obligation counts change at commit, before any fallible IPC.
         # A killed worker cannot erase a committed action by losing its event.
-        action_id = self.gate.commit_dispatch(classification)
+        action_id = self.gate.commit_dispatch(classification, operation=operation,
+                                              revision=self.observed_revision)
         if self.gate.slot_sink is not None:
             self.gate.slot_sink.commit(action_id, classification, slot_ref)
         return action_id
@@ -451,6 +518,7 @@ class AttemptSupervisor:
         self._constraints = ConstraintAssessments()
         self._assessment_generation = None
         self._fixture_fence_attempted = False
+        self.revocations: list[dict] = []
 
     def _assess_constraints(self, snapshot=None, *, retain_passes=False, read_budget=True):
         if snapshot is None and read_budget:
@@ -477,6 +545,16 @@ class AttemptSupervisor:
             return False
         self._cancel_requested = accepted or self.gate.terminal.value == 1
         return accepted
+
+    def revoke(self, operation: str) -> bool:
+        """Withdraw a permission for the rest of the attempt (policy revision)."""
+        try:
+            revision = self.gate.revoke(operation)
+        except RuntimeStop:
+            return False
+        if revision:
+            self.revocations.append({"operation": operation, "revision": revision})
+        return bool(revision)
 
     def _unknown_verification(self) -> list[dict]:
         return [{"id": c.id, "kind": "postcondition", "status": "unknown",
@@ -846,6 +924,7 @@ class AttemptSupervisor:
                 "verification": verification, "actions": actions, "cleanup": cleanup,
                 "worker_cleanup": worker_cleanup, "profile_cleanup": profile_cleanup,
                 "trace": self.trace,
+                "policy": {"revision": snapshots.get("policy_revision"), "revocations": self.revocations},
                 "slot_evidence": slot_records,
                 "ownership_evidence": self.fixture_owner.export(),
                 "budget": {"steps": snapshots["steps"],
