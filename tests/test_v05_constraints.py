@@ -136,27 +136,24 @@ def alive(pid):
 
 
 class ConstraintRows(unittest.TestCase):
-    def test_completed_attempt_carries_every_runtime_constraint(self):
+    def test_controlled_attempt_carries_every_runtime_constraint(self):
+        # main establishes a row only from evidence the supervisor owns. A fake environment
+        # gives permissions, dispatch ordering and budget that evidence; it cannot give slot
+        # boundary, fixture ownership or single-shot execution, so the attempt is not completed.
         result = AttemptSupervisor(task(), submit_once, EffectsVerifier("pass", 1)).run()
-        self.assertEqual((result["attempt_status"], result["task_outcome"]), ("completed", "pass"), result)
         rows = {row["id"]: row["status"] for row in result["verification"] if row["kind"] == "execution_constraint"}
-        self.assertEqual(rows, {f"runtime.{name}": "pass" for name in
-                                ("permissions", "text_slots", "session", "dispatch_order",
-                                 "no_uncertain_repeat", "budget")})
-        self.assertEqual(result["actions"][0]["effect"], "applied")
+        self.assertEqual(rows, {"runtime.permissions": "pass", "runtime.immutable_slots": "unknown",
+                                "runtime.ownership": "unknown", "runtime.dispatch_ordering": "pass",
+                                "runtime.no_uncertain_repeats": "unknown", "runtime.budget": "pass"})
+        self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
+                         ("incomplete", "verification_unknown", "unknown"))
 
-    def test_missing_session_evidence_prevents_completion(self):
-        def submit_without_session(gate, events):
-            inner = SubmitEnvironment()
-            inner.session_info = lambda: None
-            env = ControlledEnvironment(inner, gate, events, lambda *_: None)
-            env.observe()
-            env.execute("click", {"element": "1"})
-            return WorkerResult("finish")
-
-        result = AttemptSupervisor(task(), submit_without_session, EffectsVerifier("pass", 1)).run()
-        session = next(r for r in result["verification"] if r["id"] == "runtime.session")
-        self.assertEqual(session["status"], "unknown")
+    def test_an_environment_cannot_install_ownership_evidence_by_describing_its_session(self):
+        # v0.6 accepted a reported fresh, launched session. main's ownership row needs the
+        # supervisor's own fixture claim, so a perfect session_info() claim changes nothing.
+        result = AttemptSupervisor(task(), submit_once, EffectsVerifier("pass", 1)).run()
+        ownership = next(r for r in result["verification"] if r["id"] == "runtime.ownership")
+        self.assertEqual(ownership["status"], "unknown")
         self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "verification_unknown"))
 
     def test_permission_violation_is_confirmed_and_sticky(self):
@@ -197,7 +194,9 @@ class PolicyRevision(unittest.TestCase):
         self.assertIn("stale_policy", [str(row["data"]) and row["data"][0] for row in result["trace"]
                                        if row["kind"] == "reobserve"])
         self.assertEqual(result["budget"]["dispatches"], 1)
-        self.assertEqual(result["attempt_status"], "completed", result)
+        rows = {r["id"]: r["status"] for r in result["verification"] if r["kind"] == "execution_constraint"}
+        self.assertNotIn("fail", rows.values())
+        self.assertEqual(rows["runtime.permissions"], "pass")
 
 
 class GateFailure(unittest.TestCase):

@@ -544,6 +544,8 @@ class AttemptSupervisor:
         self._fixture_fence_attempted = False
         self.revocations: list[dict] = []
         self._actions: list[dict] = []
+        # Driver outcome per action id, kept out of the exported action rows.
+        self._driver_outcomes: dict[int, str] = {}
 
     def _assess_constraints(self, snapshot=None, *, retain_passes=False, read_budget=True):
         if snapshot is None and read_budget:
@@ -561,7 +563,8 @@ class AttemptSupervisor:
         self._constraints.update(assess_constraints(self.task, snapshot, self.attempt_id,
                                                    slot_evidence=self.slot_evidence, coverage=coverage,
                                                    ownership=self.fixture_owner,
-                                                   dispatches=self._actions, revocations=self.revocations),
+                                                   dispatches=self._actions, revocations=self.revocations,
+                                                   driver_outcomes=self._driver_outcomes),
                                  retain_passes=retain_passes)
 
     def cancel(self):
@@ -680,7 +683,10 @@ class AttemptSupervisor:
             actions.append({"id": event[1], **event[2], "effect": "unknown",
                             "proposal_seq": getattr(self, "_last_proposal_seq", None),
                             "dispatch_seq": seq, "return_seq": None, "evidence_refs": []})
+        elif event[0] == "effect_unknown":
+            self._driver_outcomes[event[1]] = "error"
         elif event[0] == "driver_return":
+            self._driver_outcomes[event[1]] = "ok" if len(event) > 2 and event[2] is True else "not_ok"
             for row in actions:
                 if row["id"] == event[1]:
                     row["driver_returned"] = True

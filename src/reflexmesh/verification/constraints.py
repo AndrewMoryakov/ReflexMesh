@@ -42,7 +42,8 @@ def assess_constraints(task: ExecutionTask, snapshot: dict | None, attempt_id: s
                        coverage: dict | None = None,
                        ownership: FixtureOwnership | None = None,
                        dispatches: list | None = None,
-                       revocations: list | None = None) -> list[dict]:
+                       revocations: list | None = None,
+                       driver_outcomes: dict | None = None) -> list[dict]:
     """Assess only evidence currently available to the supervisor.
 
     Admission guards and settled effects do not establish full adapter contracts.
@@ -64,6 +65,7 @@ def assess_constraints(task: ExecutionTask, snapshot: dict | None, attempt_id: s
                            observed_at=view.observed_at, evidence_refs=list(view.evidence_refs))
     rows[0].update(_assess_permissions(task, snapshot, attempt_id, dispatches))
     rows[3].update(_assess_ordering(snapshot, attempt_id, dispatches, revocations))
+    rows[4].update(_assess_repeats(attempt_id, dispatches, driver_outcomes))
     # Slot failures are independent of accounting availability. In particular,
     # a dead worker holding the budget lock must not erase a proven mismatch.
     if type(snapshot) is not dict or any(type(snapshot.get(key)) is not int or snapshot[key] < 0
@@ -162,6 +164,34 @@ def _assess_ordering(snapshot: dict | None, attempt_id: str, dispatches: list | 
         return unexplained
     return {"status": "pass", "observed_at": time.time(), "evidence_refs": ref,
             "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order."}
+
+
+def _assess_repeats(attempt_id: str, dispatches: list | None, outcomes: dict | None) -> dict:
+    """Repeated or post-uncertainty mutations seen at the controlled boundary.
+
+    A second commit of one mutation, or any mutation committed after an earlier mutation
+    returned an error or a failure, is a confirmed violation. Absence of such a sequence
+    does not establish the row: the adapter's internal calls are not attested here, so a
+    pass needs an authoritative record from the target itself.
+    """
+    if (type(dispatches) is not list or any(type(row) is not dict for row in dispatches) or
+            type(outcomes) is not dict):
+        return {}
+    ordered = sorted(dispatches, key=lambda row: row["id"] if _is_int(row.get("id")) else -1)
+    seen, uncertain = set(), False
+    for row in ordered:
+        if row.get("operation") == "navigate":
+            continue
+        key = (row.get("operation"), row.get("target_id"), row.get("slot_ref"))
+        if uncertain or key in seen:
+            return {"status": "fail", "observed_at": time.time(),
+                    "evidence_refs": [f"runtime:{attempt_id}:no_uncertain_repeats"],
+                    "reason": "A mutation was committed again, or after an earlier mutation had an uncertain effect."}
+        seen.add(key)
+        if outcomes.get(row.get("id")) in ("error", "not_ok"):
+            uncertain = True
+    return {"reason": "No repeated mutation was observed at the controlled boundary; "
+                      "adapter-internal single-shot execution is not established."}
 
 
 class ConstraintAssessments:
