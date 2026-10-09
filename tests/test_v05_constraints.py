@@ -84,7 +84,7 @@ def submit_once(gate, events, hang=False):
 
 def dies_holding_gate(gate, events):
     gate.reserve_step()
-    gate.commit()            # Committed, but the dispatch event never reaches the supervisor.
+    gate.commit_dispatch()   # Committed, but the dispatch event never reaches the supervisor.
     gate.lock.acquire()
     os._exit(3)
 
@@ -213,8 +213,10 @@ class GateFailure(unittest.TestCase):
 
     def test_worker_hangs_holding_gate(self):
         result = AttemptSupervisor(task(wall=0.3), hangs_holding_gate, pass_verifier).run()
-        self.assertEqual((result["attempt_status"], result["stop_reason"], result["cleanup"]),
-                         ("failed", "executor_error", "forced"))
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("failed", "executor_error"))
+        # The process group is proven gone, but the gate's counters could not be read under its
+        # lock, so main keeps the aggregate cleanup unknown (it gates releasing the fixture).
+        self.assertEqual((result["worker_cleanup"], result["cleanup"]), ("forced", "unknown"))
         self.assertLessEqual(result["timing"]["exit_after_terminal_seconds"], BOUND)
 
 

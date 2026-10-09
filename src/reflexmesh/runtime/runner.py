@@ -901,7 +901,9 @@ class AttemptSupervisor:
                 pass
         # The owned group can outlive its leader. Keep its PID reserved until
         # TERM/KILL and live-member verification finish, independent of is_alive.
+        cleanup_started = time.monotonic()
         cleanup = self.process.cleanup(KILL_SECONDS)
+        cleanup_seconds = round(time.monotonic() - cleanup_started, 3)
         worker_cleanup = cleanup
         if verification is None:
             # Late, read-only evidence. A worker that hung through the grace period has used
@@ -982,6 +984,12 @@ class AttemptSupervisor:
                 "worker_cleanup": worker_cleanup, "profile_cleanup": profile_cleanup,
                 "trace": self.trace,
                 "policy": {"revision": snapshots.get("policy_revision"), "revocations": self.revocations},
+                "timing": {"terminal_after_seconds": round(terminal_at - self.started, 3),
+                           "deadline_delay_seconds": (round(terminal_at - self.gate.deadline, 3)
+                                                      if reason == "deadline" and self.gate.deadline is not None
+                                                      else None),
+                           "cleanup_seconds": cleanup_seconds,
+                           "exit_after_terminal_seconds": round(time.monotonic() - terminal_at, 3)},
                 "slot_evidence": slot_records,
                 "ownership_evidence": self.fixture_owner.export(),
                 "budget": {"steps": snapshots["steps"],
