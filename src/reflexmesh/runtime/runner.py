@@ -17,6 +17,7 @@ from reflexmesh.runtime.profile_owner import AttemptProfiles
 from reflexmesh.text.slots import SlotRegistry
 from reflexmesh.tracing.slot_evidence import SlotEvidence
 from reflexmesh.verification.constraints import ConstraintAssessments, assess_constraints
+from reflexmesh.verification.effects import resolve_effects, snapshot_of
 
 GRACE_SECONDS = 5.0
 KILL_SECONDS = 2.0
@@ -546,6 +547,8 @@ class AttemptSupervisor:
         self._actions: list[dict] = []
         # Driver outcome per action id, kept out of the exported action rows.
         self._driver_outcomes: dict[int, str] = {}
+        # Authenticated fixture record bound to this attempt's claim; None without a real claim.
+        self._effect_snapshot: dict | None = None
 
     def _assess_constraints(self, snapshot=None, *, retain_passes=False, read_budget=True):
         if snapshot is None and read_budget:
@@ -564,7 +567,8 @@ class AttemptSupervisor:
                                                    slot_evidence=self.slot_evidence, coverage=coverage,
                                                    ownership=self.fixture_owner,
                                                    dispatches=self._actions, revocations=self.revocations,
-                                                   driver_outcomes=self._driver_outcomes),
+                                                   driver_outcomes=self._driver_outcomes,
+                                                   effect_snapshot=self._effect_snapshot),
                                  retain_passes=retain_passes)
 
     def cancel(self):
@@ -728,6 +732,18 @@ class AttemptSupervisor:
                 validated.add(row.get("operation"))
         return validated
 
+    def _reconcile_effects(self, actions, verification, *, browser_stopped: bool) -> None:
+        """Settle unknown mutation effects from the fixture's own record of requests."""
+        resolve_effects(actions, snapshot_of(verification), self._same_owner, browser_stopped=browser_stopped)
+
+    def _note_effects(self, verification) -> None:
+        """Keep the fixture record as constraint evidence only when it is bound to our claim."""
+        snapshot = snapshot_of(verification)
+        binding = snapshot.get("ownership") if snapshot is not None else None
+        claimed = (snapshot is not None and self.fixture_owner.acquisition_attempted.value and
+                   self._same_owner(binding, binding))
+        self._effect_snapshot = snapshot if claimed else None
+
     def _same_owner(self, action_binding, evidence_binding, *, bootstrap=False):
         # Generic strategies without a fixture claim retain their synthetic test
         # contract. The production browser path always has a claim marker.
@@ -831,6 +847,7 @@ class AttemptSupervisor:
             # decision against cancellation and the original wall deadline.
             verified_actions = [dict(row) for row in actions]
             validated = self._reconcile(verified_actions, verification)
+            self._note_effects(verification)
             unknown_mutations = any(row.get("operation") not in validated and
                                     row.get("operation") != "navigate" for row in verified_actions)
             self._assess_constraints()
@@ -887,7 +904,10 @@ class AttemptSupervisor:
         cleanup = self.process.cleanup(KILL_SECONDS)
         worker_cleanup = cleanup
         if verification is None:
-            verification = self._verify(max(0, grace_end - time.monotonic()))
+            # Late, read-only evidence. A worker that hung through the grace period has used
+            # that allowance up, so the read gets the cleanup allowance too; the total stays
+            # inside the exit bound (GRACE_SECONDS + KILL_SECONDS after the terminal transition).
+            verification = self._verify(max(0, grace_end + KILL_SECONDS - time.monotonic()))
         while True:
             try:
                 self._record(self.events.get_nowait(), actions)
@@ -896,6 +916,8 @@ class AttemptSupervisor:
         # Late evidence can refine an effect, but the accepted terminal status never changes.
         self._reconcile_navigation(actions)
         self._reconcile(actions, verification)
+        self._reconcile_effects(actions, verification, browser_stopped=cleanup in ("closed", "forced"))
+        self._note_effects(verification)
         synchronized_snapshot = True
         try:
             snapshots = self.gate.snapshot()
@@ -949,8 +971,11 @@ class AttemptSupervisor:
                 "executor_id": self.executor_id, "routing": self.routing,
                 "router_capabilities": self.router_capabilities, "router_usage": self.router_usage,
                 "attempt_status": status, "stop_reason": reason, "task_outcome": outcome,
-                "execution_outcome": "unknown" if snapshots["in_flight"] or any(
-                    a["effect"] == "unknown" for a in actions) else
+                # An in-flight action stays unknown unless the fixture record settled its effect.
+                "execution_outcome": "unknown" if any(a["effect"] == "unknown" for a in actions) or (
+                    snapshots["in_flight"] and not any(
+                        a["id"] == snapshots["in_flight"] and a["effect"] in ("applied", "not_applied")
+                        for a in actions)) else
                     "returned" if snapshots["dispatches"] else
                     "error" if status == "failed" else "not_started",
                 "verification": verification, "actions": actions, "cleanup": cleanup,

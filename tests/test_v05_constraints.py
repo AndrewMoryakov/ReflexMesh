@@ -59,16 +59,19 @@ class SubmitEnvironment:
 
 
 class EffectsVerifier:
-    """Verifier with an authoritative server effect record, like FixtureVerifier.effects."""
+    """Verifier that also returns the fixture's request record, shaped like FixtureVerifier's
+    retained snapshot (no claim: the synthetic contract used by generic strategies)."""
 
-    def __init__(self, status, requests):
-        self.status, self.requests = status, requests
+    def __init__(self, status, requests, pending=0):
+        self.status, self.requests, self.pending = status, requests, pending
 
     def __call__(self, task, timeout):
-        return [{"id": c.id, "status": self.status, "evidence_refs": ["fake://server"]} for c in task.criteria]
-
-    def effects(self, task, timeout):
-        return {"ref": "fake://server", "targets": {"send-form": {"requests": self.requests, "running": False}}}
+        snapshot = {"kind": "fixture_effect_snapshot", "source": "authenticated_fixture_response",
+                    "ref": "fake://server", "ownership": None, "pending_effect_count": self.pending,
+                    "effects": [{"seq": seq, "method": "POST", "path": "/form", "binding": None}
+                                for seq in range(1, self.requests + 1)]}
+        return [{"id": c.id, "status": self.status, "evidence_refs": ["fake://server"],
+                 "fixture_snapshot": snapshot} for c in task.criteria]
 
 
 def submit_once(gate, events, hang=False):

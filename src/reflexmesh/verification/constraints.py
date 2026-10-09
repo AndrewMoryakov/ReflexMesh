@@ -6,6 +6,7 @@ import math
 import time
 
 from reflexmesh.contracts.execution import ExecutionTask, OPERATION_BITS, PERMISSIONS
+from reflexmesh.verification.effects import repeat_verdict
 from reflexmesh.tracing.slot_evidence import SlotEvidence
 from reflexmesh.runtime.ownership import FixtureOwnership
 
@@ -43,7 +44,8 @@ def assess_constraints(task: ExecutionTask, snapshot: dict | None, attempt_id: s
                        ownership: FixtureOwnership | None = None,
                        dispatches: list | None = None,
                        revocations: list | None = None,
-                       driver_outcomes: dict | None = None) -> list[dict]:
+                       driver_outcomes: dict | None = None,
+                       effect_snapshot: dict | None = None) -> list[dict]:
     """Assess only evidence currently available to the supervisor.
 
     Admission guards and settled effects do not establish full adapter contracts.
@@ -65,7 +67,7 @@ def assess_constraints(task: ExecutionTask, snapshot: dict | None, attempt_id: s
                            observed_at=view.observed_at, evidence_refs=list(view.evidence_refs))
     rows[0].update(_assess_permissions(task, snapshot, attempt_id, dispatches))
     rows[3].update(_assess_ordering(snapshot, attempt_id, dispatches, revocations))
-    rows[4].update(_assess_repeats(attempt_id, dispatches, driver_outcomes))
+    rows[4].update(_assess_repeats(attempt_id, snapshot, dispatches, driver_outcomes, effect_snapshot))
     # Slot failures are independent of accounting availability. In particular,
     # a dead worker holding the budget lock must not erase a proven mismatch.
     if type(snapshot) is not dict or any(type(snapshot.get(key)) is not int or snapshot[key] < 0
@@ -166,14 +168,18 @@ def _assess_ordering(snapshot: dict | None, attempt_id: str, dispatches: list | 
             "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order."}
 
 
-def _assess_repeats(attempt_id: str, dispatches: list | None, outcomes: dict | None) -> dict:
-    """Repeated or post-uncertainty mutations seen at the controlled boundary.
+def _assess_repeats(attempt_id: str, snapshot: dict | None, dispatches: list | None,
+                    outcomes: dict | None, effects: dict | None) -> dict:
+    """Repeated or post-uncertainty mutations.
 
-    A second commit of one mutation, or any mutation committed after an earlier mutation
-    returned an error or a failure, is a confirmed violation. Absence of such a sequence
-    does not establish the row: the adapter's internal calls are not attested here, so a
-    pass needs an authoritative record from the target itself.
+    At the controlled boundary a second commit of one mutation, or any mutation committed
+    after an earlier mutation returned an error or a failure, is a confirmed violation.
+    Absence of such a sequence does not establish the row: the adapter's internal calls are
+    not attested there. A pass, or a repeat made inside the driver, needs the authenticated
+    record from the fixture itself, and only when the supervisor holds a row for every
+    dispatch the gate committed (a lost event must not turn into a false failure).
     """
+    ref = [f"runtime:{attempt_id}:no_uncertain_repeats"]
     if (type(dispatches) is not list or any(type(row) is not dict for row in dispatches) or
             type(outcomes) is not dict):
         return {}
@@ -184,12 +190,18 @@ def _assess_repeats(attempt_id: str, dispatches: list | None, outcomes: dict | N
             continue
         key = (row.get("operation"), row.get("target_id"), row.get("slot_ref"))
         if uncertain or key in seen:
-            return {"status": "fail", "observed_at": time.time(),
-                    "evidence_refs": [f"runtime:{attempt_id}:no_uncertain_repeats"],
+            return {"status": "fail", "observed_at": time.time(), "evidence_refs": ref,
                     "reason": "A mutation was committed again, or after an earlier mutation had an uncertain effect."}
         seen.add(key)
         if outcomes.get(row.get("id")) in ("error", "not_ok"):
             uncertain = True
+    complete = (type(snapshot) is dict and _is_int(snapshot.get("dispatches")) and
+                snapshot["dispatches"] == len(dispatches))
+    verdict = repeat_verdict(dispatches, effects) if complete else None
+    if verdict is not None:
+        status, reason = verdict
+        return {"status": status, "observed_at": time.time(), "evidence_refs": ref + [effects["ref"]],
+                "reason": reason}
     return {"reason": "No repeated mutation was observed at the controlled boundary; "
                       "adapter-internal single-shot execution is not established."}
 
