@@ -28,7 +28,8 @@ def make_gate():
 
 
 def row(snapshot, operations):
-    rows = assess_constraints(task(), snapshot, "attempt-1", dispatched_operations=operations)
+    dispatches = None if operations is None else [{"operation": op} for op in operations]
+    rows = assess_constraints(task(), snapshot, "attempt-1", dispatches=dispatches)
     return next(r for r in rows if r["id"] == "runtime.permissions")
 
 

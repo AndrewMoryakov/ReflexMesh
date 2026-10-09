@@ -396,7 +396,7 @@ class SlotGateGeneration(unittest.TestCase):
             if event[0] == "dispatch":
                 dispatches.append(event)
         self.assertEqual(dispatches, [("dispatch", 1, {
-            "operation": "type_text", "target_id": "name", "slot_ref": "name@1",
+            "operation": "type_text", "target_id": "name", "slot_ref": "name@1", "gate_seq": 1,
         })])
         self.gate.seal_dispatches()
         self.assertEqual(self.assessed_slot()["status"], "pass")
@@ -417,7 +417,7 @@ class ImmutableSlotLifecycle(unittest.TestCase):
             supervisor.events.close()
             supervisor.slot_evidence.close()
 
-    def test_real_handoff_permissions_and_budget_pass_leave_other_three_constraints_unknown(self):
+    def test_real_handoff_leaves_constraints_without_runtime_evidence_unknown(self):
         data = task_data()
         data["text_slots"].append({"id": "email", "version": 1, "value": "fixture@example.test"})
         data["criteria"] = [{"id": "sent", "kind": "postcondition", "predicate": "form_submitted_once",
@@ -433,8 +433,10 @@ class ImmutableSlotLifecycle(unittest.TestCase):
         self.assertEqual(constraint(result)["status"], "pass")
         self.assertEqual(constraint(result, "runtime.budget")["status"], "pass")
         self.assertEqual(constraint(result, "runtime.permissions")["status"], "pass")
-        remaining = set(REQUIRED_CONSTRAINTS) - {SLOT_ID, "runtime.budget", "runtime.permissions"}
-        self.assertEqual(len(remaining), 3)
+        self.assertEqual(constraint(result, "runtime.dispatch_ordering")["status"], "pass")
+        remaining = set(REQUIRED_CONSTRAINTS) - {SLOT_ID, "runtime.budget", "runtime.permissions",
+                                                 "runtime.dispatch_ordering"}
+        self.assertEqual(len(remaining), 2)
         self.assertTrue(all(constraint(result, cid)["status"] == "unknown" for cid in remaining))
         self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
                          ("incomplete", "verification_unknown", "unknown"))

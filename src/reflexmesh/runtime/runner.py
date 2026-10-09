@@ -71,6 +71,10 @@ class AttemptGate:
         self.text_dispatches = ctx.Value("q", 0, lock=False)
         self.nontext_dispatches = ctx.Value("q", 0, lock=False)
         self.unknown_dispatches = ctx.Value("q", 0, lock=False)
+        # One gate sequence numbers every dispatch commit, revocation and the first terminal
+        # transition, so their local order can be checked against the supervisor's trace.
+        self.seq = ctx.Value("q", 0, lock=False)
+        self.terminal_seq = ctx.Value("q", 0, lock=False)
         self.policy_revision = ctx.Value("q", 1, lock=False)
         self.permission_mask = ctx.Value("q", permission_mask(task.permissions), lock=False)
         # Evidence that commits passed the live permission check: operations that were
@@ -91,21 +95,27 @@ class AttemptGate:
         if not self.lock.acquire(timeout=0.25):
             raise RuntimeStop("gate_unavailable")
 
+    def _terminate(self, code: int) -> None:
+        """Caller holds the lock; the first terminal transition is immutable."""
+        if not self.terminal.value:
+            self.terminal.value = code
+            self.seq.value += 1
+            self.terminal_seq.value = self.seq.value
+
     def _check(self):
         if self.terminal.value:
             raise RuntimeStop({1: "cancel_requested", 2: "deadline", 3: "terminal"}[self.terminal.value])
         if self.deadline_expired():
-            self.terminal.value = 2
+            self._terminate(2)
             raise RuntimeStop("deadline")
 
     def stop(self, reason: str) -> bool:
         self._acquire()
         try:
             if self.terminal.value or self.deadline_expired():
-                if not self.terminal.value:
-                    self.terminal.value = 2
+                self._terminate(2)
                 return False
-            self.terminal.value = {"cancel_requested": 1, "deadline": 2}.get(reason, 3)
+            self._terminate({"cancel_requested": 1, "deadline": 2}.get(reason, 3))
             return True
         finally:
             self.lock.release()
@@ -116,13 +126,13 @@ class AttemptGate:
         try:
             if not self.terminal.value:
                 if self.deadline_expired():
-                    self.terminal.value = 2
+                    self._terminate(2)
                 elif expected_generation is not None and (
                         self.generation.value != expected_generation or
                         self.sealed_generation.value != expected_generation or self.in_flight.value):
                     raise RuntimeStop("evidence_changed")
                 else:
-                    self.terminal.value = 3
+                    self._terminate(3)
             return self.terminal.value
         finally:
             self.lock.release()
@@ -197,20 +207,29 @@ class AttemptGate:
             self.lock.release()
 
     def revoke(self, operation: str) -> int:
-        """Withdraw one permission; returns the new policy revision, 0 if refused."""
+        """Withdraw one permission; returns the gate sequence of the revocation, 0 if refused."""
         self._acquire()
         try:
             if self.terminal.value or operation not in OPERATION_BITS:
                 return 0
             self.permission_mask.value &= ~OPERATION_BITS[operation]
             self.policy_revision.value += 1
-            return self.policy_revision.value
+            self.seq.value += 1
+            return self.seq.value
         finally:
             self.lock.release()
 
     def commit_dispatch(self, classification: str = "unknown", *,
                         operation: str | None = None, revision: int | None = None) -> int:
-        """Dispatch boundary. `revision` is the policy revision the candidate was observed under."""
+        return self.commit_dispatch_seq(classification, operation=operation, revision=revision)[0]
+
+    def commit_dispatch_seq(self, classification: str = "unknown", *,
+                            operation: str | None = None,
+                            revision: int | None = None) -> tuple[int, int]:
+        """Dispatch boundary: returns (action_id, gate_seq).
+
+        `revision` is the policy revision the candidate was observed under.
+        """
         self._acquire()
         try:
             self._check()
@@ -234,7 +253,8 @@ class AttemptGate:
                 classification, self.unknown_dispatches)
             counter.value += 1
             self.in_flight.value = self.dispatches.value
-            return self.dispatches.value
+            self.seq.value += 1
+            return self.dispatches.value, self.seq.value
         finally:
             self.lock.release()
 
@@ -282,7 +302,8 @@ class AttemptGate:
                     "dispatches": self.dispatches.value, "in_flight": self.in_flight.value,
                     "terminal": self.terminal.value, "policy_revision": self.policy_revision.value,
                     "committed_operations": self.committed_operations.value,
-                    "unchecked_commits": self.unchecked_commits.value}
+                    "unchecked_commits": self.unchecked_commits.value,
+                    "seq": self.seq.value, "terminal_seq": self.terminal_seq.value}
         finally:
             self.lock.release()
 
@@ -321,14 +342,14 @@ class ControlledEnvironment:
             raise RuntimeStop(reason)
         self.observed_revision = self.gate.revision()
         try:
-            action_id = self._commit("nontext" if self._prepared_protocol else "unknown",
-                                     operation="navigate")
+            action_id, gate_seq = self._commit("nontext" if self._prepared_protocol else "unknown",
+                                               operation="navigate")
         except RuntimeStop as exc:
             # There is no candidate to re-observe before the first navigation.
             self.last_stop = "policy_denied" if exc.reason == "stale_policy" else exc.reason
             raise RuntimeStop(self.last_stop) from None
         self.events.put(("dispatch", action_id, {"operation": "navigate", "bootstrap": True,
-                                                **self._ownership_descriptor()}))
+                                                "gate_seq": gate_seq, **self._ownership_descriptor()}))
         try:
             self.inner.reset(goal)
         except Exception:
@@ -412,7 +433,8 @@ class ControlledEnvironment:
             raise RuntimeStop("invalid_action")
         try:
             classification = ("text" if prepared.action == "type_text" else "nontext") if prepared else "unknown"
-            action_id = self._commit(classification, descriptor.get("slot_ref"), operation=operation)
+            action_id, gate_seq = self._commit(classification, descriptor.get("slot_ref"),
+                                               operation=operation)
         except RuntimeStop as exc:
             if exc.reason == "stale_policy":
                 # The policy changed after this candidate was observed but still permits it.
@@ -424,7 +446,8 @@ class ControlledEnvironment:
             raise
         if mutating:
             self.seen_mutations.add(operation_key)
-        self.events.put(("dispatch", action_id, {**descriptor, **self._ownership_descriptor()}))
+        self.events.put(("dispatch", action_id, {**descriptor, "gate_seq": gate_seq,
+                                                **self._ownership_descriptor()}))
         try:
             result = (self.inner.execute_prepared(prepared, action_id) if prepared is not None else
                       self.inner.execute(action, params))
@@ -443,14 +466,14 @@ class ControlledEnvironment:
             self.gate.settle(action_id)
 
     def _commit(self, classification: str, slot_ref: str | None = None, *,
-                operation: str | None = None) -> int:
+                operation: str | None = None) -> tuple[int, int]:
         # Shared obligation counts change at commit, before any fallible IPC.
         # A killed worker cannot erase a committed action by losing its event.
-        action_id = self.gate.commit_dispatch(classification, operation=operation,
-                                              revision=self.observed_revision)
+        action_id, gate_seq = self.gate.commit_dispatch_seq(classification, operation=operation,
+                                                            revision=self.observed_revision)
         if self.gate.slot_sink is not None:
             self.gate.slot_sink.commit(action_id, classification, slot_ref)
-        return action_id
+        return action_id, gate_seq
 
     def _ownership_descriptor(self) -> dict:
         owner = self.gate.fixture_owner
@@ -520,7 +543,7 @@ class AttemptSupervisor:
         self._assessment_generation = None
         self._fixture_fence_attempted = False
         self.revocations: list[dict] = []
-        self._dispatched_operations: list = []
+        self._actions: list[dict] = []
 
     def _assess_constraints(self, snapshot=None, *, retain_passes=False, read_budget=True):
         if snapshot is None and read_budget:
@@ -538,7 +561,7 @@ class AttemptSupervisor:
         self._constraints.update(assess_constraints(self.task, snapshot, self.attempt_id,
                                                    slot_evidence=self.slot_evidence, coverage=coverage,
                                                    ownership=self.fixture_owner,
-                                                   dispatched_operations=self._dispatched_operations),
+                                                   dispatches=self._actions, revocations=self.revocations),
                                  retain_passes=retain_passes)
 
     def cancel(self):
@@ -552,12 +575,12 @@ class AttemptSupervisor:
     def revoke(self, operation: str) -> bool:
         """Withdraw a permission for the rest of the attempt (policy revision)."""
         try:
-            revision = self.gate.revoke(operation)
+            seq = self.gate.revoke(operation)
         except RuntimeStop:
             return False
-        if revision:
-            self.revocations.append({"operation": operation, "revision": revision})
-        return bool(revision)
+        if seq:
+            self.revocations.append({"operation": operation, "gate_seq": seq})
+        return bool(seq)
 
     def _unknown_verification(self) -> list[dict]:
         return [{"id": c.id, "kind": "postcondition", "status": "unknown",
@@ -654,7 +677,6 @@ class AttemptSupervisor:
         elif event[0] == "proposal":
             self._last_proposal_seq = seq
         elif event[0] == "dispatch":
-            self._dispatched_operations.append(event[2].get("operation") if type(event[2]) is dict else None)
             actions.append({"id": event[1], **event[2], "effect": "unknown",
                             "proposal_seq": getattr(self, "_last_proposal_seq", None),
                             "dispatch_seq": seq, "return_seq": None, "evidence_refs": []})
@@ -728,7 +750,7 @@ class AttemptSupervisor:
 
     def run(self) -> dict:
         status = reason = None
-        actions: list[dict] = []
+        actions: list[dict] = self._actions
         terminal_at = None
         self.process.start()
         while status is None:
