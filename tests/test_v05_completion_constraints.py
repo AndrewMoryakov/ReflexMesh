@@ -135,8 +135,9 @@ class CompletionGate(unittest.TestCase):
         self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
                          ("incomplete", "verification_unknown", "unknown"))
         self.assertEqual(result["verification"][0]["status"], "pass")
+        # Permissions and budget have runtime evidence; the other four rows do not yet.
         self.assertEqual([row["status"] for row in result["verification"][1:]],
-                         ["unknown"] * 5 + ["pass"])
+                         ["pass"] + ["unknown"] * 4 + ["pass"])
 
     def test_all_required_passes_allow_both_normal_finish_kinds(self):
         for strategy in (finish_no_action, no_confident_action):
@@ -186,7 +187,10 @@ class CompletionGate(unittest.TestCase):
 
         result = AttemptSupervisor(task(), finish_no_action, claimed_passes).run()
         self.assertEqual(result["attempt_status"], "incomplete")
-        self.assertEqual([row["status"] for row in result["verification"][:-1]], ["unknown"] * 6)
+        # The postcondition is unknown because the verifier's rows are rejected; permissions
+        # passes only on the gate's own record, never on what the verifier claimed.
+        self.assertEqual([row["status"] for row in result["verification"][:-1]],
+                         ["unknown", "pass"] + ["unknown"] * 4)
 
     def test_constraint_failure_blocks_completion_and_survives_later_pass(self):
         calls = 0
@@ -300,12 +304,13 @@ class ConstraintSerialization(unittest.TestCase):
             rows = result["verification"][1:]
             self.assertEqual(tuple(row["id"] for row in rows), REQUIRED_CONSTRAINTS)
             self.assertTrue(all(row["reason"] and row["kind"] == "execution_constraint" for row in rows))
-            self.assertTrue(all(row["evidence_refs"] == [] for row in rows[:-1]))
+            self.assertEqual(rows[0]["evidence_refs"], [f"runtime:{result['attempt_id']}:permissions"])
+            self.assertTrue(all(row["evidence_refs"] == [] for row in rows[1:-1]))
             evidence = [json.loads(line) for line in (output / "evidence.jsonl").read_text().splitlines()]
-            self.assertEqual(len(evidence), 1)
-            self.assertEqual(evidence[0]["criterion_id"], "runtime.budget")
-            self.assertEqual(evidence[0]["scope"], "steps_and_locally_controlled_model_calls")
-            self.assertEqual(evidence[0]["reason"], rows[-1]["reason"])
+            self.assertEqual([row["criterion_id"] for row in evidence], ["runtime.permissions", "runtime.budget"])
+            self.assertEqual(evidence[-1]["scope"], "steps_and_locally_controlled_model_calls")
+            self.assertEqual(evidence[-1]["reason"], rows[-1]["reason"])
+            self.assertEqual(evidence[0]["reason"], rows[0]["reason"])
             self.assertEqual(result["budget"]["limits"], {
                 "wall_seconds": None, "max_steps": None, "max_model_calls": None})
             json.dumps(result, allow_nan=False)

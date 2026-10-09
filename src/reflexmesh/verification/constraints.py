@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import time
 
-from reflexmesh.contracts.execution import ExecutionTask
+from reflexmesh.contracts.execution import ExecutionTask, OPERATION_BITS, PERMISSIONS
 from reflexmesh.tracing.slot_evidence import SlotEvidence
 from reflexmesh.runtime.ownership import FixtureOwnership
 
@@ -21,7 +21,7 @@ REQUIRED_CONSTRAINTS = (
 )
 
 MISSING_EVIDENCE = {
-    "runtime.permissions": "Full target attributes and dispatch-time policy revision are not evidenced.",
+    "runtime.permissions": "Not every dispatch commit was checked against the live permission mask.",
     "runtime.immutable_slots": "Resolved slot values are not evidenced across the adapter dispatch boundary.",
     "runtime.ownership": "Exclusive fixture claim and browser session/owner identity are not evidenced.",
     "runtime.dispatch_ordering": "Shared gate ordering and observation/policy identity are not persisted.",
@@ -40,7 +40,8 @@ def unknown_assessment(constraint_id: str) -> dict:
 def assess_constraints(task: ExecutionTask, snapshot: dict | None, attempt_id: str,
                        slot_evidence: SlotEvidence | None = None,
                        coverage: dict | None = None,
-                       ownership: FixtureOwnership | None = None) -> list[dict]:
+                       ownership: FixtureOwnership | None = None,
+                       dispatched_operations: list | None = None) -> list[dict]:
     """Assess only evidence currently available to the supervisor.
 
     Admission guards and settled effects do not establish full adapter contracts.
@@ -60,6 +61,7 @@ def assess_constraints(task: ExecutionTask, snapshot: dict | None, attempt_id: s
         if view.identity == (task.task_id, task.revision, attempt_id, task.run_id):
             rows[1].update(status=view.status, reason=view.reason,
                            observed_at=view.observed_at, evidence_refs=list(view.evidence_refs))
+    rows[0].update(_assess_permissions(task, snapshot, attempt_id, dispatched_operations))
     # Slot failures are independent of accounting availability. In particular,
     # a dead worker holding the budget lock must not erase a proven mismatch.
     if type(snapshot) is not dict or any(type(snapshot.get(key)) is not int or snapshot[key] < 0
@@ -73,6 +75,36 @@ def assess_constraints(task: ExecutionTask, snapshot: dict | None, attempt_id: s
                            "Observed local counters respect enabled limits; null limits are disabled.",
                     evidence_refs=[f"runtime:{attempt_id}:budget"])
     return rows
+
+
+def _assess_permissions(task: ExecutionTask, snapshot: dict | None, attempt_id: str,
+                        operations: list | None) -> dict:
+    """Permission enforcement for committed dispatches.
+
+    A dispatch that names a known operation the task did not grant is a confirmed
+    failure whatever else is available. A pass needs the gate's own record: every
+    commit was checked against the live mask, and every operation the worker
+    reported was among those the gate checked. Worker events alone never pass.
+    """
+    ref = [f"runtime:{attempt_id}:permissions"]
+    if type(operations) is not list:
+        return {}
+    granted = task.permissions
+    if any(op in PERMISSIONS and op not in granted for op in operations):
+        return {"status": "fail", "observed_at": time.time(), "evidence_refs": ref,
+                "reason": "A dispatch named an operation the task did not grant."}
+    if type(snapshot) is not dict or any(type(snapshot.get(key)) is not int or snapshot[key] < 0
+                                         for key in ("dispatches", "committed_operations",
+                                                     "unchecked_commits")):
+        return {}
+    if snapshot["unchecked_commits"]:
+        return {"reason": "A dispatch was committed without a checked operation."}
+    if len(operations) != snapshot["dispatches"] or any(op not in OPERATION_BITS for op in operations):
+        return {"reason": "Reported dispatch operations do not match the gate's committed dispatches."}
+    if any(not snapshot["committed_operations"] & OPERATION_BITS[op] for op in operations):
+        return {"reason": "A reported operation was not among those the gate checked at commit."}
+    return {"status": "pass", "observed_at": time.time(), "evidence_refs": ref,
+            "reason": "Every committed dispatch was checked against the live permission mask."}
 
 
 class ConstraintAssessments:

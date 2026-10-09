@@ -10,7 +10,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Callable
 
-from reflexmesh.contracts.execution import ExecutionTask, PERMISSIONS
+from reflexmesh.contracts.execution import ExecutionTask, OPERATION_BITS, permission_mask
 from reflexmesh.runtime.process_group import OwnedWorker
 from reflexmesh.runtime.ownership import FixtureOwnership, OwnershipError
 from reflexmesh.runtime.profile_owner import AttemptProfiles
@@ -28,15 +28,6 @@ STOP_CODES = {"cancel_requested": "cancelled", "deadline": "incomplete",
               "effect_unknown": "incomplete",
               "policy_denied": "blocked", "invalid_action": "blocked",
               "adapter_contract_unsupported": "blocked", "no_admissible_action": "blocked"}
-# Stable bit positions for the shared permission mask; the vocabulary is closed in V0.5.
-OPERATION_BITS = {name: 1 << index for index, name in enumerate(sorted(PERMISSIONS))}
-
-
-def permission_mask(operations) -> int:
-    mask = 0
-    for name in operations:
-        mask |= OPERATION_BITS.get(name, 0)
-    return mask
 
 
 class RuntimeStop(Exception):
@@ -82,6 +73,10 @@ class AttemptGate:
         self.unknown_dispatches = ctx.Value("q", 0, lock=False)
         self.policy_revision = ctx.Value("q", 1, lock=False)
         self.permission_mask = ctx.Value("q", permission_mask(task.permissions), lock=False)
+        # Evidence that commits passed the live permission check: operations that were
+        # checked at commit, and commits that named no operation of the closed vocabulary.
+        self.committed_operations = ctx.Value("q", 0, lock=False)
+        self.unchecked_commits = ctx.Value("q", 0, lock=False)
         self.slot_registry = slot_registry if slot_registry is not None else SlotRegistry.from_task(task)
         self.slot_sink = slot_sink
         self.fixture_owner = fixture_owner
@@ -229,6 +224,10 @@ class AttemptGate:
                 raise RuntimeStop("policy_denied")
             if revision is not None and revision != self.policy_revision.value:
                 raise RuntimeStop("stale_policy")
+            if operation in OPERATION_BITS:
+                self.committed_operations.value |= OPERATION_BITS[operation]
+            else:
+                self.unchecked_commits.value += 1
             self.dispatches.value += 1
             self.generation.value += 1
             counter = {"text": self.text_dispatches, "nontext": self.nontext_dispatches}.get(
@@ -281,7 +280,9 @@ class AttemptGate:
                     "opaque_model_usage": bool(self.opaque_model_usage.value),
                     "router_invocations": self.router_invocations.value,
                     "dispatches": self.dispatches.value, "in_flight": self.in_flight.value,
-                    "terminal": self.terminal.value, "policy_revision": self.policy_revision.value}
+                    "terminal": self.terminal.value, "policy_revision": self.policy_revision.value,
+                    "committed_operations": self.committed_operations.value,
+                    "unchecked_commits": self.unchecked_commits.value}
         finally:
             self.lock.release()
 
@@ -519,6 +520,7 @@ class AttemptSupervisor:
         self._assessment_generation = None
         self._fixture_fence_attempted = False
         self.revocations: list[dict] = []
+        self._dispatched_operations: list = []
 
     def _assess_constraints(self, snapshot=None, *, retain_passes=False, read_budget=True):
         if snapshot is None and read_budget:
@@ -535,7 +537,8 @@ class AttemptSupervisor:
                                        coverage["sealed_generation"] == coverage["generation"] else None)
         self._constraints.update(assess_constraints(self.task, snapshot, self.attempt_id,
                                                    slot_evidence=self.slot_evidence, coverage=coverage,
-                                                   ownership=self.fixture_owner),
+                                                   ownership=self.fixture_owner,
+                                                   dispatched_operations=self._dispatched_operations),
                                  retain_passes=retain_passes)
 
     def cancel(self):
@@ -651,6 +654,7 @@ class AttemptSupervisor:
         elif event[0] == "proposal":
             self._last_proposal_seq = seq
         elif event[0] == "dispatch":
+            self._dispatched_operations.append(event[2].get("operation") if type(event[2]) is dict else None)
             actions.append({"id": event[1], **event[2], "effect": "unknown",
                             "proposal_seq": getattr(self, "_last_proposal_seq", None),
                             "dispatch_seq": seq, "return_seq": None, "evidence_refs": []})

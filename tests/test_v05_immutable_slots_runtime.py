@@ -417,7 +417,7 @@ class ImmutableSlotLifecycle(unittest.TestCase):
             supervisor.events.close()
             supervisor.slot_evidence.close()
 
-    def test_real_handoff_and_budget_pass_leave_other_four_constraints_unknown(self):
+    def test_real_handoff_permissions_and_budget_pass_leave_other_three_constraints_unknown(self):
         data = task_data()
         data["text_slots"].append({"id": "email", "version": 1, "value": "fixture@example.test"})
         data["criteria"] = [{"id": "sent", "kind": "postcondition", "predicate": "form_submitted_once",
@@ -432,8 +432,9 @@ class ImmutableSlotLifecycle(unittest.TestCase):
         self.assertEqual(result["actions"][0]["effect"], "applied")
         self.assertEqual(constraint(result)["status"], "pass")
         self.assertEqual(constraint(result, "runtime.budget")["status"], "pass")
-        remaining = set(REQUIRED_CONSTRAINTS) - {SLOT_ID, "runtime.budget"}
-        self.assertEqual(len(remaining), 4)
+        self.assertEqual(constraint(result, "runtime.permissions")["status"], "pass")
+        remaining = set(REQUIRED_CONSTRAINTS) - {SLOT_ID, "runtime.budget", "runtime.permissions"}
+        self.assertEqual(len(remaining), 3)
         self.assertTrue(all(constraint(result, cid)["status"] == "unknown" for cid in remaining))
         self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
                          ("incomplete", "verification_unknown", "unknown"))

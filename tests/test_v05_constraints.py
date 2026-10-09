@@ -107,10 +107,9 @@ def never_returns(gate, events):
 def bypasses_permission(gate, events):
     # Fault injection: an executor that commits an operation outside the granted permissions.
     gate.reserve_step()
-    action_id, seq = gate.commit()
+    action_id = gate.commit_dispatch()  # No operation named: the gate cannot check it.
     events.put(("proposal", {"action": "click"}))
-    events.put(("dispatch", action_id, {"operation": "delete_account", "target_id": "delete-account",
-                                        "gate_seq": seq}))
+    events.put(("dispatch", action_id, {"operation": "delete_account", "target_id": "delete-account"}))
     time.sleep(1)
     return WorkerResult("finish")
 
