@@ -5,6 +5,8 @@ from __future__ import annotations
 import functools
 import importlib.util
 import json
+import math
+import re
 import signal
 import shutil
 import sys
@@ -18,6 +20,8 @@ from reflexmesh.contracts.execution import ExecutionTask, Limits, PREDICATES
 from reflexmesh.contracts.task import Route, Task, ValidationError
 from reflexmesh.routing.jev_router import validate_config
 from reflexmesh.routing.router import Router, execution_router
+from reflexmesh.runtime.faults import validate_faults
+from reflexmesh.runtime.handoff import build_handoff, chain_usage, standalone_chain
 from reflexmesh.runtime.runner import AttemptSupervisor, WorkerResult
 from reflexmesh.runtime.ownership import OwnershipError
 from reflexmesh.verification.verifier import FixtureVerifier
@@ -53,6 +57,45 @@ def _load(path):
 def _error(code):
     print(json.dumps({"error": {"code": code}}, ensure_ascii=True), file=sys.stderr)
     return 2
+
+
+ATTEMPT_ID = re.compile(r"^[0-9a-f]{32}$")
+
+
+def validate_chain(raw, task) -> dict:
+    """Link to a parent attempt: identity, root limits, and what the chain already used.
+
+    A disabled (null) root limit is unlimited; the task may then use any value for it.
+    """
+    if type(raw) is not dict or set(raw) != {"root_attempt_id", "parent_attempt_id", "sequence",
+                                             "root_limits", "used"}:
+        raise ValidationError("chain must have exactly root_attempt_id, parent_attempt_id, sequence, root_limits, used")
+    if not all(type(raw[k]) is str and ATTEMPT_ID.match(raw[k]) for k in ("root_attempt_id", "parent_attempt_id")):
+        raise ValidationError("chain attempt IDs must be 32 lowercase hex characters")
+    if type(raw["sequence"]) is not int or raw["sequence"] < 2:
+        raise ValidationError("chain sequence must be an integer >= 2")
+    limits, used = raw["root_limits"], raw["used"]
+    if (type(limits) is not dict or set(limits) != {"wall_seconds", "max_steps", "max_model_calls", "max_action_retries"}
+            or type(used) is not dict or set(used) != {"steps", "model_calls", "wall_seconds"}):
+        raise ValidationError("invalid chain limits or usage")
+    for key, value in (*limits.items(), *used.items()):
+        if value is None and key in ("wall_seconds", "max_steps", "max_model_calls"):
+            continue
+        if type(value) not in (int, float) or isinstance(value, bool) or not math.isfinite(value) or value < 0:
+            raise ValidationError("chain numbers must be finite and nonnegative")
+    if any(value is None for value in used.values()):
+        raise ValidationError("chain usage must be numeric")
+    # A linked attempt may never exceed what the chain has left.
+    left = {"max_steps": None if limits["max_steps"] is None else limits["max_steps"] - used["steps"],
+            "max_model_calls": (None if limits["max_model_calls"] is None
+                                else limits["max_model_calls"] - used["model_calls"]),
+            "wall_seconds": (None if limits["wall_seconds"] is None
+                             else limits["wall_seconds"] - used["wall_seconds"] + 1e-6)}
+    for key, remaining in left.items():
+        wanted = getattr(task.limits, key)
+        if remaining is not None and (wanted is None or wanted > remaining):
+            raise ValidationError("task limits exceed the chain's remaining budget")
+    return raw
 
 
 def _jev_action_provider():
@@ -133,6 +176,15 @@ def run_execution(args) -> int:
         task = ExecutionTask.from_dict(_load(args.input))
         if getattr(args, "no_limits", False):
             task = replace(task, limits=Limits(None, None, None, 0))
+        faults = validate_faults(_load(args.faults)) if getattr(args, "faults", None) else {}
+        if faults:
+            # Acceptance fault injection is not wired into this runtime. Accepting the file and
+            # ignoring it would let a run claim a barrier that was never applied.
+            return _error("faults_unsupported")
+        attempt_id = getattr(args, "attempt_id", None)
+        if attempt_id is not None and not ATTEMPT_ID.match(attempt_id):
+            raise ValidationError("attempt ID must be 32 lowercase hex characters")
+        chain = validate_chain(_load(args.chain), task) if getattr(args, "chain", None) else None
         if args.action_provider == "script":
             if not args.script:
                 raise ValidationError("script provider requires --script")
@@ -155,17 +207,34 @@ def run_execution(args) -> int:
         return _error("output_unavailable")
 
     supervisor = AttemptSupervisor(task, BrowserExecutionStrategy(task, args, entries),
-                                   verifier_factory=FixtureVerifier)
-    previous = signal.getsignal(signal.SIGINT)
+                                   verifier_factory=FixtureVerifier, attempt_id=attempt_id)
     signal.signal(signal.SIGINT, lambda *_: supervisor.cancel())
+    control = Path(args.control_dir) if getattr(args, "control_dir", None) else None
+    if control is not None:
+        # Handshake with a Task API caller: announce the handler, then honour a cancel that was
+        # requested before it existed (the caller only signals once 'ready' is present).
+        (control / "ready").touch()
+        if (control / "cancel").exists():
+            supervisor.cancel()
     try:
         result = supervisor.run()
     finally:
-        signal.signal(signal.SIGINT, previous)
+        # A late SIGINT after the terminal transition is a no-op; it must not interrupt the output.
+        signal.signal(signal.SIGINT, lambda *_: None)
     result.update(trace_ref="trace.jsonl", evidence_persistence="stored", evidence_refs=list(dict.fromkeys(
         [ref for row in result["verification"] for ref in row.get("evidence_refs", [])] +
         [ref for row in result["actions"] for ref in row.get("evidence_refs", [])] +
         [row["ref"] for row in result.get("ownership_evidence", []) if "ref" in row])))
+    root_limits = {"wall_seconds": task.limits.wall_seconds, "max_steps": task.limits.max_steps,
+                   "max_model_calls": task.limits.max_model_calls, "max_action_retries": 0}
+    # A result without a chain link (an injected supervisor, for instance) is a standalone attempt.
+    result.setdefault("chain", standalone_chain(str(result.get("attempt_id") or attempt_id or "")))
+    if chain:
+        result["chain"] = {k: chain[k] for k in ("root_attempt_id", "parent_attempt_id", "sequence")}
+        root_limits = chain["root_limits"]
+    usage = chain_usage(chain["used"] if chain else None, result)
+    result["chain"]["used"] = usage
+    result["handoff"] = build_handoff(task, result, root_limits=root_limits, usage=usage)
     try:
         (output / "trace.jsonl").write_text("".join(json.dumps({"event": row}, ensure_ascii=True) + "\n"
                                                  for row in result.get("trace", result["actions"])), encoding="utf-8")
@@ -204,6 +273,7 @@ def run_execution(args) -> int:
                 row.update(status="unknown", reason="Evidence persistence failed.")
         for row in result["actions"]:
             row["evidence_refs"] = []
+        result["handoff"] = build_handoff(task, result, root_limits=root_limits, usage=usage)
         print(json.dumps(result, ensure_ascii=True))
         return EXIT_CODES["failed"]
     print(json.dumps(result, ensure_ascii=True))

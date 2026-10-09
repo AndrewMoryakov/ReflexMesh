@@ -23,7 +23,7 @@ import reflexmesh
 from reflexmesh.adapters.system_one.script_selector import validate_script
 from reflexmesh.contracts.execution import ExecutionTask
 from reflexmesh.contracts.task import ValidationError
-from reflexmesh.runtime.handoff import remaining_budget
+from reflexmesh.runtime.handoff import exhausted, remaining_budget
 from reflexmesh.runtime.runner import GRACE_SECONDS, KILL_SECONDS
 
 ROUTING_PROVIDERS = ("stub", "jevrouter")
@@ -258,10 +258,12 @@ class TaskService:
         parent_chain = parent.get("chain") or {}
         root_id = parent_chain.get("root_attempt_id") or parent_attempt_id
         root_task = self._read(self._dir(root_id) / "task.json")
-        root_limits = dict(root_task["limits"])
+        # limits: null disables every budget; the chain then has nothing to run out of.
+        root_limits = dict(root_task["limits"] or {"wall_seconds": None, "max_steps": None,
+                                                    "max_model_calls": None, "max_action_retries": 0})
         used = parent_chain.get("used") or {"steps": 0, "model_calls": 0, "wall_seconds": 0.0}
         left = remaining_budget(root_limits, used)
-        if left["steps"] < 1 or left["model_calls"] < 1 or left["wall_seconds"] < 1:
+        if exhausted(left):
             raise ApiError("budget_exhausted", f"remaining chain budget {left}")
         new["limits"] = {"wall_seconds": left["wall_seconds"], "max_steps": left["steps"],
                          "max_model_calls": left["model_calls"], "max_action_retries": 0}

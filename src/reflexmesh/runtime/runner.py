@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 from reflexmesh.contracts.execution import ExecutionTask, OPERATION_BITS, permission_mask
+from reflexmesh.runtime.handoff import standalone_chain
 from reflexmesh.runtime.process_group import OwnedWorker
 from reflexmesh.runtime.ownership import FixtureOwnership, OwnershipError
 from reflexmesh.runtime.profile_owner import AttemptProfiles
@@ -513,12 +514,14 @@ def _verification_work(verifier, task, timeout, observation, result_queue):
 class AttemptSupervisor:
     """Supervisor process retains ownership after a worker is stopped or terminated."""
 
-    def __init__(self, task: ExecutionTask, strategy, verifier=None, *, verifier_factory=None):
+    def __init__(self, task: ExecutionTask, strategy, verifier=None, *, verifier_factory=None,
+                 attempt_id: str | None = None):
         self.task, self.strategy, self.verifier = task, strategy, verifier
         self.verifier_factory = verifier_factory
         self.context = mp.get_context("fork")
         self.started = time.monotonic()
-        self.attempt_id = uuid.uuid4().hex
+        # A Task API caller may name the attempt so its directory and the result agree.
+        self.attempt_id = attempt_id if attempt_id is not None else uuid.uuid4().hex
         self.fixture_owner = FixtureOwnership(self.context, task, self.attempt_id)
         self.profiles = AttemptProfiles(self.context)
         registry = SlotRegistry.from_task(task)
@@ -968,11 +971,12 @@ class AttemptSupervisor:
         elapsed = round(time.monotonic() - self.started, 3)
         slot_records = self.slot_evidence.export()
         self.slot_evidence.close()
-        return {"schema_version": "execution-result/0.1", "task_id": self.task.task_id,
+        return {"schema_version": "execution-result/0.2", "task_id": self.task.task_id,
                 "revision": self.task.revision, "attempt_id": self.attempt_id,
                 "executor_id": self.executor_id, "routing": self.routing,
                 "router_capabilities": self.router_capabilities, "router_usage": self.router_usage,
                 "attempt_status": status, "stop_reason": reason, "task_outcome": outcome,
+                "chain": standalone_chain(self.attempt_id), "handoff": None,
                 # An in-flight action stays unknown unless the fixture record settled its effect.
                 "execution_outcome": "unknown" if any(a["effect"] == "unknown" for a in actions) or (
                     snapshots["in_flight"] and not any(

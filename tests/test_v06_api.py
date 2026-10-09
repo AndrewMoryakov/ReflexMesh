@@ -254,7 +254,8 @@ class SameSemantics(unittest.TestCase):
         mcp_result = done["result"]
         self.assertEqual(cli.returncode, 3)
         self.assertEqual({k: cli_result[k] for k in keys}, {k: mcp_result[k] for k in keys})
-        self.assertEqual(cli_result["stop_reason"], "executor_unavailable")
+        # main names an unreachable fixture by its claim step; executor_unavailable is a missing executor.
+        self.assertEqual(cli_result["stop_reason"], "ownership_unavailable")
         self.assertEqual([(r["id"], r["status"]) for r in cli_result["verification"]],
                          [(r["id"], r["status"]) for r in mcp_result["verification"]])
         self.assertEqual(cli_result["handoff"]["kind"], mcp_result["handoff"]["kind"])

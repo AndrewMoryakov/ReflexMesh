@@ -19,18 +19,30 @@ def standalone_chain(attempt_id: str) -> dict:
 
 
 def remaining_budget(root_limits: dict, used: dict) -> dict:
-    """Chain-level remainder: root limits minus everything every attempt in the chain used."""
-    return {"steps": max(0, int(root_limits["max_steps"]) - int(used.get("steps", 0))),
-            "model_calls": max(0, int(root_limits["max_model_calls"]) - int(used.get("model_calls", 0))),
-            "wall_seconds": max(0.0, round(float(root_limits["wall_seconds"]) - float(used.get("wall_seconds", 0.0)), 3))}
+    """Chain-level remainder: root limits minus everything every attempt in the chain used.
+
+    A disabled (None) root limit stays unlimited: its remainder is None, never exhausted.
+    """
+    steps, calls, wall = (root_limits.get(key) for key in ("max_steps", "max_model_calls", "wall_seconds"))
+    return {"steps": None if steps is None else max(0, int(steps) - int(used.get("steps", 0))),
+            "model_calls": None if calls is None else max(0, int(calls) - int(used.get("model_calls", 0))),
+            "wall_seconds": (None if wall is None else
+                             max(0.0, round(float(wall) - float(used.get("wall_seconds", 0.0)), 3)))}
+
+
+def exhausted(remaining: dict) -> bool:
+    return any(value is not None and value < 1 for value in remaining.values())
 
 
 def chain_usage(prior: dict | None, result: dict) -> dict:
     """Usage of the chain up to and including this attempt."""
     prior = prior or {}
     budget = result.get("budget") or {}
+    # Router-internal model calls can be unmetered (model_calls is None then); the chain counts
+    # the locally controlled provider requests, which is the scope the limit applies to.
+    calls = budget.get("local_model_calls", budget.get("model_calls"))
     return {"steps": int(prior.get("steps", 0)) + int(budget.get("steps", 0)),
-            "model_calls": int(prior.get("model_calls", 0)) + int(budget.get("model_calls", 0)),
+            "model_calls": int(prior.get("model_calls", 0)) + int(calls or 0),
             "wall_seconds": round(float(prior.get("wall_seconds", 0.0)) + float(budget.get("elapsed_seconds", 0.0)), 3)}
 
 
@@ -64,9 +76,8 @@ def build_handoff(task: ExecutionTask, result: dict, *, root_limits: dict, usage
     else:
         kind = KINDS.get(result.get("attempt_status"), "failed")
     remaining = remaining_budget(root_limits, usage)
-    exhausted = remaining["steps"] < 1 or remaining["model_calls"] < 1 or remaining["wall_seconds"] < 1
     continuation = ({"allowed": False, "reason": "unresolved_effect"} if unresolved else
-                    {"allowed": False, "reason": "budget_exhausted"} if exhausted else
+                    {"allowed": False, "reason": "budget_exhausted"} if exhausted(remaining) else
                     {"allowed": True, "reason": None})
     return {
         "schema_version": "handoff/0.1",
