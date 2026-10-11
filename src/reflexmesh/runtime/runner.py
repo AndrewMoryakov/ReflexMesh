@@ -78,7 +78,9 @@ class AttemptGate:
         self.seq = ctx.Value("q", 0, lock=False)
         self.terminal_seq = ctx.Value("q", 0, lock=False)
         self.policy_revision = ctx.Value("q", 1, lock=False)
-        self.permission_mask = ctx.Value("q", permission_mask(task.permissions), lock=False)
+        # The operation vocabulary belongs to the task kind; fixture tasks use the V0.5 table.
+        self.bits = getattr(task, "operation_bits", OPERATION_BITS)
+        self.permission_mask = ctx.Value("q", permission_mask(task.permissions, self.bits), lock=False)
         # Evidence that commits passed the live permission check: operations that were
         # checked at commit, and commits that named no operation of the closed vocabulary.
         self.committed_operations = ctx.Value("q", 0, lock=False)
@@ -204,7 +206,7 @@ class AttemptGate:
     def permitted(self, operation: str) -> bool:
         self._acquire()
         try:
-            return bool(self.permission_mask.value & OPERATION_BITS.get(operation, 0))
+            return bool(self.permission_mask.value & self.bits.get(operation, 0))
         finally:
             self.lock.release()
 
@@ -212,9 +214,9 @@ class AttemptGate:
         """Withdraw one permission; returns the gate sequence of the revocation, 0 if refused."""
         self._acquire()
         try:
-            if self.terminal.value or operation not in OPERATION_BITS:
+            if self.terminal.value or operation not in self.bits:
                 return 0
-            self.permission_mask.value &= ~OPERATION_BITS[operation]
+            self.permission_mask.value &= ~self.bits[operation]
             self.policy_revision.value += 1
             self.seq.value += 1
             return self.seq.value
@@ -241,12 +243,12 @@ class AttemptGate:
                 raise RuntimeStop("step_limit")
             if self.in_flight.value:
                 raise RuntimeStop("effect_unknown")
-            if operation in OPERATION_BITS and not self.permission_mask.value & OPERATION_BITS[operation]:
+            if operation in self.bits and not self.permission_mask.value & self.bits[operation]:
                 raise RuntimeStop("policy_denied")
             if revision is not None and revision != self.policy_revision.value:
                 raise RuntimeStop("stale_policy")
-            if operation in OPERATION_BITS:
-                self.committed_operations.value |= OPERATION_BITS[operation]
+            if operation in self.bits:
+                self.committed_operations.value |= self.bits[operation]
             else:
                 self.unchecked_commits.value += 1
             self.dispatches.value += 1

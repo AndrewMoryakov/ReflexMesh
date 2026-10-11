@@ -14,10 +14,12 @@ PERMISSIONS = frozenset({"navigate", "type_text", "toggle_setting", "save_settin
 OPERATION_BITS = {name: 1 << index for index, name in enumerate(sorted(PERMISSIONS))}
 
 
-def permission_mask(operations) -> int:
+def permission_mask(operations, bits=None) -> int:
+    """Bit mask of granted operations in `bits` (the fixture vocabulary unless a task supplies its own)."""
+    bits = OPERATION_BITS if bits is None else bits
     mask = 0
     for name in operations:
-        mask |= OPERATION_BITS.get(name, 0)
+        mask |= bits.get(name, 0)
     return mask
 
 

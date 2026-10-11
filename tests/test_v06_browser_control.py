@@ -1,0 +1,298 @@
+"""Gate, admission and journal for the generic browser path, against a fake adapter.
+
+No browser is involved: these checks pin down what the runtime does with an adapter's answers
+(stale target, revoked permission, unknown effect, cancel, deadline, redaction).
+"""
+
+import json
+import multiprocessing as mp
+import sys
+import tempfile
+import time
+import unittest
+from pathlib import Path
+from types import SimpleNamespace
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from reflexmesh.adapters.system_one.browser_adapter import PreparedBrowserAction, Target
+from reflexmesh.contracts.browser import BrowserTask, OPERATION_BITS as BROWSER_BITS
+from reflexmesh.contracts.execution import OPERATION_BITS as FIXTURE_BITS, ExecutionTask
+from reflexmesh.runtime.browser_run import AttemptTask, BrowserControlledEnvironment, Journal
+from reflexmesh.runtime.runner import AttemptGate, RuntimeStop, SkippedAction
+from reflexmesh.text.slots import SlotRegistry
+from reflexmesh.verification.constraints import assess_constraints
+from test_v05_runtime import sample
+from v06_samples import task_dict
+
+CTX = mp.get_context("fork")
+
+
+class FakeAdapter:
+    """What the control layer needs from an adapter; behavior is scripted per test."""
+
+    def __init__(self):
+        self.report = {"observation_id": 1, "url": "http://127.0.0.1:8770/orders", "coverage": {"status": "complete"},
+                       "text_chars": 10, "options": {}, "option_list": [], "signature": "sig"}
+        self.effect_report = None
+        self.prepare_errors: list[str | None] = []
+        self.results: list = []
+        self.executed: list[int] = []
+        self.closed = False
+
+    def reset(self, goal):
+        pass
+
+    def observe(self):
+        self.report = {**self.report, "observation_id": self.report["observation_id"] + 1}
+        return SimpleNamespace(text="page", fields={}, candidates={})
+
+    def prepare(self, action, params):
+        if self.prepare_errors:
+            error = self.prepare_errors.pop(0)
+            if error:
+                raise RuntimeStop(error)
+        operation = {"type_text": "type_text"}.get(action, action)
+        risk = "read" if operation in ("scroll", "wait", "switch_tab") else "write"
+        target = Target(kind="elements", key="1", operation=operation, role="button", name="Go")
+        return PreparedBrowserAction(action, operation, risk, self.report["observation_id"],
+                                     f"{self.report['observation_id']}:elements:1", (("element", "1"),), target)
+
+    def execute_prepared(self, prepared, action_id):
+        self.executed.append(action_id)
+        outcome = self.results.pop(0) if self.results else SimpleNamespace(ok=True)
+        if isinstance(outcome, BaseException):
+            raise outcome
+        return outcome
+
+    def state_key(self, prepared):
+        return f"{prepared.ref}@{self.report['signature']}"
+
+    def close(self):
+        self.closed = True
+
+
+class Harness:
+    def __init__(self, test, task=None, **limits):
+        data = task_dict()
+        data["limits"] = {**data["limits"], **limits}
+        self.task = task or BrowserTask.from_dict(data)
+        self.view = AttemptTask(self.task, "attempt-1")
+        registry = SlotRegistry.from_task(self.view, "attempt-1")
+        self.gate = AttemptGate(CTX, self.view, time.monotonic(), slot_registry=registry)
+        self.journal = Journal(self.task, "attempt-1", None, "script")
+        self.adapter = FakeAdapter()
+        self.env = BrowserControlledEnvironment(self.adapter, self.gate, self.journal, self.task)
+        self.test = test
+        self.env.reset("goal")
+        self.env.observe()
+
+    def kinds(self):
+        return [r["kind"] for r in self.journal.records]
+
+
+class GateVocabulary(unittest.TestCase):
+    def test_gate_takes_its_operation_table_from_the_task(self):
+        harness = Harness(self)
+        gate = harness.gate
+        self.assertIs(gate.bits, BROWSER_BITS)
+        self.assertTrue(gate.permitted("click") and gate.permitted("scroll"))
+        self.assertFalse(gate.permitted("submit_form"))  # a fixture operation, unknown here
+        before = gate.snapshot()
+        gate.commit_dispatch("nontext", operation="click")
+        after = gate.snapshot()
+        self.assertEqual(after["unchecked_commits"], before["unchecked_commits"])
+        self.assertTrue(after["committed_operations"] & BROWSER_BITS["click"])
+
+    def test_fixture_tasks_keep_the_fixture_table(self):
+        task = ExecutionTask.from_dict(sample())
+        gate = AttemptGate(CTX, task, time.monotonic())
+        self.assertIs(gate.bits, FIXTURE_BITS)
+        self.assertNotEqual(set(FIXTURE_BITS), set(BROWSER_BITS))
+
+    def test_revocation_stops_an_operation_and_bumps_the_revision(self):
+        harness = Harness(self)
+        revision = harness.gate.revision()
+        self.assertGreater(harness.gate.revoke("click"), 0)
+        self.assertEqual(harness.gate.revision(), revision + 1)
+        with self.assertRaises(RuntimeStop) as caught:
+            harness.gate.commit_dispatch("nontext", operation="click")
+        self.assertEqual(caught.exception.reason, "policy_denied")
+
+
+class Admission(unittest.TestCase):
+    def test_stale_target_is_never_dispatched(self):
+        h = Harness(self)
+        dispatches = h.gate.snapshot()["dispatches"]
+        h.adapter.prepare_errors = ["stale_target"]
+        self.assertIsInstance(h.env.execute("click", {"element": "1"}), SkippedAction)
+        self.assertEqual(h.gate.snapshot()["dispatches"], dispatches)
+        self.assertEqual(h.adapter.executed, [])
+        self.assertEqual(h.kinds()[-3:], ["proposal", "admission_rejected", "reobserve"])
+
+    def test_three_stale_targets_in_a_row_become_a_stale_loop(self):
+        h = Harness(self)
+        h.adapter.prepare_errors = ["stale_target", "stale_target", "stale_target"]
+        h.env.execute("click", {"element": "1"})
+        h.env.execute("click", {"element": "1"})
+        with self.assertRaises(RuntimeStop) as caught:
+            h.env.execute("click", {"element": "1"})
+        self.assertEqual(caught.exception.reason, "stale_loop")
+        self.assertEqual(h.env.last_stop, "stale_loop")
+
+    def test_an_admitted_action_resets_the_stale_streak(self):
+        h = Harness(self)
+        h.adapter.prepare_errors = ["stale_target", "stale_target", None, "stale_target", "stale_target"]
+        for _ in range(2):
+            h.env.execute("click", {"element": "1"})
+        h.env.execute("click", {"element": "1"})  # admitted
+        for _ in range(2):
+            h.env.execute("click", {"element": "1"})  # two stale again: still below the limit
+
+    def test_permission_revoked_after_the_option_was_offered(self):
+        h = Harness(self)
+        h.gate.revoke("click")
+        before = h.gate.snapshot()["dispatches"]
+        with self.assertRaises(RuntimeStop) as caught:
+            h.env.execute("click", {"element": "1"})
+        self.assertEqual(caught.exception.reason, "policy_denied")
+        self.assertEqual(h.gate.snapshot()["dispatches"], before)
+        self.assertEqual(h.adapter.executed, [])
+
+    def test_policy_changed_since_the_observation_forces_a_new_observation(self):
+        h = Harness(self)
+        h.gate.revoke("wait")  # click is still allowed, but the candidate set is out of date
+        before = h.gate.snapshot()["dispatches"]
+        self.assertIsInstance(h.env.execute("click", {"element": "1"}), SkippedAction)
+        self.assertEqual(h.gate.snapshot()["dispatches"], before)
+        self.assertIn("reobserve", h.kinds())
+
+    def test_adapter_refusals_stop_the_attempt_without_dispatch(self):
+        for reason in ("policy_denied", "invalid_action", "adapter_contract_unsupported"):
+            h = Harness(self)
+            h.adapter.prepare_errors = [reason]
+            before = h.gate.snapshot()["dispatches"]
+            with self.assertRaises(RuntimeStop):
+                h.env.execute("click", {"element": "1"})
+            self.assertEqual(h.env.last_stop, reason)
+            self.assertEqual(h.gate.snapshot()["dispatches"], before)
+
+    def test_no_dispatch_after_an_accepted_cancel(self):
+        h = Harness(self)
+        self.assertTrue(h.gate.stop("cancel_requested"))
+        before = h.gate.snapshot()["dispatches"]
+        with self.assertRaises(RuntimeStop) as caught:
+            h.env.execute("click", {"element": "1"})
+        self.assertEqual(caught.exception.reason, "cancel_requested")
+        self.assertEqual(h.gate.snapshot()["dispatches"], before)
+        with self.assertRaises(RuntimeStop):
+            h.env.observe()
+
+    def test_deadline_ends_observation_and_dispatch(self):
+        h = Harness(self, wall_seconds=0.05)
+        time.sleep(0.1)
+        with self.assertRaises(RuntimeStop) as caught:
+            h.env.observe()
+        self.assertEqual(caught.exception.reason, "deadline")
+        with self.assertRaises(RuntimeStop):
+            h.env.execute("click", {"element": "1"})
+
+    def test_step_and_call_budgets_are_enforced(self):
+        h = Harness(self, max_steps=3)
+        h.env.observe()
+        with self.assertRaises(RuntimeStop) as caught:
+            h.env.observe()
+        self.assertEqual(caught.exception.reason, "step_limit")
+        h2 = Harness(self, max_model_calls=1)
+        h2.gate.reserve_call()
+        with self.assertRaises(RuntimeStop) as caught:
+            h2.gate.reserve_call()
+        self.assertEqual(caught.exception.reason, "model_call_limit")
+
+
+class UnknownEffects(unittest.TestCase):
+    def test_a_failed_driver_call_blocks_every_further_dispatch(self):
+        h = Harness(self)
+        h.adapter.results = [SimpleNamespace(ok=False)]
+        h.env.execute("click", {"element": "1"})
+        with self.assertRaises(RuntimeStop) as caught:
+            h.env.execute("scroll", {"direction": "down"})
+        self.assertEqual(caught.exception.reason, "effect_unknown")
+        self.assertEqual(h.gate.snapshot()["dispatches"], 2)  # bootstrap + the failed click
+
+    def test_a_driver_exception_is_an_unknown_effect_not_a_crash(self):
+        h = Harness(self)
+        h.adapter.results = [ValueError("boom with page text")]
+        result = h.env.execute("click", {"element": "1"})
+        self.assertFalse(result.ok)
+        self.assertEqual(h.journal.outcomes[2], "error")
+        self.assertNotIn("page text", json.dumps(h.journal.records))
+        with self.assertRaises(RuntimeStop):
+            h.env.execute("click", {"element": "1"})
+        # The loop may still look at the page.
+        h.env.observe()
+
+    def test_read_operations_repeat_freely_and_are_checked_at_the_gate(self):
+        h = Harness(self)
+        for _ in range(3):
+            self.assertTrue(h.env.execute("scroll", {"direction": "down"}).ok)
+        snapshot = h.gate.snapshot()
+        self.assertEqual(snapshot["unchecked_commits"], 0)
+        self.assertTrue(snapshot["committed_operations"] & BROWSER_BITS["scroll"])
+
+    def test_constraint_rows_from_the_journal_pass_only_with_evidence(self):
+        h = Harness(self)
+        h.env.execute("click", {"element": "1"})
+        h.gate.seal_dispatches()
+        rows = {r["id"]: r for r in assess_constraints(
+            h.view, h.gate.snapshot(), "attempt-1", dispatches=h.journal.actions, revocations=[],
+            driver_outcomes=h.journal.outcomes)}
+        self.assertEqual(rows["runtime.permissions"]["status"], "pass")
+        self.assertEqual(rows["runtime.budget"]["status"], "pass")
+        self.assertEqual(rows["runtime.dispatch_ordering"]["status"], "pass")
+        self.assertEqual(rows["runtime.ownership"]["status"], "unknown")
+        self.assertEqual(rows["runtime.no_uncertain_repeats"]["status"], "unknown")
+
+    def test_repeating_one_action_on_an_unchanged_page_is_a_repeat(self):
+        h = Harness(self)
+        h.env.execute("click", {"element": "1"})
+        h.env.execute("click", {"element": "1"})  # same target, same page signature
+        h.gate.seal_dispatches()
+        rows = {r["id"]: r for r in assess_constraints(
+            h.view, h.gate.snapshot(), "attempt-1", dispatches=h.journal.actions, revocations=[],
+            driver_outcomes=h.journal.outcomes)}
+        self.assertEqual(rows["runtime.no_uncertain_repeats"]["status"], "fail")
+
+
+class JournalRedaction(unittest.TestCase):
+    def test_slot_values_do_not_reach_the_trace(self):
+        data = task_dict(text_slots=[
+            {"id": "order", "version": 1, "value": "125", "sensitivity": "normal"},
+            {"id": "note", "version": 1, "value": "Перезвонить завтра", "sensitivity": "normal"},
+            {"id": "pw", "version": 1, "value": "hunter2", "sensitivity": "secret"}])
+        task = BrowserTask.from_dict(data)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "trace.jsonl"
+            journal = Journal(task, "attempt-1", path, "script")
+            journal.emit("observed", page="Перезвонить завтра / hunter2 / order 125",
+                         options=[{"name": "field hunter2"}])
+            journal.close()
+            text = path.read_text(encoding="utf-8")
+        self.assertNotIn("Перезвонить завтра", text)
+        self.assertNotIn("hunter2", text)
+        self.assertIn("[slot:note@1]", text)
+        self.assertIn("125", text)  # a value this short cannot be told apart from ordinary text
+
+    def test_event_order_is_proposal_then_dispatch_then_return(self):
+        h = Harness(self)
+        h.env.execute("click", {"element": "1"})
+        kinds = h.kinds()
+        self.assertLess(kinds.index("proposal", kinds.index("observed")), len(kinds))
+        last = kinds[-3:]
+        self.assertEqual(last, ["proposal", "dispatch_committed", "driver_returned"])
+
+
+if __name__ == "__main__":
+    unittest.main()

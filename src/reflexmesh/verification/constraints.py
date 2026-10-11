@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import time
 
-from reflexmesh.contracts.execution import ExecutionTask, OPERATION_BITS, PERMISSIONS
+from reflexmesh.contracts.execution import ExecutionTask, OPERATION_BITS
 from reflexmesh.verification.effects import repeat_verdict
 from reflexmesh.tracing.slot_evidence import SlotEvidence
 from reflexmesh.runtime.ownership import FixtureOwnership
@@ -101,7 +101,8 @@ def _assess_permissions(task: ExecutionTask, snapshot: dict | None, attempt_id: 
         return {}
     operations = [row.get("operation") for row in dispatches]
     granted = task.permissions
-    if any(op in PERMISSIONS and op not in granted for op in operations):
+    bits = getattr(task, "operation_bits", OPERATION_BITS)
+    if any(op in bits and op not in granted for op in operations):
         return {"status": "fail", "observed_at": time.time(), "evidence_refs": ref,
                 "reason": "A dispatch named an operation the task did not grant."}
     if type(snapshot) is not dict or any(type(snapshot.get(key)) is not int or snapshot[key] < 0
@@ -110,9 +111,9 @@ def _assess_permissions(task: ExecutionTask, snapshot: dict | None, attempt_id: 
         return {}
     if snapshot["unchecked_commits"]:
         return {"reason": "A dispatch was committed without a checked operation."}
-    if len(operations) != snapshot["dispatches"] or any(op not in OPERATION_BITS for op in operations):
+    if len(operations) != snapshot["dispatches"] or any(op not in bits for op in operations):
         return {"reason": "Reported dispatch operations do not match the gate's committed dispatches."}
-    if any(not snapshot["committed_operations"] & OPERATION_BITS[op] for op in operations):
+    if any(not snapshot["committed_operations"] & bits[op] for op in operations):
         return {"reason": "A reported operation was not among those the gate checked at commit."}
     return {"status": "pass", "observed_at": time.time(), "evidence_refs": ref,
             "reason": "Every committed dispatch was checked against the live permission mask."}
