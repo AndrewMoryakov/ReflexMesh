@@ -15,6 +15,13 @@
 
 <p align="center"><b>English</b> | <a href="README.ru.md">Русский</a></p>
 
+**Current development:** [V0.6 Browser Core](docs/specs/V0.6-browser-core.md),
+starting with M1–M2: a generic DOM adapter and real Jev micro-action choices.
+The selected stack is SystemOneHarness + low-level Browser Use + Jev.
+Read [CURRENT_DIRECTION](docs/CURRENT_DIRECTION.md) and [AGENTS](AGENTS.md)
+before choosing implementation work. The fixture runtime below is existing
+experimental code; the generic browser path still requires implementation and evidence.
+
 ```sh
 python -m venv .venv && .venv/bin/python -m pip install -e .
 .venv/bin/reflexmesh route --input examples/route-task.json
@@ -64,7 +71,7 @@ An AI agent that is asked to do something usually has several ways to do it: cal
 | **Task** | The strict JSON input for routing: id, goal, the routes the system is capable of and the routes allowed. |
 | **Capabilities / allowed routes** | Declarations, not probes: capabilities say what could be used, allowed routes say what may be used. Neither checks that an executor is connected. |
 | **Stub** | The default router: picks the first eligible route in a fixed order and never reads the goal. |
-| **Jev / JevRouter** | A small routing model and the local HTTP service that serves it; an upstream project ReflexMesh talks to. |
+| **Jev / JevRouter** | Jev is a bounded-choice decision model: existing macro routing and planned V0.6 micro-actions. JevRouter is the upstream local HTTP routing service. |
 | **NONE candidate** | A "none of these fits" option the adapter offers Jev, which turns a poor match into an honest refusal. |
 | **Verifier** | Code that checks the goal against evidence, such as server-side state; a run counts as done only when it confirms. |
 | **TextSlot** | A versioned, immutable piece of text (`name@1`) that a task supplies and an action may type, so the model never invents content. |
@@ -98,12 +105,12 @@ Status labels: unlabeled = implemented in this repository; **experimental** = im
 
 ### Documentation system
 
-- **Direction, constraints and evidence in separate documents.** North Star, target architecture, sixteen invariants (`INV-01`..`INV-16`), roadmap V0 → V2.0, status, three ADRs, specifications V0.1–V0.5, research reports and guides. → [Direction and documents](#direction-and-documents)
+- **Direction, constraints and evidence in separate documents.** AGENTS, CURRENT_DIRECTION, North Star, target architecture, sixteen invariants (`INV-01`..`INV-16`), roadmap V0 → V2.0, status, three ADRs, active V0.6 specification, earlier V0.1–V0.5 contracts, dated reports and guides. → [Direction and documents](#direction-and-documents)
 
 ### Not built yet
 
 - **Executors beyond the browser spike** — direct API/MCP tools, CLI/scripts, models and agents as executors, desktop, macros, workflows: **target directions**, not integrations. → [Direction and documents](#direction-and-documents)
-- **A task interface** — an MCP/HTTP Task API, the Pi integration and handoff (planned for V0.6); the `integrations/` directories are empty placeholders. → [Status](#status)
+- **Generic browser execution and a task interface** — V0.6 adds the browser core and same-session handoff first, then MCP/Pi wrappers. HTTP Task API is later work; the `integrations/` directories are empty placeholders. → [Status](#status)
 - **Perception (OCR/accessibility), ClawBridge, Skyvern, Ui.Vision, Cua adapters, a meso-level supervisor, recovery and a durable receipts store** — **planned**; the matching modules in `src/` are empty placeholders.
 - **Capability discovery and self-extension** — a future direction only ([`docs/architecture/FUTURE_SELF_EXTENSION.md`](docs/architecture/FUTURE_SELF_EXTENSION.md)).
 
@@ -116,10 +123,10 @@ Status labels: unlabeled = implemented in this repository; **experimental** = im
 The picture shows the target design. Of the tools drawn, only a controlled browser path is being built; the others are directions, not implemented integrations.
 
 1. **A task arrives** from an agent. Pi is the first intended client, but the core stays independent of it, so other agents and programs can send the same tasks.
-2. **The router picks a route** from those the task declares allowed. Jev makes this bounded choice; the current CUA / LLM / PERCEPTION catalogue is an experimental set for V0, not the final classification.
+2. **The runtime admits an executor.** When a task needs a choice among routes, Jev proposes one from the allowed set. An explicit V0.6 browser.soh request does not need another macro call; Jev then chooses micro-actions. The current CUA / LLM / PERCEPTION routing catalogue is an experimental set for V0.
 3. **A gate owned by code** enforces permissions and limits before anything runs. Choosing a route authorizes nothing by itself.
 4. **An executor acts** — for now, only a controlled browser executor is in scope.
-5. **A verifier checks the goal.** The run counts as done only if the verifier confirms it; otherwise it stops with a reason, or hands the task back to the calling agent.
+5. **A verifier checks the goal.** Completion requires accepted criteria and all mandatory runtime constraints; otherwise the runtime stops with a reason or returns handoff. Same-session continuation is specified in V0.6 and not yet implemented.
 
 ### What runs today
 
@@ -196,10 +203,10 @@ reflexmesh run --input task.json --output-dir ./evidence-001 \
 - **Criteria.** Four postconditions use fixture-server state and events: `settings_saved`, `form_submitted_once`, `export_completed_once`, `account_intact`. `current_page` instead requires a matching browser observation of the current URL and target; a historical server GET is insufficient.
 - **Providers.** `--routing-provider stub|jevrouter` and `--action-provider script|jev`, both explicit; `script` is a deterministic test fixture supplied by `--script`.
 - **Outcome.** One JSON on stdout and `result.json`, `trace.jsonl`, `evidence.jsonl` in the output directory. `attempt_status` is `completed` (exit 0), `blocked` (3), `incomplete` (4), `failed` (5) or `cancelled` (130); input errors and output-directory preparation errors (before the attempt starts) exit 2, while a failure to write the output files after the run is reported as `failed` with stop reason `output_error` and exits 5. `task_outcome` is `pass` only for a completed attempt whose checks all pass. Success is never read from the harness's own status.
-- **Verification coverage.** Completion requires every postcondition, settled actions, and all six mandatory runtime assessments to pass before the terminal gate accepts it. Immutable-slot assessment now uses sealed, attempt-bound evidence of the exact payload handed to the supported driver; the local-budget assessment uses synchronized counters. Permissions, ownership, dispatch ordering, and no uncertain repeats remain `unknown`. Missing slot receipts also remain `unknown`; an actual mismatched handoff is a sticky failure. Thus passing postconditions still cannot complete ordinary runs. Slot evidence does not prove focus, final DOM values, or driver-internal behavior. V0.5 acceptance remains incomplete and this stage's regression sources are unrun. See the [handoff evidence scope](docs/guides/V0.5-local-run.md#immutable-slot-handoff-evidence).
+- **Verification coverage.** Completion requires every postcondition, settled actions, and all six mandatory runtime assessments to pass before the terminal gate accepts it. Immutable-slot assessment uses sealed, attempt-bound evidence of the exact payload handed to the supported driver; local-budget assessment uses synchronized counters. Permissions, dispatch ordering, and no uncertain repeats remain `unknown`. Ownership can retain a proven identity change as a sticky `fail`, but cannot pass. Missing slot receipts also remain `unknown`; an actual mismatched payload is a sticky failure. Thus passing postconditions still cannot complete ordinary runs. Slot evidence does not prove focus, final DOM values, or driver-internal behavior. V0.5 acceptance remains incomplete; no new regression run is claimed. See the [handoff evidence scope](docs/guides/V0.5-local-run.md#immutable-slot-handoff-evidence).
 - **Control.** A supervisor with a deadline that starts before availability checks, routing and startup; step and model-call counters; a dispatch and cancellation gate with a defined order; a worker process with bounded grace and cleanup; unresolved actions recorded as unknown effects rather than guessed.
 - **Attempt ownership.** The controlled fixture now atomically claims an attempt before capturing its baseline. Server effects carry the exact task/revision, attempt, fixture instance, claim/epoch and bound private-profile/session identity. Terminal fencing rejects old requests; uncertain cleanup keeps the fixture quarantined without expiry. This is a narrower guarantee than exclusive OS/browser-controller ownership, so `runtime.ownership` still cannot pass and ordinary completion remains blocked. See [scope and unrun checks](docs/guides/V0.5-local-run.md#controlled-fixture-claims-and-attempt-bound-results).
-- **Budget configuration.** Elapsed task work is the primary time budget and can span hours (`wall_seconds: 7200` for two hours). Set an individual time/step/model-call limit to `null`, use `limits: null`, or pass `--no-limits` to disable budgets explicitly. Cancellation, permissions, verification and bounded cleanup remain active. Zero is not an unlimited marker. See [budget semantics and examples](docs/guides/V0.5-local-run.md#task-budgets-hours-and-explicit-unlimited-mode).
+- **Fixture budget configuration.** Elapsed task work is the primary time budget and can span hours (`wall_seconds: 7200` for two hours). Set an individual time/step/model-call limit to `null`, use `limits: null`, or pass `--no-limits` to disable fixture budgets explicitly. Cancellation, permissions, verification and bounded cleanup remain active. Zero is not an unlimited marker. V0.6 BrowserTask instead requires finite budgets; this unlimited mode is not its default or contract. See [fixture budget semantics and examples](docs/guides/V0.5-local-run.md#task-budgets-hours-and-explicit-unlimited-mode).
 - **Router accounting.** Routers use a common replaceable interface; only stub and JevRouter adapters are implemented. `max_model_calls` bounds locally controlled provider requests. JevRouter remains available with finite local limits, but its internal model calls are unknown/unlimited and the total is reported as `null`, never as one HTTP request or a verified global cap. See [router capabilities and usage](docs/guides/V0.5-local-run.md#replaceable-routers-and-honest-model-call-accounting).
 - **Platform and dependencies.** The first supported environment is Linux or WSL with a fresh browser process per attempt, a loopback fixture, and pinned optional dependencies (SystemOneHarness and Browser Use). The supervisor uses the POSIX `fork` start method, so `reflexmesh run` does not start on native Windows (measured on Windows with Python 3.13). The routing CLI and the V0.1–V0.3 tests are not affected.
 
@@ -245,13 +252,15 @@ evidence remains in the [live report](docs/research/V0.2-live-openrouter.md).
 | V0.2 | JevRouter HTTP adapter, refusal reasons, trace | Live gate closed for OpenRouter |
 | V0.3 / V0.3b | Routing study; refusal study and the NONE candidate | Done (verdict "useful"); NONE implemented |
 | V0.4 | SystemOneHarness + Browser Use spike | Done |
-| V0.5 | Minimal controlled browser runtime | In progress; historical U 36/36 recorded with provenance/coverage caveats; B and J pending |
-| V0.6 | MCP interface, Pi integration, handoff | Not started |
+| V0.5 | Controlled fixture runtime | Experimental implementation; historical U 36/36 with caveats; acceptance open, B/J pending |
+| V0.6 | Generic Browser Core: SOH + Browser Use + Jev, same-session handoff, verification; then MCP/Pi | Specification accepted; M1–M2 are the current development priority, generic implementation pending |
 | V1.0 | First finished browser MVP from Pi/MCP | Planned |
 | V1.1–V2.0 | OCR, desktop, recovery, queue/UI, durable workflows, several executor classes | Preliminary order, not a promise |
 
 ## Direction and documents
 
+- [Agent instructions](AGENTS.md) and [current direction](docs/CURRENT_DIRECTION.md) — how to choose the next implementation work.
+- [V0.6 Browser Core](docs/specs/V0.6-browser-core.md) — selected stack, contracts, M1–M5 and acceptance criteria.
 - [North Star](docs/NORTH_STAR.md) — the product goal and signs of usefulness.
 - [Target architecture](docs/architecture/TARGET_ARCHITECTURE.md) — macro/meso/micro, the runtime and executors.
 - [Invariants](docs/architecture/INVARIANTS.md) — mandatory constraints.
@@ -259,7 +268,8 @@ evidence remains in the [live report](docs/research/V0.2-live-openrouter.md).
 - [Current status](docs/STATUS.md) — implementation, evidence and open gates.
 - [Documentation map](docs/README.md) — specifications, reports and update rules.
 
-V1.0 is the first finished browser MVP from Pi/MCP; its scope is not widened.
+V1.0 is the first finished browser MVP from Pi/MCP, based on the generic browser
+scope specified in V0.6. Desktop and other executor classes follow it.
 V2.0 is the target of the first coherent system with several classes of executors,
 selected tasks without a GUI, browser/desktop and recovery. The concrete set of
 adapters and scenarios is determined after V1.0, with no promise to connect them all.
