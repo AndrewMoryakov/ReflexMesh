@@ -24,6 +24,19 @@ def _unsupported():
     return RuntimeStop("adapter_contract_unsupported")
 
 
+def _input_model(model):
+    """The `input` action's payload object.
+
+    Browser Use at the pinned commit builds a union RootModel whose member holds the payload
+    (`model.root.input`); a direct `model.input` is the shape the unit fakes use. Whichever is
+    present is the object `Tools.act` will read, so the exact-payload checks run on it.
+    """
+    direct = getattr(model, "input", None)
+    if direct is not None:
+        return direct
+    return getattr(getattr(model, "root", None), "input", None)
+
+
 def dispatch_text(backend, command: PreparedTextCommand, action_id: int, sink):
     """Dispatch a resolved immutable command, never an untrusted parameter map."""
     try:
@@ -69,7 +82,7 @@ async def _dispatch_text(backend, command: PreparedTextCommand, action_id: int, 
         inspect.signature(act).bind(object(), session, sensitive_data=None)
         model = model_factory(input={"index": command.index, "text": command._value, "clear": True})
         payload = model.model_dump(exclude_unset=True)
-        input_model = model.input
+        input_model = _input_model(model)
     except Exception:
         # Upstream model validation errors can contain the complete value.
         raise _unsupported() from None
