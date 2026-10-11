@@ -3,6 +3,9 @@
 Статическая сверка: 2026-10-11, кодовая база
 [b17813b](https://github.com/AndrewMoryakov/ReflexMesh/commit/b17813b25f8b6086c35d8220c461df43518bed53).
 Новых тестовых, браузерных или модельных прогонов при этой сверке не выполнялось.
+Прогоны общего браузерного пути V0.6 (M1–M2) от 2026-10-11 сделаны на локальной интеграционной ветке
+`integrate/v0.6-into-main` (коммит `aedfaa9`, не отправлена и не слита в `main`); подробности и оговорки —
+[отчёт M1–M2](research/V0.6-M1-M2-2026-10-11.md). Остальные утверждения этого файла относятся к своей дате и кодовой базе.
 Историческая проверка routing от 2026-09-24 использовала ранний контрактный baseline
 [62ccf0d](https://github.com/AndrewMoryakov/ReflexMesh/commit/62ccf0d29c5d0e599f92561b4d8da3f980d63719).
 Последующий live-прогон и расширенные сценарии имеют собственные commit и среду в отчётах.
@@ -30,7 +33,7 @@ Live gate V0.2 закрыт 2026-09-24 для `openrouter:~typesafe/jev-latest` 
 | V0.4 | SystemOneHarness + Browser Use под контролем runtime на фикстуре | [Исторический spike](research/V0.4-spike.md): 18/18 детерминированных и 12/12 Jev-прогонов; ограниченный стенд и среда |
 | V0.5, экспериментально | `reflexmesh run`, supervisor/worker, отмена/dispatch, лимиты, TextSlots, SOH-адаптер и fixture verifier реализованы в репозитории | Исторически записано U 36/36; исходный SHA `1887114` недоступен. [Отдельное ревью](research/V0.5-review-2026-09-25.md) сообщает воспроизведение U на `fe088e6` и один Chromium smoke, не зачтённый в B. [Оговорки о происхождении и покрытии](research/V0.5-U-acceptance.md#static-review-addendum-2026-10-07); B/J acceptance открыт |
 | Поздние fixture изменения, статически | Обязательный completion gate, закрытые свидетельства передачи TextSlots, атомарный claim фикстуры, привязка сессии и terminal fencing есть в текущем коде | [Completion/slots](guides/V0.5-local-run.md#completion-assessment-gate), [fixture ownership](guides/V0.5-local-run.md#controlled-fixture-claims-and-attempt-bound-results); это не новые выполненные регрессии и не полная приёмка |
-| V0.6 | Принята спецификация SystemOneHarness + Browser Use + Jev | Общие BrowserTask/adapter, continuation и verification требуют реализации; готовность на неизвестных сайтах не подтверждена |
+| V0.6 | Спецификация принята. На интеграционной ветке (не в `main`): `browser-task/0.1`, общий DOM-адаптер, провайдеры решений, контролируемый прогон, `reflexmesh browser run` ([руководство](guides/V0.6-browser-run.md)) | [Отчёт M1–M2](research/V0.6-M1-M2-2026-10-11.md): M1 — сценарий на реальном Chromium (script-провайдер, сайт без разметки ReflexMesh) и отказ от устаревшего узла проверены; M2 — механика (допуск, TextSlots, бюджеты, трасса) проверена на script и на заглушке эндпоинта; **настоящий Jev не запускался** (нет ключа); `completed` недостижим без verifier (M4); handoff-продолжения (M3) нет; 60 новых тестов, модуль с браузером 20/20 в трёх прогонах подряд. Готовность на произвольных сайтах не подтверждена |
 | Платформы V0.1/V0.2 routing | Linux/Python 3.12.14/Node 24.19.0; Windows 11/Python 3.13.15/Node 24.15.0 | В историческом прогоне 25 тестов прошли на обеих платформах (Windows-специфичный timeout в тесте исправлен в 599b58d) |
 
 Числа тестов и конфигурации относятся к указанным в отчётах прогонам;
@@ -40,8 +43,9 @@ HTTP-пути; выбранный маршрут никогда не означ�
 
 ## Пока отсутствует
 
-- Общий browser путь V0.6 без fixture IDs: новый BrowserTask, общие snapshot/node refs,
-  новые predicates и доказательства всех обязательных constraints.
+- Остальное общее браузерное ядро V0.6 (первые M1–M2 есть только на интеграционной ветке): запуск с настоящим Jev,
+  общие predicates и verifier, доказательства `ownership` и `no_uncertain_repeats`, предотвращение (а не обнаружение)
+  ухода на чужой origin, пробы frames/shadow DOM, press_key/focus_region.
 - Handoff и продолжение LLM/Jev в той же живой сессии через SessionManager/TaskChain;
   текущий fixture HarnessStrategy закрывает environment после своего segment.
 - Live-подтверждение прямого провайдера typesafe.
@@ -106,6 +110,19 @@ V0.3 выполнен по [утверждённому протоколу](specs
 - `is_stub=false` и provenance от локального сервиса не доказывают обращение к модели.
 - `needs_confirmation` возвращает предложение; механизма подтверждения и последующего исполнения пока нет.
 - Отказ, ошибка и выбранный маршрут имеют разные исходы; автоматического fallback на stub нет.
+
+### Общий браузерный путь (интеграционная ветка)
+
+- Запускается `reflexmesh browser run` на Linux/WSL; цикл идёт в вызывающем процессе с потоком-сторожем, а не в
+  изолированном supervisor-процессе. Chromium может потребовать `--no-sandbox` (результат это фиксирует).
+- Строки `runtime.permissions`, `dispatch_ordering`, `immutable_slots`, `budget` получают pass по свидетельствам
+  шлюза и реестра слотов; `ownership` и `no_uncertain_repeats` остаются `unknown`. Критерии задачи — `unknown`
+  (verifier M4 нет), поэтому попытка не бывает `completed`.
+- Эффект клика и ввода на сервере остаётся `unknown`; интерфейсное наблюдение (`ui_effect`) — не серверный эффект.
+- Редирект на чужой origin обнаруживается после запроса (`blocked/policy_denied`), не предотвращается.
+- Возможности `press_key`, `focus_region`, `frames`, `cross_origin_frames`, `open_shadow_dom` объявлены `false`, а не проверены пробами.
+- На интеграционной ветке строки permissions/dispatch_ordering/no_uncertain_repeats для fixture пути тоже могут
+  получать pass по свидетельствам (в `main` они `unknown`); это относится к коду ветки и не слито.
 
 ## Покрытие инвариантов
 

@@ -20,7 +20,10 @@ starting with M1–M2: a generic DOM adapter and real Jev micro-action choices.
 The selected stack is SystemOneHarness + low-level Browser Use + Jev.
 Read [CURRENT_DIRECTION](docs/CURRENT_DIRECTION.md) and [AGENTS](AGENTS.md)
 before choosing implementation work. The fixture runtime below is existing
-experimental code; the generic browser path still requires implementation and evidence.
+experimental code. The generic browser path has a first implementation on the integration branch
+(`reflexmesh browser run`): M1 is shown on a real Chromium with a deterministic script, the mechanics of M2
+are checked, and a run with the real Jev provider is still pending. See the
+[M1–M2 report](docs/research/V0.6-M1-M2-2026-10-11.md) and the [guide](docs/guides/V0.6-browser-run.md).
 
 ```sh
 python -m venv .venv && .venv/bin/python -m pip install -e .
@@ -103,6 +106,8 @@ Status labels: unlabeled = implemented in this repository; **experimental** = im
 - **Permissions, TextSlots and a verifier.** Seven named permissions, immutable versioned text slots and five postcondition predicates checked against fixture-server evidence or, for `current_page`, a browser observation; `completed` is assigned by the runtime, never by the harness. → [The execution runtime](#the-execution-runtime-experimental)
 - **A spike and recorded deterministic checks.** The V0.4 spike of SystemOneHarness + Browser Use under runtime veto, cancellation and deadline passed its checks; the historical V0.5 deterministic (U) report records 36 of 36 planned subcases, with [source-provenance and C12 coverage caveats](docs/research/V0.5-U-acceptance.md#static-review-addendum-2026-10-07); the real-browser (B) and live-Jev (J) acceptance subcases are pending. → [Status](#status)
 
+- **`reflexmesh browser run` (V0.6 M1–M2, integration branch).** One `browser-task/0.1` on a site the core has no scenario for: options come from the page's own accessibility tree, each is bound to its DOM node and re-checked before dispatch, and every command passes the shared gate. A run ends `incomplete/verification_unknown` until the M4 verifier exists. → [The generic browser path](#the-generic-browser-path-v06-m1m2)
+
 ### Documentation system
 
 - **Direction, constraints and evidence in separate documents.** AGENTS, CURRENT_DIRECTION, North Star, target architecture, sixteen invariants (`INV-01`..`INV-16`), roadmap V0 → V2.0, status, three ADRs, active V0.6 specification, earlier V0.1–V0.5 contracts, dated reports and guides. → [Direction and documents](#direction-and-documents)
@@ -110,7 +115,7 @@ Status labels: unlabeled = implemented in this repository; **experimental** = im
 ### Not built yet
 
 - **Executors beyond the browser spike** — direct API/MCP tools, CLI/scripts, models and agents as executors, desktop, macros, workflows: **target directions**, not integrations. → [Direction and documents](#direction-and-documents)
-- **Generic browser execution and a task interface** — V0.6 adds the browser core and same-session handoff first, then MCP/Pi wrappers. HTTP Task API is later work; the `integrations/` directories are empty placeholders. → [Status](#status)
+- **The rest of the generic browser core and a task interface** — V0.6 M1–M2 exist (see above); the verifier and mandatory-constraint proofs (M4), same-session handoff (M3) and the Jev/LLM comparison (M5) do not, and a run with the real Jev provider is pending. MCP/Pi wrappers follow. HTTP Task API is later work; the `integrations/` directories are empty placeholders. → [Status](#status)
 - **Perception (OCR/accessibility), ClawBridge, Skyvern, Ui.Vision, Cua adapters, a meso-level supervisor, recovery and a durable receipts store** — **planned**; the matching modules in `src/` are empty placeholders.
 - **Capability discovery and self-extension** — a future direction only ([`docs/architecture/FUTURE_SELF_EXTENSION.md`](docs/architecture/FUTURE_SELF_EXTENSION.md)).
 
@@ -212,6 +217,14 @@ reflexmesh run --input task.json --output-dir ./evidence-001 \
 
 For the step-by-step local checks, the fixture server and the U manifest, see the [V0.5 local run guide](docs/guides/V0.5-local-run.md).
 
+## The generic browser path (V0.6 M1–M2)
+
+`reflexmesh browser run` executes one `browser-task/0.1` (start URL, allowed origins, permissions, versioned text slots, criteria, finite limits) on a DOM site that has no prepared scenario. It lives beside the fixture runtime and does not change it. Install and commands: [guide](docs/guides/V0.6-browser-run.md); what was run and what was not: [M1–M2 report](docs/research/V0.6-M1-M2-2026-10-11.md).
+
+- **What is shown.** On a local order site with no ReflexMesh markup, a deterministic script finds an order, types a prepared note and saves it on a real Chromium; the server recorded the note once. A node replaced after observation is rejected as stale and not dispatched. Four of the six runtime constraints pass on gate and slot-ledger evidence; ownership and no-uncertain-repeats stay `unknown`.
+- **What is not.** No run used the real Jev service (no key was available); a stand-in decisions server checks only the plumbing. The result is never `completed`: there is no verifier for task criteria yet. Handoff continuation, frames, key presses and shadow DOM are not built. A server-side redirect to another origin is detected after the request, not prevented.
+- **Platform.** Linux or WSL (`fork`, `/proc`); Chromium may need `--no-sandbox` on hosts that forbid user namespaces, which the result records.
+
 ## Evidence and experiments
 
 Every claim below is tied to a dated report with its commit and environment; the reports, not this table, are authoritative.
@@ -253,7 +266,7 @@ evidence remains in the [live report](docs/research/V0.2-live-openrouter.md).
 | V0.3 / V0.3b | Routing study; refusal study and the NONE candidate | Done (verdict "useful"); NONE implemented |
 | V0.4 | SystemOneHarness + Browser Use spike | Done |
 | V0.5 | Controlled fixture runtime | Experimental implementation; historical U 36/36 with caveats; acceptance open, B/J pending |
-| V0.6 | Generic Browser Core: SOH + Browser Use + Jev, same-session handoff, verification; then MCP/Pi | Specification accepted; M1–M2 are the current development priority, generic implementation pending |
+| V0.6 | Generic Browser Core: SOH + Browser Use + Jev, same-session handoff, verification; then MCP/Pi | Specification accepted; M1 shown with a script on a real Chromium and M2 mechanics checked on the integration branch; real-Jev run, M3 handoff and M4 verification pending |
 | V1.0 | First finished browser MVP from Pi/MCP | Planned |
 | V1.1–V2.0 | OCR, desktop, recovery, queue/UI, durable workflows, several executor classes | Preliminary order, not a promise |
 
@@ -395,6 +408,7 @@ The script starts and stops a local demo server itself in a temporary directory.
 |---|---|---|
 | `reflexmesh route [--input FILE\|-] [--provider stub\|jevrouter] [--jev-url URL] [--timeout S] [--allow-demo] [--no-none-candidate]` | Routing only; prints a RoutingDecision JSON | `0` selected, `3` abstained, `4` needs confirmation, `5` adapter or provider error, `2` input error |
 | `reflexmesh run --input FILE --output-dir DIR --routing-provider stub\|jevrouter --action-provider script\|jev [--script FILE] [--chrome FILE] [--jev-url URL] [--timeout S] [--no-limits]` | Executes one bounded browser subtask on a fixture site (experimental, POSIX only) | `0` completed, `3` blocked, `4` incomplete, `5` failed (this includes a write failure for `trace.jsonl`, `evidence.jsonl` or `result.json` after the run: stop reason `output_error`), `130` cancelled, `2` input error or output-directory preparation error (before the attempt starts: the directory cannot be created, is not empty, or `trace.jsonl` cannot be created) |
+| `reflexmesh browser run --input FILE --output-dir DIR --action-provider script\|jev [--script FILE] [--model NAME] [--decisions-url URL] [--chrome FILE] [--no-sandbox]` | Executes one `browser-task/0.1` on a DOM site (V0.6 M1–M2, POSIX only) | `0` completed (unreachable until M4), `3` blocked, `4` incomplete, `5` failed, `130` cancelled, `2` input or output-directory error |
 | `reflexmesh --version`, `--help` | Plain text | |
 
 ### JevRouter adapter failure codes
