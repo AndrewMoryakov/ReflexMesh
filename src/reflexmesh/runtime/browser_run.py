@@ -41,6 +41,7 @@ from reflexmesh.verification.constraints import ConstraintAssessments, assess_co
 
 RESULT_SCHEMA = "browser-result/0.1"
 SOH_PIN = "ab8e8f08b4a6268c0633a474423d556599ee06a4"
+BROWSER_USE_PIN = "5c892e013a73e6622e6f50336e1eb0aa2c4405f2"
 STALE_LIMIT = 3
 HANDOFF_REASONS = {"no_confident_action": "no_confident_action", "escalation_requested": "escalation_requested",
                    "repeated_action": "no_progress", "stale_loop": "stale_loop"}
@@ -421,7 +422,15 @@ class BrowserRun:
                                         text=True, timeout=5).stdout.strip() or None
         except Exception:
             pass
-        return {"reflexmesh": version("reflexmesh"), "browser_use": version("browser-use"),
+        browser_use_commit = None
+        try:  # present when installed from a git URL: the commit that was actually installed
+            direct = json.loads(importlib.metadata.distribution("browser-use").read_text("direct_url.json") or "{}")
+            browser_use_commit = (direct.get("vcs_info") or {}).get("commit_id")
+        except Exception:
+            pass
+        return {"reflexmesh": version("reflexmesh"),
+                "browser_use": {"version": version("browser-use"), "commit": browser_use_commit,
+                                "pinned_commit": BROWSER_USE_PIN, "matches_pin": browser_use_commit == BROWSER_USE_PIN},
                 "systemone_harness": {"version": version("systemone-harness"), "commit": soh_commit,
                                       "pinned_commit": SOH_PIN, "matches_pin": soh_commit == SOH_PIN},
                 "chromium": chrome_version(self.chrome) if self.chrome and Path(self.chrome).exists() else None,
