@@ -257,8 +257,9 @@ class BrowserControlledEnvironment:
             # Withdrawn after the option was offered; nothing has been dispatched.
             self.journal.put(("rejected", "policy_denied"))
             raise self._stop("policy_denied")
-        if self.uncertain:
-            # An earlier command's effect is unknown and nothing here can settle it (V0.6 section 9).
+        if self.uncertain and prepared.risk == "write":
+            # An earlier write's effect is unknown and nothing here can settle it (V0.6 section 9).
+            # Looking again (scroll, wait, switch_tab) is still allowed; changing things is not.
             self.journal.put(("rejected", "effect_unknown"))
             raise self._stop("effect_unknown")
         classification = "text" if prepared.action == "type_text" else "nontext"
@@ -280,18 +281,18 @@ class BrowserControlledEnvironment:
         try:
             result = self.inner.execute_prepared(prepared, action_id)
         except RuntimeStop as exc:
-            self.uncertain = True
+            self.uncertain = self.uncertain or prepared.risk == "write"
             self.journal.put(("effect_unknown", action_id))
             if exc.reason != "effect_unknown":
                 raise self._stop(exc.reason) from None
             return _DriverFailure()
         except Exception:
             # An exception does not prove the page was untouched. The loop may look again but not act.
-            self.uncertain = True
+            self.uncertain = self.uncertain or prepared.risk == "write"
             self.journal.put(("effect_unknown", action_id))
             return _DriverFailure()
         else:
-            if not result.ok:
+            if not result.ok and prepared.risk == "write":
                 self.uncertain = True
             self.journal.put(("driver_return", action_id, bool(result.ok)))
             return result

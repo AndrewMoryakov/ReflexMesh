@@ -187,7 +187,10 @@ def _assess_repeats(attempt_id: str, snapshot: dict | None, dispatches: list | N
     ordered = sorted(dispatches, key=lambda row: row["id"] if _is_int(row.get("id")) else -1)
     seen, uncertain = set(), False
     for row in ordered:
-        if row.get("operation") == "navigate":
+        # Navigation is session-local, and a row marked read-only (scroll, wait, switch_tab) cannot
+        # reach a server: repeating it, or running it after a failed call, is not a repeated mutation.
+        # Fixture rows carry no `risk` and keep the strict rule.
+        if row.get("operation") == "navigate" or row.get("risk") == "read":
             continue
         key = (row.get("operation"), row.get("target_id"), row.get("slot_ref"))
         if uncertain or key in seen:

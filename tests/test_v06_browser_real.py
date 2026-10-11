@@ -212,6 +212,16 @@ class GenericPath(BrowserCase):
         last_page = [r for r in self.trace() if r["kind"] == "observed"][-1]["page"]
         self.assertTrue(last_page.endswith("/"))  # back on the dashboard
 
+    def test_the_same_action_on_an_unchanged_page_stops_as_no_progress(self):
+        """SystemOneHarness hashes the observation to notice a repeat; a fresh observation id in the
+        fields would make every state look new, so none is put there."""
+        steps = [{"action": "wait"}, {"action": "wait"}, {"action": "finish"}]
+        result = self.start(self.task(start="/"), label_script(steps)).run()
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "needs_handoff"))
+        self.assertEqual(result["handoff"]["reason"], "no_progress")
+        self.assertEqual([a["operation"] for a in result["actions"]], ["navigate", "wait"])  # the repeat never ran
+        self.assertNotEqual({r["id"]: r["status"] for r in result["verification"]}["runtime.no_uncertain_repeats"], "fail")
+
     def test_a_second_tab_is_offered_and_can_be_switched_to(self):
         steps = HAPPY_PATH[:3] + [{"action": "click", "element": "Open tracking"},
                                   {"action": "switch_tab", "tab": "orders/125$"}, {"action": "finish"}]

@@ -213,14 +213,39 @@ class Admission(unittest.TestCase):
 
 
 class UnknownEffects(unittest.TestCase):
-    def test_a_failed_driver_call_blocks_every_further_dispatch(self):
+    def test_a_failed_write_blocks_further_writes_but_not_looking_again(self):
         h = Harness(self)
         h.adapter.results = [SimpleNamespace(ok=False)]
         h.env.execute("click", {"element": "1"})
         with self.assertRaises(RuntimeStop) as caught:
-            h.env.execute("scroll", {"direction": "down"})
+            h.env.execute("click", {"element": "1"})
         self.assertEqual(caught.exception.reason, "effect_unknown")
         self.assertEqual(h.gate.snapshot()["dispatches"], 2)  # bootstrap + the failed click
+        self.assertTrue(h.env.execute("scroll", {"direction": "down"}).ok)  # reading cannot change anything
+        self.assertEqual(h.gate.snapshot()["dispatches"], 3)
+
+    def test_a_failed_read_does_not_make_later_writes_unknown(self):
+        h = Harness(self)
+        h.adapter.results = [SimpleNamespace(ok=False)]
+        h.env.execute("scroll", {"direction": "down"})
+        self.assertTrue(h.env.execute("click", {"element": "1"}).ok)
+        h.gate.seal_dispatches()
+        rows = {r["id"]: r for r in assess_constraints(
+            h.view, h.gate.snapshot(), "attempt-1", dispatches=h.journal.actions, revocations=[],
+            driver_outcomes=h.journal.outcomes)}
+        self.assertNotEqual(rows["runtime.no_uncertain_repeats"]["status"], "fail")
+
+    def test_waiting_twice_on_an_unchanged_page_is_not_a_repeated_mutation(self):
+        h = Harness(self)
+        for _ in range(2):
+            self.assertTrue(h.env.execute("wait", {}).ok)
+        h.env.execute("scroll", {"direction": "down"})
+        h.env.execute("scroll", {"direction": "down"})
+        h.gate.seal_dispatches()
+        rows = {r["id"]: r for r in assess_constraints(
+            h.view, h.gate.snapshot(), "attempt-1", dispatches=h.journal.actions, revocations=[],
+            driver_outcomes=h.journal.outcomes)}
+        self.assertEqual(rows["runtime.no_uncertain_repeats"]["status"], "unknown")
 
     def test_a_driver_exception_is_an_unknown_effect_not_a_crash(self):
         h = Harness(self)

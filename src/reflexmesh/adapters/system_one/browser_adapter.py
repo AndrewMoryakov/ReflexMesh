@@ -418,8 +418,10 @@ class GenericBrowserAdapter:
                     "next_window": "scroll" if (below or above) else None}
         obs.candidates = candidates
         obs.text = self._scrub(obs.text)
+        # No observation id here: SystemOneHarness hashes these fields to notice an action repeated on an
+        # unchanged state, and a fresh id every step would make every state look new (V0.6 section 8).
         obs.fields = {"url": url, "title": self._scrub(str(state.title or "")), "controls": len(considered),
-                      "tabs": len(tabs) + 1, "coverage": coverage, "observation_id": oid}
+                      "tabs": len(tabs) + 1, "coverage": coverage}
         self.report = {
             "observation_id": oid, "url": url, "coverage": coverage,
             "text_chars": len(obs.text), "options": {kind: len(values) for kind, values in candidates.items()
