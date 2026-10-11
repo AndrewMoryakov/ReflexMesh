@@ -1,0 +1,8 @@
+[
+  {"action": "type_text", "field": "Order number", "value": "^order@1"},
+  {"action": "click", "element": "button 'Search'"},
+  {"action": "click", "element": "Заказ №125"},
+  {"action": "type_text", "field": "textbox 'Note'", "value": "^note@1"},
+  {"action": "click", "element": "Save note"},
+  {"action": "finish"}
+]

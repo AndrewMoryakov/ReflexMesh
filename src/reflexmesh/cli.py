@@ -71,6 +71,19 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--attempt-id", metavar="HEX32", help="attempt ID chosen by a Task API caller")
     run.add_argument("--chain", metavar="FILE", help="link to a parent attempt (JSON); set by the Task API")
     run.add_argument("--control-dir", metavar="DIR", help="cancellation handshake directory; set by the Task API")
+    browser = sub.add_parser("browser", help="V0.6 browser core: a bounded task on any DOM site")
+    browser_sub = browser.add_subparsers(dest="browser_command", required=True)
+    brun = browser_sub.add_parser("run", help="execute one browser-task/0.1 attempt")
+    brun.add_argument("--input", default="-", metavar="FILE")
+    brun.add_argument("--output-dir", required=True, metavar="DIR")
+    brun.add_argument("--action-provider", choices=("script", "jev"), required=True,
+                      help="script plays fixed steps against the offered options (mechanics only); jev calls the real provider")
+    brun.add_argument("--script", metavar="FILE", help="JSON list of steps for the script provider")
+    brun.add_argument("--model", metavar="NAME", help="Jev model name; the provider key comes from the environment")
+    brun.add_argument("--chrome", metavar="FILE", help="Chromium executable (or REFLEXMESH_CHROME)")
+    brun.add_argument("--no-sandbox", action="store_true",
+                      help="start Chromium without its sandbox (or REFLEXMESH_CHROME_NO_SANDBOX=1); recorded in the result")
+    brun.add_argument("--attempt-id", metavar="HEX32")
     mcp = sub.add_parser("mcp", help="serve the Task API over MCP (stdio)")
     mcp.add_argument("--state-dir", required=True, metavar="DIR")
     mcp.add_argument("--chrome", metavar="FILE", help="Chromium executable for browser attempts")
@@ -82,6 +95,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "run":
             from reflexmesh.runtime.cli import run_execution
             return run_execution(args)
+        if args.command == "browser":
+            from reflexmesh.runtime.browser_cli import run_browser
+            return run_browser(args)
         if args.command == "mcp":
             from reflexmesh.api.mcp_server import serve
             return serve(args)
