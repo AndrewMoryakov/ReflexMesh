@@ -17,6 +17,8 @@
 - [V0.2: JevRouter HTTP](specs/V0.2.md) · [контрактная проверка](research/V0.2-validation.md) · [live-прогон OpenRouter](research/V0.2-live-openrouter.md) · [расширенные сценарии](research/V0.2-live-extended-openrouter.md) · [инструкция для Windows](guides/V0.2-live-run-windows.md).
 - [V0.3: протокол](specs/V0.3.md) · [рубрика](specs/V0.3-routing-rubric.md) · [результаты](research/V0.3-routing.md) · [V0.3b: отказ](specs/V0.3b-refusal.md) · [результаты V0.3b](research/V0.3b-refusal.md).
 - [V0.4: спецификация spike](specs/V0.4.md) · [pre-spike: SOH и Cua](research/V0.4-prespike.md) · [результаты spike](research/V0.4-spike.md).
+- [V0.5: контролируемый fixture runtime](specs/V0.5.md) · [локальный запуск и границы свидетельств](guides/V0.5-local-run.md).
+- [V0.6: браузерное ядро для неизвестных сайтов](specs/V0.6-browser-core.md) — SystemOneHarness + Browser Use + Jev, конечные действия, handoff в той же сессии, verification и критерии сравнения. Спецификация не означает готовность реализации.
 - [ADR-0001: уточнения инвариантов после ревью](architecture/ADR-0001-invariant-review.md).
 - [ADR-0002: эффекты routing и граница micro-loop](architecture/ADR-0002-routing-effects-and-loop-control.md).
 - [ADR-0003: смысловой отказ через кандидата NONE](architecture/ADR-0003-none-candidate-refusal.md).
