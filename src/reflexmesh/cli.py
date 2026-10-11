@@ -80,6 +80,9 @@ def main(argv: list[str] | None = None) -> int:
                       help="script plays fixed steps against the offered options (mechanics only); jev calls the real provider")
     brun.add_argument("--script", metavar="FILE", help="JSON list of steps for the script provider")
     brun.add_argument("--model", metavar="NAME", help="Jev model name; the provider key comes from the environment")
+    brun.add_argument("--decisions-url", metavar="URL",
+                      help="base URL of the decisions endpoint instead of the provider's own (https, or http on loopback); "
+                           "for stand-ins and proxies, recorded in the result")
     brun.add_argument("--chrome", metavar="FILE", help="Chromium executable (or REFLEXMESH_CHROME)")
     brun.add_argument("--no-sandbox", action="store_true",
                       help="start Chromium without its sandbox (or REFLEXMESH_CHROME_NO_SANDBOX=1); recorded in the result")

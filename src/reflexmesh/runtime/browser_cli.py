@@ -63,7 +63,7 @@ def run_browser(args) -> int:
             return LabelScriptProvider(steps), "script:label", None
         from reflexmesh.adapters.system_one.decision_providers import jev_provider_from_env
 
-        provider, config_id = jev_provider_from_env(args.model)
+        provider, config_id = jev_provider_from_env(args.model, base_url=getattr(args, "decisions_url", None))
         return provider, config_id, provider.model
 
     chrome = args.chrome or os.environ.get("REFLEXMESH_CHROME")

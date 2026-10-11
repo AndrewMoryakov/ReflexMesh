@@ -9,8 +9,10 @@ control loop never reads it.
 
 Routes:
   /                    dashboard
+  /leave               redirects to another origin (localhost), for allowed-origins checks
   /orders[?q=...]      search form, and matching orders when q is given
-  /orders/<id>         one order: details, saved notes, a note form
+  /orders/<id>         one order: details, saved notes, a note form with priority and notify
+  /orders/<id>/tracking    a small page, opened by the order page in a new tab
   POST /orders/<id>/note   saves a note (303 back to the order)
   /__state             JSON: recorded requests and notes
 """
@@ -28,6 +30,7 @@ ORDERS = {
     "126": {"customer": "Sidorova", "status": "Delivered"},
 }
 NOTES: dict[str, list[str]] = {}
+META: dict[str, dict] = {}
 REQUESTS: list[dict] = []
 
 
@@ -43,7 +46,8 @@ label{{display:block;margin:.6rem 0 .2rem}} textarea{{width:24rem;height:5rem}}<
 def dashboard(port: int) -> bytes:
     # A link to another origin (localhost, not 127.0.0.1) for the allowed-origins checks.
     return page("Dashboard", "<p>Welcome. Use <b>Orders</b> to look up an order.</p>"
-                f'<p><a href="http://localhost:{port}/">External portal</a></p>')
+                f'<p><a href="http://localhost:{port}/">External portal</a></p>'
+                '<p><a href="/leave">Partner offer</a></p>')
 
 
 def orders(query: str) -> bytes:
@@ -71,8 +75,13 @@ def order(oid: str) -> bytes | None:
     shown = "".join(f"<li>{escape(n)}</li>" for n in notes) or "<li>No notes yet.</li>"
     body = (f"<p>Customer: {escape(info['customer'])}. Status: {escape(info['status'])}.</p>"
             f"<h2>Notes</h2><ul>{shown}</ul>"
+            f'<p><a href="/orders/{oid}/tracking" target="_blank">Open tracking</a></p>'
             f'<form method="post" action="/orders/{oid}/note"><label for="note">Note</label>'
             '<textarea id="note" name="note"></textarea>'
+            '<label for="priority">Priority</label>'
+            '<select id="priority" name="priority"><option>Normal</option><option>High</option>'
+            '<option>Low</option></select>'
+            '<label><input type="checkbox" name="notify"> Notify customer by email</label>'
             '<button type="submit">Save note</button></form>')
     return page(f"Заказ №{oid}", body)
 
@@ -97,15 +106,20 @@ class Handler(BaseHTTPRequestHandler):
             REQUESTS.append({"method": "GET", "path": parts.path, "host": self.headers.get("Host")})
         if parts.path == "/__state":
             with LOCK:
-                data = json.dumps({"notes": NOTES, "requests": REQUESTS}, ensure_ascii=False).encode()
+                data = json.dumps({"notes": NOTES, "meta": META, "requests": REQUESTS}, ensure_ascii=False).encode()
             return self._send(200, data, "application/json")
         if parts.path == "/":
             return self._send(200, dashboard(self.server.server_port))
+        if parts.path == "/leave":  # a same-origin link that the server turns into another origin
+            return self._send(302, b"", location=f"http://localhost:{self.server.server_port}/")
         if parts.path == "/orders":
             return self._send(200, orders(parse_qs(parts.query).get("q", [""])[0].strip()))
         if parts.path.startswith("/orders/"):
-            body = order(parts.path.split("/")[2])
-            if body is not None:
+            pieces = parts.path.split("/")
+            if len(pieces) == 4 and pieces[3] == "tracking" and pieces[2] in ORDERS:
+                return self._send(200, page("Tracking", f"<p>Parcel for order {pieces[2]} is on its way.</p>"))
+            body = order(pieces[2])
+            if body is not None and len(pieces) == 3:
                 return self._send(200, body)
         self._send(404, page("Not found", "<p>No such page.</p>"))
 
@@ -121,6 +135,8 @@ class Handler(BaseHTTPRequestHandler):
             if note:
                 with LOCK:
                     NOTES.setdefault(pieces[1], []).append(note)
+                    META[pieces[1]] = {"priority": fields.get("priority", [""])[0],
+                                       "notify": "notify" in fields}
             return self._send(303, b"", location=f"/orders/{pieces[1]}")
         self._send(404, page("Not found", "<p>No such page.</p>"))
 

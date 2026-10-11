@@ -21,6 +21,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 from dataclasses import dataclass, field
 from urllib.parse import urljoin, urlsplit
 
@@ -28,6 +29,8 @@ from reflexmesh.contracts.browser import BrowserTask, READ_OPERATIONS, canonical
 from reflexmesh.runtime.runner import RuntimeStop
 from reflexmesh.text.slots import PreparedTextCommand, SlotRegistry
 
+BLANK_URLS = ("", "about:blank")
+BLANK_RETRIES, BLANK_WAIT = 6, 0.5
 PROFILE_PREFIX = "browser-use-user-data-dir-reflexmesh-"
 MAX_ELEMENTS = 200
 MAX_TEXT_CHARS = 8000
@@ -292,11 +295,19 @@ class GenericBrowserAdapter:
     def observe(self):
         self._ensure_backend()
         obs, state, nodes, doc = self.backend._run(self._capture())
+        # A window that has just opened shows about:blank until its page arrives; that is not a
+        # policy question. Give it a moment, then report it as the empty page it is.
+        for _ in range(BLANK_RETRIES):
+            if str(doc["url"] or "") not in BLANK_URLS:
+                break
+            time.sleep(BLANK_WAIT)
+            obs, state, nodes, doc = self.backend._run(self._capture())
         self._doc = doc
         url = str(doc["url"] or "")
+        blank = url in BLANK_URLS
         if url.startswith("chrome-error:"):
             raise RuntimeStop("navigation_failed")
-        if not self._origin_allowed(url):
+        if not blank and not self._origin_allowed(url):
             raise RuntimeStop("policy_denied")
         self._observation_id += 1
         oid = self._observation_id
@@ -389,6 +400,8 @@ class GenericBrowserAdapter:
             reasons.append("control_limit")
         if text_cut:
             reasons.append("text_truncated")
+        if blank:
+            reasons.append("blank_page")
         if skipped_frames:
             reasons.append("frame_content_not_offered")
         if below:
@@ -493,14 +506,16 @@ class GenericBrowserAdapter:
             except ValueError:
                 raise RuntimeStop("invalid_action") from None
         _, state, nodes, doc = self.backend._run(self._capture())
-        if doc["loader_id"] != self._doc.get("loader_id") or doc["frame_id"] != self._doc.get("frame_id") \
-                or not self._origin_allowed(str(doc["url"] or "")):
-            self._stale()
         if operation == "switch_tab":
-            if entry.tab_id not in {str(getattr(t, "target_id", "")) for t in state.tabs or []}:
+            # What matters is the destination tab, not the page in front (which may be blank).
+            tab = next((t for t in state.tabs or [] if str(getattr(t, "target_id", "")) == entry.tab_id), None)
+            if tab is None or not self._origin_allowed(str(tab.url or "")):
                 self._stale()
             params_fresh = (("tab", entry.key),)
         else:
+            if doc["loader_id"] != self._doc.get("loader_id") or doc["frame_id"] != self._doc.get("frame_id") \
+                    or not self._origin_allowed(str(doc["url"] or "")):
+                self._stale()
             index, node = self._find(nodes, entry)
             if node is None or self._signature(node) != entry.signature:
                 self._stale()

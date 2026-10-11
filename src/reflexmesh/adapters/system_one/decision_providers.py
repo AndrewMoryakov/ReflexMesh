@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 import os
 import re
+from urllib.parse import urlsplit
 
 CONTROL_ACTIONS = ("finish", "escalate")
 
@@ -47,41 +48,54 @@ class LabelScriptProvider:
 
         step = self.steps[self.calls] if self.calls < len(self.steps) else {"action": "finish"}
         self.calls += 1
-        action = step.get("action")
-        offered = (questions.get("next_action") or {}).get("criteria") or {}
-        if action not in offered:
-            raise ProviderError(f"script: action {action!r} is not offered at step {self.calls}")
-        answers = {"next_action": self._choice(offered, action),
-                   "goal_reached": {"type": "noul", "noul": 0.95 if action == "finish" else 0.0}}
-        for key, question in questions.items():
-            if key in answers or key in ("next_action", "goal_reached"):
-                continue
-            if question.get("type") == "noul":
-                answers[key] = {"type": "noul", "noul": 0.99}
-                continue
-            if question.get("type") != "choice":
-                answers[key] = {"type": "score", "score": 0, "probabilities": {}, "confidence": 0.99}
-                continue
-            criteria = question.get("criteria") or {}
-            parameter = key.split("__", 1)[1] if "__" in key else key
-            if key.startswith(f"{action}__") and parameter in step:
-                pattern = re.compile(str(step[parameter]), re.IGNORECASE)
-                matches = [ref for ref, description in criteria.items() if pattern.search(str(description))]
-                if len(matches) != 1:
-                    raise ProviderError(f"script: {parameter!r} matched {len(matches)} options at step {self.calls}")
-                answers[key] = self._choice(criteria, matches[0])
-            elif criteria:
-                answers[key] = self._choice(criteria, next(iter(criteria)))
+        try:
+            answers = answers_for_step(step, questions)
+        except ScriptMismatch as exc:
+            raise ProviderError(f"script: {exc} at step {self.calls}") from None
         return Decision(answers=answers, usage={"input_tokens": 0, "output_tokens": 0}, model=self.model,
                         request_id=f"script-{self.calls}", latency_ms=1, raw={"script_step": self.calls})
 
-    @staticmethod
-    def _choice(criteria: dict, pick: str) -> dict:
-        return {"type": "choice", "choice": pick, "confidence": 0.99,
-                "probabilities": {name: (0.99 if name == pick else 0.0) for name in criteria}}
-
     def close(self):
         pass
+
+
+def _choice(criteria: dict, pick: str) -> dict:
+    return {"type": "choice", "choice": pick, "confidence": 0.99,
+            "probabilities": {name: (0.99 if name == pick else 0.0) for name in criteria}}
+
+
+def answers_for_step(step: dict, questions: dict) -> dict:
+    """Decision answers (wire shape) for one scripted step against the options a step offers.
+
+    Raises ScriptMismatch when the action is not offered or a pattern matches no option, or
+    more than one. Shared by the script provider and the test stand-in for the decisions endpoint.
+    """
+    action = step.get("action")
+    offered = (questions.get("next_action") or {}).get("criteria") or {}
+    if action not in offered:
+        raise ScriptMismatch(f"action {action!r} is not offered")
+    answers = {"next_action": _choice(offered, action),
+               "goal_reached": {"type": "noul", "noul": 0.95 if action == "finish" else 0.0}}
+    for key, question in questions.items():
+        if key in answers:
+            continue
+        if question.get("type") == "noul":
+            answers[key] = {"type": "noul", "noul": 0.99}
+            continue
+        if question.get("type") != "choice":
+            answers[key] = {"type": "score", "score": 0, "probabilities": {}, "confidence": 0.99}
+            continue
+        criteria = question.get("criteria") or {}
+        parameter = key.split("__", 1)[1] if "__" in key else key
+        if key.startswith(f"{action}__") and parameter in step:
+            pattern = re.compile(str(step[parameter]), re.IGNORECASE)
+            matches = [ref for ref, description in criteria.items() if pattern.search(str(description))]
+            if len(matches) != 1:
+                raise ScriptMismatch(f"{parameter!r} matched {len(matches)} options")
+            answers[key] = _choice(criteria, matches[0])
+        elif criteria:
+            answers[key] = _choice(criteria, next(iter(criteria)))
+    return answers
 
 
 class ValidatingProvider:
@@ -147,22 +161,40 @@ class ValidatingProvider:
             self.inner.close()
 
 
-def jev_provider_from_env(model: str | None = None, timeout: float = 30.0):
+def _checked_endpoint(url: str) -> str:
+    """A decisions endpoint that will receive the API key: https, or plain http on loopback only."""
+    parts = urlsplit(url)
+    loopback = parts.hostname in ("127.0.0.1", "localhost", "::1")
+    if (parts.scheme not in ("http", "https") or not parts.hostname or parts.username or parts.password
+            or parts.path not in ("", "/") or parts.query or parts.fragment
+            or (parts.scheme == "http" and not loopback)):
+        raise ProviderUnavailable("the decisions endpoint must be https, or http on loopback, with no path")
+    return f"{parts.scheme}://{parts.netloc}"
+
+
+def jev_provider_from_env(model: str | None = None, timeout: float = 30.0, base_url: str | None = None):
     """OpenRouter (OPENROUTER_API_KEY) or TypeSafe (TYPESAFE_API_KEY); retries are off.
 
     Returns the provider and a configuration identifier for the result. The key is read
     from the environment only; it is never an argument, a task field or a log line.
+    `base_url` is service configuration for a stand-in or proxy; it is checked because the
+    key is sent there.
     """
     try:
         from systemone_harness.provider import OpenRouterProvider, TypeSafeProvider
     except ImportError as exc:
         raise ProviderUnavailable("systemone_harness is not installed") from exc
-    key = os.environ.get("OPENROUTER_API_KEY")
-    if key:
+    if os.environ.get("OPENROUTER_API_KEY"):
         name = model or os.environ.get("S1_MODEL", "~typesafe/jev-latest")
-        return OpenRouterProvider(key, name, timeout=timeout, retries=0), f"openrouter:{name}"
-    key = os.environ.get("TYPESAFE_API_KEY")
-    if key:
+        provider = OpenRouterProvider(os.environ["OPENROUTER_API_KEY"], name, timeout=timeout, retries=0)
+        config = f"openrouter:{name}"
+    elif os.environ.get("TYPESAFE_API_KEY"):
         name = model or os.environ.get("S1_MODEL", "jev-latest")
-        return TypeSafeProvider(key, name, timeout=timeout, retries=0), f"typesafe:{name}"
-    raise ProviderUnavailable("no Jev provider key: set OPENROUTER_API_KEY or TYPESAFE_API_KEY")
+        provider = TypeSafeProvider(os.environ["TYPESAFE_API_KEY"], name, timeout=timeout, retries=0)
+        config = f"typesafe:{name}"
+    else:
+        raise ProviderUnavailable("no Jev provider key: set OPENROUTER_API_KEY or TYPESAFE_API_KEY")
+    if base_url:
+        provider.base_url = _checked_endpoint(base_url)
+        config += f"@{urlsplit(provider.base_url).netloc}"
+    return provider, config

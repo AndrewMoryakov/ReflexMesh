@@ -181,6 +181,17 @@ class JevProviderWire(unittest.TestCase):
         self.assertEqual(provider.path, "/api/alpha/decisions")
         self.assertEqual(config_id, "openrouter:~typesafe/jev-latest")
 
+    def test_endpoint_override_is_checked_because_the_key_is_sent_there(self):
+        with mock.patch.dict(os.environ, {"OPENROUTER_API_KEY": "sk-test-not-a-real-key"}, clear=True):
+            for bad in ("http://example.com", "ftp://127.0.0.1", "https://user:pw@x.test", "https://x.test/api",
+                        "http://127.0.0.1:1/?a=1", "http://[::2]:1"):
+                with self.assertRaises(ProviderUnavailable, msg=bad):
+                    jev_provider_from_env(base_url=bad)
+            provider, config = jev_provider_from_env(base_url="https://gateway.example.test")
+            self.assertEqual(provider.base_url, "https://gateway.example.test")
+            self.assertTrue(config.endswith("@gateway.example.test"))
+            self.assertEqual(jev_provider_from_env(base_url="http://127.0.0.1:9")[0].base_url, "http://127.0.0.1:9")
+
     def test_without_a_key_the_provider_is_unavailable(self):
         with mock.patch.dict(os.environ, {}, clear=True):
             with self.assertRaises(ProviderUnavailable):
