@@ -9,6 +9,7 @@ control loop never reads it.
 
 Routes:
   /                    dashboard
+  /catalog             260 buttons, to see how a dense page is reported
   /leave               redirects to another origin (localhost), for allowed-origins checks
   /orders[?q=...]      search form, and matching orders when q is given
   /orders/<id>         one order: details, saved notes, a note form with priority and notify
@@ -48,6 +49,12 @@ def dashboard(port: int) -> bytes:
     return page("Dashboard", "<p>Welcome. Use <b>Orders</b> to look up an order.</p>"
                 f'<p><a href="http://localhost:{port}/">External portal</a></p>'
                 '<p><a href="/leave">Partner offer</a></p>')
+
+
+def catalog() -> bytes:
+    """A dense page: 260 buttons, far more than one observation may list."""
+    buttons = "".join(f'<li><button type="button">Item {n}</button></li>' for n in range(1, 261))
+    return page("Catalog", f"<ul>{buttons}</ul>")
 
 
 def orders(query: str) -> bytes:
@@ -112,6 +119,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, dashboard(self.server.server_port))
         if parts.path == "/leave":  # a same-origin link that the server turns into another origin
             return self._send(302, b"", location=f"http://localhost:{self.server.server_port}/")
+        if parts.path == "/catalog":
+            return self._send(200, catalog())
         if parts.path == "/orders":
             return self._send(200, orders(parse_qs(parts.query).get("q", [""])[0].strip()))
         if parts.path.startswith("/orders/"):

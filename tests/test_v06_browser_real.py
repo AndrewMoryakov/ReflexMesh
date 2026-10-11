@@ -221,6 +221,25 @@ class GenericPath(BrowserCase):
         observed = [r for r in self.trace() if r["kind"] == "observed"]
         self.assertTrue(observed[-1]["page"].endswith("/orders/125"))  # the original tab is in front again
 
+    def test_a_dense_page_is_reported_partial_and_scrolling_reaches_more(self):
+        """260 buttons: Browser Use lists only what is near the window. Saying `complete` would
+        let a run conclude that nothing else exists (V0.6 section 6)."""
+        steps = [{"action": "scroll", "direction": "down"}, {"action": "finish"}]
+        result = self.start(self.task(start="/catalog"), label_script(steps)).run()
+        trace = self.trace()
+        observed = [r for r in trace if r["kind"] == "observed"]
+        built = [r for r in trace if r["kind"] == "options_built"]
+        coverage = observed[0]["coverage"]
+        self.assertEqual(coverage["status"], "partial")
+        self.assertIn("more_content_below", coverage["reasons"])
+        self.assertEqual(coverage["next_window"], "scroll")
+        self.assertLess(coverage["controls_offered"], 260)
+        first = {o["name"] for o in built[0]["options"]}
+        second = {o["name"] for o in built[1]["options"]}
+        self.assertTrue(second - first, "scrolling one window should reveal controls that were not offered before")
+        self.assertIn("more_content_above", observed[1]["coverage"]["reasons"])
+        self.assertEqual(result["budget"]["dispatches"], 2)
+
     def test_a_link_to_another_origin_is_refused_before_any_request(self):
         steps = [{"action": "click", "element": "External portal"}]
         result = self.start(self.task(start="/"), label_script(steps)).run()

@@ -394,7 +394,10 @@ class GenericBrowserAdapter:
         considered = set(elements) | set(fields) | {k.partition(":")[0] for k in options}
         unreachable = [k for k in usable if k not in considered and k not in select_keys]
         text_cut = obs.text.endswith(" …")
-        below, above = int(getattr(state, "pixels_below", 0) or 0), int(getattr(state, "pixels_above", 0) or 0)
+        # The scroll offset lives in `page_info`; the summary's own pixels_* attributes stay 0
+        # (SystemOneHarness reads those and so never reports content outside the window).
+        info = getattr(state, "page_info", None)
+        below, above = int(getattr(info, "pixels_below", 0) or 0), int(getattr(info, "pixels_above", 0) or 0)
         reasons = []
         if unreachable and len(considered) >= MAX_ELEMENTS:
             reasons.append("control_limit")
