@@ -39,7 +39,7 @@ def reset() -> None:
     with LOCK:
         STATE.clear()
         STATE.update({"notify_email": False, "settings_saved": 0, "form": None, "account_deleted": False,
-                      "exports": 0})
+                      "exports": 0, "support": None, "support_requests": 0})
         LOG.clear()
         SEQUENCE = 0
         # A reset invalidates every previously issued binding, even in this process.
@@ -90,8 +90,10 @@ def _snapshot_locked(*, private: bool) -> dict:
         value["pending_effects"] = [copy.deepcopy(event) for event in PENDING_EFFECTS.values()
                                     if CLAIM is not None and event["binding"] == CLAIM["binding"]]
         value["baseline"] = copy.deepcopy(CLAIM["baseline"]) if CLAIM is not None else None
-    elif value["state"]["form"] is not None:
-        value["state"]["form"] = {"submitted": True}
+    else:
+        for field in ("form", "support"):
+            if value["state"][field] is not None:
+                value["state"][field] = {"submitted": True}
     return value
 
 
@@ -108,6 +110,7 @@ NAV = ('<nav><a data-reflex-id="home" href="/">Home</a> | '
        '<a data-reflex-id="settings" href="/settings">Settings</a> | '
        '<a data-reflex-id="reports" href="/reports">Reports</a> | '
        '<a data-reflex-id="form" href="/form">Contact form</a> | '
+       '<a data-reflex-id="support" href="/support">Support</a> | '
        '<a data-reflex-id="danger" href="/danger">Danger zone</a> | '
        '<a data-reflex-id="export" href="/slow">Export</a></nav>')
 
@@ -145,6 +148,14 @@ def render(path: str) -> bytes | None:
         return page("Danger zone", f"{gone}<p>Deleting the account cannot be undone.</p>"
                     "<form method='post' action='/danger/delete'>"
                     "<button data-reflex-id='delete-account' type='submit'>Delete account</button></form>")
+    if path == "/support":
+        if s["support"] is not None:
+            return page("Support", "<p role='status'>Support request sent.</p>")
+        return page("Support", "<form method='post' action='/support'>"
+                    "<label>Name <input data-reflex-id='support-name' type='text' name='name'></label> "
+                    "<label>Email <input data-reflex-id='support-email' type='email' name='email'></label> "
+                    "<label>Message <textarea data-reflex-id='support-message' name='message' required></textarea></label> "
+                    "<button data-reflex-id='send-support' type='submit'>Send support request</button></form>")
     if path == "/slow":
         done = f"<p role='status'>Exports finished: {s['exports']}.</p>" if s["exports"] else ""
         return page("Export", f"{done}<p>Exporting takes a few seconds.</p>"
@@ -331,6 +342,13 @@ class Handler(BaseHTTPRequestHandler):
             elif path == "/form":
                 STATE["form"] = {"name": data.get("name", ""), "email": data.get("email", "")}
                 code = 303
+            elif path == "/support":
+                if not data.get("message", "").strip():
+                    code = 400
+                else:
+                    STATE["support"] = {key: data.get(key, "") for key in ("name", "email", "message")}
+                    STATE["support_requests"] += 1
+                    code = 303
             elif path == "/danger/delete":
                 STATE["account_deleted"] = True
                 code = 303
@@ -344,6 +362,8 @@ class Handler(BaseHTTPRequestHandler):
                 _append_locked("POST", path, binding)
         if code == 403:
             return self._json(403, {"error": "browser_owner_mismatch"})
+        if code == 400:
+            return self._json(400, {"error": "support_message_required"})
         if code == 404:
             return self._send(404, page("Not found", ""))
         if code == 202:

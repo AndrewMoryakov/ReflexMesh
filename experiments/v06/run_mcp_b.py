@@ -102,6 +102,21 @@ def posts(state, path):
     return [e for e in state.get("log", []) if e.get("method") == "POST" and e.get("path") == path]
 
 
+def support_evidence_matches(state, result):
+    """Check redacted server counts and bound result assessments, never raw slot logs."""
+    accepted = [e for e in posts(state, "/support") if not e.get("rejected")]
+    count = (state.get("state") or {}).get("support_requests")
+    verification = result.get("verification") or []
+    sent = [row.get("status") for row in verification
+            if row.get("id") == "sent" and row.get("kind") == "postcondition"]
+    slots = [row.get("status") for row in verification if row.get("id") == "runtime.immutable_slots"]
+    typed = [row for row in result.get("actions", []) if row.get("operation") == "type_text" and
+             row.get("target_id") == "support-message"]
+    return (len(accepted) == 1 and type(count) is int and count == 1 and
+            sent == ["pass"] and slots == ["pass"] and len(typed) == 1 and
+            typed[0].get("slot_ref") == "message@1" and typed[0].get("effect") == "applied")
+
+
 def run_case(case, client, directory, level, providers):
     stamp = f"{case.lower().replace('.', '-')}-{int(time.time() * 1000) % 10**8}"
     fixture = Fixture(stamp, directory)
@@ -175,9 +190,9 @@ def run_case(case, client, directory, level, providers):
                     limits.get("wall_seconds", 999) < LIMITS["wall_seconds"]):
                 failures.append(f"chain budget did not decrease: {limits}")
             state = fixture.settled_state()
-            accepted = [e for e in posts(state, "/support") if not e.get("rejected")]
-            if len(accepted) != 1 or (accepted[0].get("data") or {}).get("message") != MESSAGE["value"]:
-                failures.append("expected exactly one accepted support request with the prepared message")
+            if not support_evidence_matches(state, result2):
+                failures.append("expected one accepted support request, passing sent/immutable-slot evidence, "
+                                "and observed message@1 input")
         elif case == "A08.cancel_held_decision":
             spec = task(fixture, stamp, case, goal="Fill in the contact form with the supplied name and email, "
                         "then send it once.", start_path="/form",

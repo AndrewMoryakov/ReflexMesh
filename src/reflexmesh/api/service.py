@@ -81,7 +81,7 @@ class TaskService:
                  allow_faults: bool = False):
         if type(max_concurrent) is not int or max_concurrent < 1:
             raise ValueError("max_concurrent must be a positive integer")
-        self.root = Path(state_dir).resolve()
+        self.root = Path(state_dir).expanduser().resolve()
         _private_directory(self.root, exist_ok=True)
         _private_directory(self.root / "attempts", exist_ok=True)
         self.chrome, self.jev_url, self.max_concurrent = chrome, jev_url, max_concurrent
@@ -126,14 +126,14 @@ class TaskService:
     def _running(self) -> int:
         return sum(1 for process in self.processes.values() if process.poll() is None)
 
-    def _faults(self, faults):
+    def _faults(self, faults, limits=None):
         if faults is None:
             return None
         if not self.allow_faults:
             raise ApiError("invalid_input", "fault injection is disabled on this server")
         from reflexmesh.runtime.faults import validate_faults
         try:
-            return validate_faults(faults)
+            return validate_faults(faults, limits=limits)
         except ValidationError as exc:
             raise ApiError("invalid_input", str(exc)) from None
 
@@ -210,8 +210,9 @@ class TaskService:
 
     # ── API ──
     def submit(self, task: dict, routing_provider: str, action_provider: str, script=None, faults=None) -> dict:
-        self._validate(task, routing_provider, action_provider, script)
-        return self._start(task, routing_provider, action_provider, script, None, self._faults(faults))
+        parsed = self._validate(task, routing_provider, action_provider, script)
+        return self._start(task, routing_provider, action_provider, script, None,
+                           self._faults(faults, parsed.limits))
 
     def status(self, attempt_id: str, wait_seconds: float = 0.0, detail: str = "summary") -> dict:
         directory = self._dir(attempt_id)
@@ -321,7 +322,8 @@ class TaskService:
             raise ApiError("budget_exhausted", f"remaining chain budget {left}")
         new["limits"] = {"wall_seconds": left["wall_seconds"], "max_steps": left["steps"],
                          "max_model_calls": left["model_calls"], "max_action_retries": 0}
-        self._validate(new, routing_provider, action_provider, script)
+        parsed = self._validate(new, routing_provider, action_provider, script)
+        faults = self._faults(faults, parsed.limits)
         chain = {"root_attempt_id": root_id, "parent_attempt_id": parent_attempt_id,
                  "sequence": int(parent_chain.get("sequence") or 1) + 1, "root_limits": root_limits,
                  "used": {"steps": int(used.get("steps", 0)), "model_calls": int(used.get("model_calls", 0)),

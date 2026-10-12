@@ -316,12 +316,13 @@ class ControlledEnvironment:
     """Compatible with SystemOneHarness Environment; policy and target checks are injected."""
 
     def __init__(self, inner, gate: AttemptGate, events,
-                 admit: Callable[[str, dict], str | None], *, bootstrap: bool = False):
+                 admit: Callable[[str, dict], str | None], *, bootstrap: bool = False, faults=None):
         # This enrollment is deliberately narrow. A duck-typed/fake environment
         # cannot turn its own assertions into trusted boundary coverage.
         from reflexmesh.adapters.system_one.fixture_browser import FixtureBrowser
 
         self.inner, self.gate, self.events, self.admit = inner, gate, events, admit
+        self.faults = faults
         self._prepared_protocol = type(inner) is FixtureBrowser
         if self._prepared_protocol:
             inner.bind_profile_owner(gate.profile_client)
@@ -345,6 +346,10 @@ class ControlledEnvironment:
             self.last_stop = reason
             raise RuntimeStop(reason)
         self.observed_revision = self.gate.revision()
+        descriptor = (self.inner.describe("navigate", {"bootstrap": True})
+                      if hasattr(self.inner, "describe") else {"operation": "navigate"})
+        if self.faults is not None:
+            self.faults.before_commit(descriptor)
         try:
             action_id, gate_seq = self._commit("nontext" if self._prepared_protocol else "unknown",
                                                operation="navigate")
@@ -355,12 +360,20 @@ class ControlledEnvironment:
         self.events.put(("dispatch", action_id, {"operation": "navigate", "bootstrap": True,
                                                 "gate_seq": gate_seq, **self._ownership_descriptor()}))
         try:
+            if self.faults is not None:
+                self.faults.before_driver(descriptor)
             self.inner.reset(goal)
+            if self.faults is not None:
+                # Bootstrap has no driver result, but still has the same
+                # committed-action delay/hang boundary.
+                bootstrap_return = self.faults.after_driver(descriptor, None)
+            else:
+                bootstrap_return = None
         except Exception:
             self.events.put(("effect_unknown", action_id))
             raise
         else:
-            self.events.put(("driver_return", action_id, True))
+            self.events.put(("driver_return", action_id, bootstrap_return is None))
         finally:
             self.gate.settle(action_id)
 
@@ -389,6 +402,21 @@ class ControlledEnvironment:
     def _record_observation(self, obs):
         safe = {k: obs.fields[k] for k in ("url", "run_id", "target_ids", "ownership")
                 if hasattr(obs, "fields") and k in obs.fields}
+        # Only target identifiers cross into the trace, never observed field values.
+        for key in ("filled_targets", "empty_targets", "content_gaps"):
+            values = obs.fields.get(key) if hasattr(obs, "fields") else None
+            if type(values) is list and all(type(value) is str for value in values):
+                safe[key] = list(values)
+        nodes = obs.fields.get("target_nodes") if hasattr(obs, "fields") else None
+        if type(nodes) is dict:
+            safe["target_nodes"] = {
+                target: dict(node) for target, node in nodes.items()
+                if type(target) is str and type(node) is dict and
+                set(node) == {"backend_node_id", "frame_id", "target_id"} and
+                type(node["backend_node_id"]) is int and node["backend_node_id"] > 0 and
+                all(type(node[key]) is str and 0 < len(node[key]) <= 128 and
+                    all(c.isascii() and (c.isalnum() or c in "_.-") for c in node[key])
+                    for key in ("frame_id", "target_id"))}
         if safe:
             safe["captured_at"] = time.time()
             self.events.put(("observation", safe))
@@ -399,6 +427,8 @@ class ControlledEnvironment:
         prepared = None
         if self._prepared_protocol:
             try:
+                if self.faults is not None:
+                    self.faults.before_admit(self.inner, action, params)
                 prepared = self.inner.prepare(action, params)
                 # Preserve an explicitly injected additional policy. It sees a
                 # fresh copy of the admitted parameters and cannot mutate the
@@ -436,6 +466,8 @@ class ControlledEnvironment:
             self.events.put(("rejected", "invalid_action"))
             raise RuntimeStop("invalid_action")
         try:
+            if self.faults is not None:
+                self.faults.before_commit(descriptor)
             classification = ("text" if prepared.action == "type_text" else "nontext") if prepared else "unknown"
             action_id, gate_seq = self._commit(classification, descriptor.get("slot_ref"),
                                                operation=operation)
@@ -453,8 +485,12 @@ class ControlledEnvironment:
         self.events.put(("dispatch", action_id, {**descriptor, "gate_seq": gate_seq,
                                                 **self._ownership_descriptor()}))
         try:
+            if self.faults is not None:
+                self.faults.before_driver(descriptor)
             result = (self.inner.execute_prepared(prepared, action_id) if prepared is not None else
                       self.inner.execute(action, params))
+            if self.faults is not None:
+                result = self.faults.after_driver(descriptor, result)
         except Exception:
             # Driver exceptions do not prove the external effect did not happen.
             if mutating:
@@ -484,6 +520,8 @@ class ControlledEnvironment:
         return {"ownership": owner.binding} if self._prepared_protocol and type(owner) is FixtureOwnership else {}
 
     def close(self):
+        if self.faults is not None:
+            self.faults.before_close()
         self.inner.close()
 
 
@@ -552,6 +590,7 @@ class AttemptSupervisor:
         self._actions: list[dict] = []
         # Driver outcome per action id, kept out of the exported action rows.
         self._driver_outcomes: dict[int, str] = {}
+        self._typing_observations: dict[int, dict] = {}
         # Authenticated fixture record bound to this attempt's claim; None without a real claim.
         self._effect_snapshot: dict | None = None
 
@@ -660,9 +699,12 @@ class AttemptSupervisor:
 
     def _record(self, event, actions):
         if event[0] in ("dispatch", "driver_return", "effect_unknown", "rejected", "reobserve",
-                        "decision_request", "step", "stopped", "done", "observation", "proposal"):
+                        "decision_request", "step", "stopped", "done", "observation", "proposal",
+                        "fault", "revocation"):
             self.trace.append({"seq": len(self.trace) + 1, "kind": event[0], "data": list(event[1:])})
         seq = len(self.trace)
+        if event[0] == "revocation":
+            self.revocations.append({"operation": event[1], "gate_seq": event[2]})
         if event[0] == "fixture_claim":
             try:
                 self.fixture_owner.adopt(event[1])
@@ -689,6 +731,8 @@ class AttemptSupervisor:
         elif event[0] == "proposal":
             self._last_proposal_seq = seq
         elif event[0] == "dispatch":
+            if event[2].get("operation") == "type_text" and self.observation is not None:
+                self._typing_observations[event[1]] = self.observation
             actions.append({"id": event[1], **event[2], "effect": "unknown",
                             "proposal_seq": getattr(self, "_last_proposal_seq", None),
                             "dispatch_seq": seq, "return_seq": None, "evidence_refs": []})
@@ -704,6 +748,47 @@ class AttemptSupervisor:
             self.observation = event[1]
             self._observation_seq = seq
             self._reconcile_navigation(actions)
+            self._reconcile_typing(actions)
+
+    def _reconcile_typing(self, actions):
+        """A fresh empty-to-filled observation can settle a successful session-local input.
+
+        This is not evidence of submission or exact-slot verification. Pre-filled fields,
+        failed/lost driver returns, another page/owner, or intervening dispatches remain
+        unknown; the field state could have another cause.
+        """
+        observation = self.observation
+        if observation is None or type(observation.get("filled_targets")) is not list:
+            return
+        for row in actions:
+            before = self._typing_observations.get(row.get("id"))
+            target = row.get("target_id")
+            if (row.get("operation") == "type_text" and row.get("effect") == "unknown" and
+                    self._driver_outcomes.get(row.get("id")) == "ok" and
+                    before is not None and type(before.get("filled_targets")) is list and
+                    type(target) is str and target not in before["filled_targets"] and
+                    target in observation["filled_targets"] and
+                    self._same_typed_node(target, before, observation) and
+                    type(before.get("url")) is str and before["url"] == observation.get("url") and
+                    type(row.get("return_seq")) is int and
+                    self._observation_seq > row["return_seq"] > row.get("dispatch_seq", -1) and
+                    not any(other.get("dispatch_seq", -1) > row["dispatch_seq"] for other in actions) and
+                    self._same_owner(row.get("ownership"), before.get("ownership")) and
+                    self._same_owner(row.get("ownership"), observation.get("ownership"))):
+                row["effect"] = "applied"
+                row["evidence_refs"] = [f"browser:{self.attempt_id}:{self._observation_seq}"]
+
+    def _same_typed_node(self, target, before, after):
+        # Synthetic strategies have no fixture claim or DOM identity contract. In
+        # production, missing live value/identity cannot be mistaken for an empty field.
+        if not self.fixture_owner.acquisition_attempted.value:
+            return True
+        empty = before.get("empty_targets")
+        old, new = before.get("target_nodes"), after.get("target_nodes")
+        return (type(empty) is list and target in empty and
+                type(old) is dict and type(new) is dict and
+                type(old.get(target)) is dict and bool(old[target]) and
+                old[target] == new.get(target))
 
     def _reconcile_navigation(self, actions):
         observation = self.observation
@@ -722,6 +807,7 @@ class AttemptSupervisor:
 
     def _reconcile(self, actions, verification):
         covered = {"form_submitted_once": {"submit_form", "type_text"},
+                   "support_request_sent_once": {"submit_form"},
                    "settings_saved": {"save_settings", "toggle_setting"},
                    "export_completed_once": {"start_export"}}
         validated = set()
@@ -729,6 +815,7 @@ class AttemptSupervisor:
             matches = [assessment for criterion, assessment in zip(self.task.criteria, verification)
                        if assessment["status"] == "pass" and
                        row.get("operation") in assessment.get("verified_operations", covered.get(criterion.predicate, set())) and
+                       self._criterion_target_matches(criterion.predicate, row) and
                        self._same_owner(row.get("ownership"), assessment.get("ownership"))]
             if matches:
                 row["effect"] = "applied"
@@ -736,6 +823,17 @@ class AttemptSupervisor:
                                                          for ref in assessment.get("evidence_refs", [])))
                 validated.add(row.get("operation"))
         return validated
+
+    def _criterion_target_matches(self, predicate, row):
+        # The two form routes share an operation but have independent effects.
+        # A pass for one route must never settle a submission to the other.
+        targets = {"form_submitted_once": "send-form", "support_request_sent_once": "send-support"}
+        if row.get("operation") != "submit_form" or predicate not in targets:
+            return True
+        target = row.get("target_id")
+        if target is None and not self.fixture_owner.acquisition_attempted.value:
+            return True  # Legacy synthetic strategies do not have fixture targets.
+        return target == targets[predicate]
 
     def _reconcile_effects(self, actions, verification, *, browser_stopped: bool) -> None:
         """Settle unknown mutation effects from the fixture's own record of requests."""
@@ -922,6 +1020,7 @@ class AttemptSupervisor:
                 break
         # Late evidence can refine an effect, but the accepted terminal status never changes.
         self._reconcile_navigation(actions)
+        self._reconcile_typing(actions)
         self._reconcile(actions, verification)
         self._reconcile_effects(actions, verification, browser_stopped=cleanup in ("closed", "forced"))
         self._note_effects(verification)

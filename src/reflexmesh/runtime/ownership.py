@@ -31,7 +31,7 @@ _SESSION_FIELDS = frozenset({"session_id", "profile_id"})
 _BASELINE_FIELDS = frozenset({"run_id", "instance_id", "sequence", "state", "log"})
 _SNAPSHOT_FIELDS = _BASELINE_FIELDS | {
     "owner_epoch", "phase", "binding", "effects", "pending_effects", "baseline"}
-_FIXTURE_PATHS = frozenset({"/", "/profile", "/reports", "/settings", "/form",
+_FIXTURE_PATHS = frozenset({"/", "/profile", "/reports", "/settings", "/form", "/support",
                             "/danger", "/danger/delete", "/slow", "/slow/export"})
 _BROWSER_VIOLATIONS = frozenset({"browser_session_changed", "browser_profile_changed",
                                   "browser_configuration_changed"})

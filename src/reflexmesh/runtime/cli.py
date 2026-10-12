@@ -20,7 +20,7 @@ from reflexmesh.contracts.execution import ExecutionTask, Limits, PREDICATES
 from reflexmesh.contracts.task import Route, Task, ValidationError
 from reflexmesh.routing.jev_router import validate_config
 from reflexmesh.routing.router import Router, execution_router
-from reflexmesh.runtime.faults import validate_faults
+from reflexmesh.runtime.faults import FaultBarriers, validate_faults
 from reflexmesh.runtime.handoff import build_handoff, chain_usage, standalone_chain
 from reflexmesh.runtime.runner import AttemptSupervisor, WorkerResult
 from reflexmesh.runtime.ownership import OwnershipError
@@ -117,9 +117,10 @@ def claim_fixture(task, timeout, owner):
 class BrowserExecutionStrategy:
     """Run preflight, macro routing and the browser loop in one supervised worker."""
 
-    def __init__(self, task, args, entries, *, router: Router | None = None):
+    def __init__(self, task, args, entries, *, router: Router | None = None, faults=None):
         self.task, self.args, self.entries = task, args, entries
         self.router = router if router is not None else execution_router(args.routing_provider, args.jev_url)
+        self.faults = validate_faults(faults or {}, limits=task.limits)
 
     def __call__(self, gate, events):
         task, args = self.task, self.args
@@ -163,11 +164,13 @@ class BrowserExecutionStrategy:
             return WorkerResult("blocked", "executor_unavailable")
         gate.remaining()
         events.put(("executor_selected", "browser.soh"))
+        barriers = (FaultBarriers(self.faults, gate, events, control_dir=getattr(args, "control_dir", None))
+                    if self.faults else None)
         strategy = HarnessStrategy(task.goal, functools.partial(FixtureBrowser, task, chrome=chrome),
                                    FixtureBrowser.action_space,
                                    functools.partial(_script_provider, self.entries) if self.entries is not None
                                    else _jev_action_provider,
-                                   admit=None, model=self.entries is None, bootstrap=True)
+                                   admit=None, model=self.entries is None, bootstrap=True, faults=barriers)
         return strategy(gate, events)
 
 
@@ -176,11 +179,8 @@ def run_execution(args) -> int:
         task = ExecutionTask.from_dict(_load(args.input))
         if getattr(args, "no_limits", False):
             task = replace(task, limits=Limits(None, None, None, 0))
-        faults = validate_faults(_load(args.faults)) if getattr(args, "faults", None) else {}
-        if faults:
-            # Acceptance fault injection is not wired into this runtime. Accepting the file and
-            # ignoring it would let a run claim a barrier that was never applied.
-            return _error("faults_unsupported")
+        faults = (validate_faults(_load(args.faults), limits=task.limits)
+                  if getattr(args, "faults", None) else {})
         attempt_id = getattr(args, "attempt_id", None)
         if attempt_id is not None and not ATTEMPT_ID.match(attempt_id):
             raise ValidationError("attempt ID must be 32 lowercase hex characters")
@@ -206,7 +206,7 @@ def run_execution(args) -> int:
     except OSError:
         return _error("output_unavailable")
 
-    supervisor = AttemptSupervisor(task, BrowserExecutionStrategy(task, args, entries),
+    supervisor = AttemptSupervisor(task, BrowserExecutionStrategy(task, args, entries, faults=faults),
                                    verifier_factory=FixtureVerifier, attempt_id=attempt_id)
     signal.signal(signal.SIGINT, lambda *_: supervisor.cancel())
     control = Path(args.control_dir) if getattr(args, "control_dir", None) else None
@@ -221,6 +221,9 @@ def run_execution(args) -> int:
     finally:
         # A late SIGINT after the terminal transition is a no-op; it must not interrupt the output.
         signal.signal(signal.SIGINT, lambda *_: None)
+    # Configuration is not proof that a barrier was reached; the redacted
+    # `fault` trace events record which hooks actually ran.
+    result["faults"] = faults
     result.update(trace_ref="trace.jsonl", evidence_persistence="stored", evidence_refs=list(dict.fromkeys(
         [ref for row in result["verification"] for ref in row.get("evidence_refs", [])] +
         [ref for row in result["actions"] for ref in row.get("evidence_refs", [])] +

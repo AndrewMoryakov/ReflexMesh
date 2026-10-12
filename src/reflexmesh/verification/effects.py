@@ -9,7 +9,7 @@ actually did, including repeats inside the driver.
 from __future__ import annotations
 
 # Mutating targets whose click is a POST the fixture records, and the path it is recorded under.
-TARGET_PATHS = {"send-form": "/form", "save-settings": "/settings",
+TARGET_PATHS = {"send-form": "/form", "send-support": "/support", "save-settings": "/settings",
                 "start-export": "/slow/export", "delete-account": "/danger/delete"}
 
 

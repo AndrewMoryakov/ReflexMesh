@@ -22,6 +22,7 @@ from reflexmesh.contracts.execution import ExecutionTask
 from reflexmesh.runtime.handoff import build_handoff
 from reflexmesh.verification.verifier import FixtureVerifier, read_fixture
 from test_v05_runtime import sample
+from test_v05_fixture import FixtureServerCase
 
 ENV = {**os.environ, "PYTHONPATH": str(ROOT / "src")}
 NO_CHROME = "/nonexistent/reflexmesh-test-chrome"
@@ -460,25 +461,8 @@ class Continuation(unittest.TestCase):
         self.assertEqual(child["permissions"], ["navigate"])
 
 
-class SupportPredicate(unittest.TestCase):
-    """The content-gap fixture page and its predicate."""
-
-    def setUp(self):
-        self.port, self.run_id = free_port(), "support-run"
-        self.process = subprocess.Popen([sys.executable, str(ROOT / "experiments/v05/site/server.py"),
-                                         "--port", str(self.port), "--run-id", self.run_id],
-                                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        self.origin = f"http://127.0.0.1:{self.port}"
-        for _ in range(100):
-            try:
-                urllib.request.urlopen(self.origin + "/__state", timeout=0.2).close()
-                break
-            except OSError:
-                time.sleep(0.05)
-
-    def tearDown(self):
-        self.process.terminate()
-        self.process.wait(timeout=5)
+class SupportPredicate(FixtureServerCase):
+    """Owned HTTP support requests; these are not Browser Use acceptance runs."""
 
     def task(self, message=None):
         data = sample()
@@ -490,36 +474,35 @@ class SupportPredicate(unittest.TestCase):
             data["text_slots"].append({"id": "message", "version": 1, "value": message})
         data["criteria"] = [{"id": "sent", "kind": "postcondition", "predicate": "support_request_sent_once",
                              "args": {"name_slot": "name@1", "email_slot": "email@1"}}]
-        return ExecutionTask.from_dict(data)
+        task = ExecutionTask.from_dict(data)
+        self.owner, self.baseline = self.claim(task)
+        return task
 
     def post(self, **fields):
         body = urllib.parse.urlencode(fields).encode()
         try:
-            urllib.request.urlopen(urllib.request.Request(self.origin + "/support", data=body), timeout=2).close()
+            self.request(self.owner, "/support", body).close()
         except urllib.error.HTTPError as exc:
             return exc.code
         return 200
 
     def verify(self, task):
-        verifier = FixtureVerifier(task, self.baseline)
+        verifier = FixtureVerifier(task, self.baseline, ownership=self.owner)
         return verifier(task, 2)[0]["status"]
 
     def test_message_must_come_from_a_declared_slot(self):
         task = self.task("Please call me back.")
-        self.baseline = read_fixture(task, 2)
         self.assertEqual(self.post(name="Test User", email="test@example.com", message="Invented text"), 200)
         self.assertEqual(self.verify(task), "fail")
 
     def test_empty_message_is_rejected_by_the_server(self):
         task = self.task()
-        self.baseline = read_fixture(task, 2)
         self.assertEqual(self.post(name="Test User", email="test@example.com", message=""), 400)
         self.assertEqual(self.verify(task), "fail")
         self.assertEqual(read_fixture(task, 2)["state"]["support_requests"], 0)
 
     def test_declared_message_passes_once(self):
         task = self.task("Please call me back.")
-        self.baseline = read_fixture(task, 2)
         self.post(name="Test User", email="test@example.com", message="Please call me back.")
         self.assertEqual(self.verify(task), "pass")
         self.post(name="Test User", email="test@example.com", message="Please call me back.")
