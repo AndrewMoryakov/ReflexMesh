@@ -87,6 +87,9 @@ def main(argv: list[str] | None = None) -> int:
     brun.add_argument("--no-sandbox", action="store_true",
                       help="start Chromium without its sandbox (or REFLEXMESH_CHROME_NO_SANDBOX=1); recorded in the result")
     brun.add_argument("--attempt-id", metavar="HEX32")
+    bview = browser_sub.add_parser("view", help="read-only local page: who decided each step, what, and how long it took")
+    bview.add_argument("--run-dir", required=True, metavar="DIR", help="a run's output directory (may be still running)")
+    bview.add_argument("--port", type=int, default=8780, help="loopback port; 0 picks a free one")
     mcp = sub.add_parser("mcp", help="serve the Task API over MCP (stdio)")
     mcp.add_argument("--state-dir", required=True, metavar="DIR")
     mcp.add_argument("--chrome", metavar="FILE", help="Chromium executable for browser attempts")
@@ -98,6 +101,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "run":
             from reflexmesh.runtime.cli import run_execution
             return run_execution(args)
+        if args.command == "browser" and args.browser_command == "view":
+            from reflexmesh.runtime.browser_view import serve as serve_view
+            return serve_view(args)
         if args.command == "browser":
             from reflexmesh.runtime.browser_cli import run_browser
             return run_browser(args)
