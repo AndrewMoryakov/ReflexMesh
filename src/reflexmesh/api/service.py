@@ -33,6 +33,39 @@ MAX_WAIT_SECONDS = 50.0
 SHUTDOWN_BOUND = GRACE_SECONDS + KILL_SECONDS + 1.0
 
 
+def _private_directory(path: Path, *, exist_ok: bool = False, tighten_existing: bool = True) -> None:
+    """Create private parents too, without changing existing ancestors of the state root."""
+    try:
+        path.mkdir(mode=0o700)
+    except FileNotFoundError:
+        _private_directory(path.parent, exist_ok=True, tighten_existing=False)
+        _private_directory(path, exist_ok=exist_ok, tighten_existing=tighten_existing)
+        return
+    except FileExistsError:
+        if not exist_ok or path.is_symlink() or not path.is_dir():
+            raise
+        if not tighten_existing:
+            return
+    # mkdir's mode can be reduced by the caller's umask. Also tighten reused state dirs.
+    path.chmod(0o700)
+
+
+def _open_private(path: Path):
+    """Create an owner-only artifact; never overwrite or follow an existing entry."""
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        os.fchmod(descriptor, 0o600)
+        return os.fdopen(descriptor, "wb")
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _write_private_json(path: Path, value) -> None:
+    with _open_private(path) as stream:
+        stream.write(json.dumps(value, indent=1).encode("utf-8"))
+
+
 class ApiError(Exception):
     def __init__(self, code: str, message: str = ""):
         super().__init__(message or code)
@@ -49,7 +82,8 @@ class TaskService:
         if type(max_concurrent) is not int or max_concurrent < 1:
             raise ValueError("max_concurrent must be a positive integer")
         self.root = Path(state_dir).resolve()
-        (self.root / "attempts").mkdir(parents=True, exist_ok=True)
+        _private_directory(self.root, exist_ok=True)
+        _private_directory(self.root / "attempts", exist_ok=True)
         self.chrome, self.jev_url, self.max_concurrent = chrome, jev_url, max_concurrent
         self.allow_faults = allow_faults  # Acceptance barriers only; recorded in every result.
         self.python = python or sys.executable
@@ -103,6 +137,29 @@ class TaskService:
         except ValidationError as exc:
             raise ApiError("invalid_input", str(exc)) from None
 
+    def _consume_handoff(self, parent_attempt_id: str, child_attempt_id: str) -> None:
+        """Persist a one-shot claim before any child can start (INV-10/11/12).
+
+        O_EXCL arbitrates across service instances as well as threads. Never remove the
+        claim on an error: after a crash or an ambiguous launch, retrying could duplicate
+        external effects. Even an incomplete claim is therefore a consumed handoff.
+        """
+        directory = self._dir(parent_attempt_id)
+        try:
+            fd = os.open(directory / "continuation.json", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            raise ApiError("continuation_refused", "the parent handoff has already been consumed") from None
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump({"parent_attempt_id": parent_attempt_id, "child_attempt_id": child_attempt_id}, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Make the directory entry durable too, before launching a process with effects.
+        directory_fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+
     def _start(self, task: dict, routing_provider: str, action_provider: str, script, chain: dict | None,
                faults: dict | None = None) -> dict:
         with self.lock:
@@ -111,40 +168,37 @@ class TaskService:
             if self._running() >= self.max_concurrent:
                 raise ApiError("busy", f"at most {self.max_concurrent} attempt(s) may run at once")
             attempt_id = uuid.uuid4().hex
+            if chain is not None:
+                self._consume_handoff(chain["parent_attempt_id"], attempt_id)
             directory = self.root / "attempts" / attempt_id
-            directory.mkdir(parents=True)
-            (directory / "task.json").write_text(json.dumps(task, indent=1), encoding="utf-8")
+            _private_directory(directory)
+            _write_private_json(directory / "task.json", task)
             command = [self.python, "-m", "reflexmesh", "run", "--input", "task.json", "--output-dir", "out",
                        "--routing-provider", routing_provider, "--action-provider", action_provider,
                        "--attempt-id", attempt_id, "--control-dir", "."]
             if script is not None:
-                (directory / "script.json").write_text(json.dumps(script, indent=1), encoding="utf-8")
+                _write_private_json(directory / "script.json", script)
                 command += ["--script", "script.json"]
             if self.chrome:
                 command += ["--chrome", self.chrome]
             if routing_provider == "jevrouter":
                 command += ["--jev-url", self.jev_url]
             if chain is not None:
-                (directory / "chain.json").write_text(json.dumps(chain, indent=1), encoding="utf-8")
+                _write_private_json(directory / "chain.json", chain)
                 command += ["--chain", "chain.json"]
             if faults:
-                (directory / "faults.json").write_text(json.dumps(faults, indent=1), encoding="utf-8")
+                _write_private_json(directory / "faults.json", faults)
                 command += ["--faults", "faults.json"]
             request = {"attempt_id": attempt_id, "submitted_at": time.time(), "routing_provider": routing_provider,
                        "action_provider": action_provider, "scripted": script is not None,
                        "parent_attempt_id": chain and chain["parent_attempt_id"]}
-            (directory / "request.json").write_text(json.dumps(request, indent=1), encoding="utf-8")
-            stdout = open(directory / "stdout.json", "wb")
-            stderr = open(directory / "stderr.log", "wb")
-            try:
+            _write_private_json(directory / "request.json", request)
+            with _open_private(directory / "stdout.json") as stdout, _open_private(directory / "stderr.log") as stderr:
                 # Own session: a client killing the server's process group does not bypass the
                 # attempt's graceful cancellation; shutdown() reaps attempts explicitly.
                 self.processes[attempt_id] = subprocess.Popen(command, cwd=directory, env=self.env,
                                                               stdin=subprocess.DEVNULL, stdout=stdout,
-                                                              stderr=stderr, start_new_session=True)
-            finally:
-                stdout.close()
-                stderr.close()
+                                                              stderr=stderr, start_new_session=True, umask=0o077)
         return {"attempt_id": attempt_id, "state": "running", "parent_attempt_id": request["parent_attempt_id"]}
 
     def _result(self, directory: Path) -> dict | None:
