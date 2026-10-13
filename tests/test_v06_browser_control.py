@@ -70,6 +70,9 @@ class FakeAdapter:
     def state_key(self, prepared):
         return f"{prepared.operation}:{prepared.ref}@{self.report['signature']}"
 
+    def mutation_key(self, prepared):
+        return f"{prepared.operation}:{prepared.target.name}@{self.report['url']}"
+
     def close(self):
         self.closed = True
 
@@ -295,13 +298,45 @@ class UnknownEffects(unittest.TestCase):
         self.assertIsInstance(h.env.execute("scroll", {"direction": "down"}), SkippedAction)  # reads too
         self.assertTrue(h.env.execute("wait", {}).ok)
         self.assertTrue(h.env.execute("wait", {}).ok)                         # waiting again is allowed
-        h.adapter.report = {**h.adapter.report, "signature": "moved"}
+        h.adapter.report = {**h.adapter.report, "signature": "moved", "url": "http://127.0.0.1:8770/orders?q=1"}
         self.assertTrue(h.env.execute("click", {"element": "1"}).ok)
         h.gate.seal_dispatches()
         rows = {r["id"]: r for r in assess_constraints(
             h.view, h.gate.snapshot(), "attempt-1", dispatches=h.journal.actions, revocations=[],
             driver_outcomes=h.journal.outcomes)}
         self.assertNotEqual(rows["runtime.no_uncertain_repeats"]["status"], "fail")
+
+    def test_a_write_is_not_repeated_on_the_same_document_however_the_page_moved(self):
+        """V0.6 section 9. A real Jev run (2026-10-13) typed and saved one order note nine times: each
+        save added the note to the page, so every repeat looked like a new state. The server effect of a
+        write is unknown here, so the same change on the same document is refused before dispatch."""
+        h = Harness(self)
+        self.assertTrue(h.env.execute("click", {"element": "1"}).ok)                 # Save note
+        h.adapter.report = {**h.adapter.report, "signature": "a note is listed now"}  # same URL
+        self.assertIsInstance(h.env.execute("click", {"element": "1"}), SkippedAction)
+        self.assertEqual(h.gate.snapshot()["dispatches"], 2)                          # bootstrap + one save
+        self.assertEqual([r["reason"] for r in h.journal.records if r["kind"] == "admission_rejected"],
+                         ["repeated_mutation"])
+        self.assertTrue(h.env.execute("scroll", {"direction": "down"}).ok)           # looking is still fine
+        h.gate.seal_dispatches()
+        rows = {r["id"]: r for r in assess_constraints(
+            h.view, h.gate.snapshot(), "attempt-1", dispatches=h.journal.actions, revocations=[],
+            driver_outcomes=h.journal.outcomes)}
+        self.assertNotEqual(rows["runtime.no_uncertain_repeats"]["status"], "fail")
+
+    def test_the_constraint_names_a_repeated_write_by_document_not_page_state(self):
+        """Before 2026-10-13 the assessment keyed rows by page state too and said "no repeated mutation"
+        about the nine saves. Two rows with one mutation key and different page states are a repeat."""
+        h = Harness(self)
+        h.env.execute("click", {"element": "1"})
+        h.gate.seal_dispatches()
+        row = dict(h.journal.actions[-1])
+        again = {**row, "id": row["id"] + 1, "target_id": "same save, another page state"}
+        verdict = assess_constraints(h.view, h.gate.snapshot(), "attempt-1",
+                                     dispatches=h.journal.actions + [again], revocations=[],
+                                     driver_outcomes=h.journal.outcomes)
+        rows = {r["id"]: r for r in verdict}
+        self.assertEqual(rows["runtime.no_uncertain_repeats"]["status"], "fail")
 
     def test_three_cycles_without_a_new_state_stop_as_no_progress(self):
         h = Harness(self)                                     # the harness has looked once already

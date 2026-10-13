@@ -587,3 +587,12 @@ class GenericBrowserAdapter:
         an unchanged page is a repeat, the same button on a page that moved on is not. The target is
         named by what it is (role, name, option, destination, slot), never by Browser Use's index."""
         return f"{action_identity(prepared)}@{self.report.get('signature', '')}"
+
+    def mutation_key(self, prepared: PreparedBrowserAction) -> str:
+        """Identity of "this change on this document", for unknown-effect repeats (V0.6 section 9). A
+        write changes what the page shows (a saved note appears in the list), so the page state is not
+        the key: the same Save on the same order is the same operation however the page moved on."""
+        parts = urlsplit(str(self.report.get("url") or ""))
+        # The query can carry typed values (`?q=...`) and the journal keeps only paths: it goes in as a digest.
+        query = hashlib.sha256(parts.query.encode()).hexdigest()[:12] if parts.query else ""
+        return f"{action_identity(prepared)}@{parts.scheme}://{parts.netloc}{parts.path}?{query}"

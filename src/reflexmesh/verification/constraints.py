@@ -192,7 +192,8 @@ def _assess_repeats(attempt_id: str, snapshot: dict | None, dispatches: list | N
         # Fixture rows carry no `risk` and keep the strict rule.
         if row.get("operation") == "navigate" or row.get("risk") == "read":
             continue
-        key = (row.get("operation"), row.get("target_id"), row.get("slot_ref"))
+        # Browser rows name the change by document, not by page state (a write moves the state on).
+        key = row.get("mutation_key") or (row.get("operation"), row.get("target_id"), row.get("slot_ref"))
         if uncertain or key in seen:
             return {"status": "fail", "observed_at": time.time(), "evidence_refs": ref,
                     "reason": "A mutation was committed again, or after an earlier mutation had an uncertain effect."}

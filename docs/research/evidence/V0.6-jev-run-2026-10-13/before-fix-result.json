@@ -1,0 +1,1598 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "order-note-125",
+  "revision": 1,
+  "chain_id": "d6f1326cc08946c2ac8811072ec47202",
+  "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+  "parent_attempt_id": null,
+  "attempt_status": "incomplete",
+  "stop_reason": "needs_handoff",
+  "task_outcome": "unknown",
+  "execution_outcome": "unknown",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "note_saved",
+      "kind": "postcondition",
+      "predicate": "revisit_match",
+      "status": "unknown",
+      "reason": "No verifier for this predicate exists in this build (V0.6 M4); the criterion stays unknown.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1791915194.7369492,
+      "evidence_refs": [
+        "runtime:d6f1326cc08946c2ac8811072ec47202:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1791915194.7368872,
+      "evidence_refs": [
+        "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:coverage:23",
+        "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:2",
+        "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:5",
+        "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:7",
+        "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:9",
+        "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:11",
+        "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:13",
+        "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:15",
+        "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:17",
+        "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:19",
+        "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:21",
+        "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:23"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "Exclusive fixture claim and browser session/owner identity are not evidenced.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1791915194.7370188,
+      "evidence_refs": [
+        "runtime:d6f1326cc08946c2ac8811072ec47202:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "No repeated mutation was observed at the controlled boundary; adapter-internal single-shot execution is not established.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1791915194.7370698,
+      "evidence_refs": [
+        "runtime:d6f1326cc08946c2ac8811072ec47202:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "start_url",
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 0,
+      "producer": "jev",
+      "bootstrap": true,
+      "destination": "http://127.0.0.1:8770/orders",
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 3,
+      "dispatch_seq": 4,
+      "return_seq": 5,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "browser:d6f1326cc08946c2ac8811072ec47202:6"
+      ],
+      "driver_ok": true
+    },
+    {
+      "id": 2,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "1:text_fields:25",
+      "target_id": "[\"type_text\", \"textbox\", \"Order number\", \"\", \"\", \"order@1\"]@5ea827e50a544aba",
+      "target": {
+        "role": "textbox",
+        "name": "Order number"
+      },
+      "slot_ref": "order@1",
+      "observation_id": 1,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 2,
+      "proposal_seq": 11,
+      "dispatch_seq": 12,
+      "return_seq": 13,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 3,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "2:elements:26",
+      "target_id": "[\"click\", \"button\", \"Search\", \"\", \"\", \"\"]@0588a7c7e9357e67",
+      "target": {
+        "role": "button",
+        "name": "Search"
+      },
+      "slot_ref": null,
+      "observation_id": 2,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 3,
+      "proposal_seq": 20,
+      "dispatch_seq": 21,
+      "return_seq": 22,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": true,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 4,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "3:elements:62",
+      "target_id": "[\"click\", \"link\", \"Заказ №125\", \"\", \"http://127.0.0.1:8770/orders/125\", \"\"]@e56ecfaaa4dd4235",
+      "target": {
+        "role": "link",
+        "name": "Заказ №125"
+      },
+      "slot_ref": null,
+      "observation_id": 3,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": "http://127.0.0.1:8770/orders/125",
+      "policy_revision": 1,
+      "gate_seq": 4,
+      "proposal_seq": 29,
+      "dispatch_seq": 30,
+      "return_seq": 31,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": true,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 5,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "4:text_fields:102",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@c6fa1bb499474e2e",
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "note@1",
+      "observation_id": 4,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 5,
+      "proposal_seq": 38,
+      "dispatch_seq": 39,
+      "return_seq": 40,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 6,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "5:elements:115",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@5edacf72082957c7",
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 5,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 6,
+      "proposal_seq": 47,
+      "dispatch_seq": 48,
+      "return_seq": 49,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 7,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "7:text_fields:176",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@865b5723702db5a9",
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "note@1",
+      "observation_id": 7,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 7,
+      "proposal_seq": 61,
+      "dispatch_seq": 62,
+      "return_seq": 63,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 8,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "8:elements:189",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@695221df5da29736",
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 8,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 8,
+      "proposal_seq": 70,
+      "dispatch_seq": 71,
+      "return_seq": 72,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 9,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "10:text_fields:253",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@9a65101a2ccb582c",
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "note@1",
+      "observation_id": 10,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 9,
+      "proposal_seq": 84,
+      "dispatch_seq": 85,
+      "return_seq": 86,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 10,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "11:elements:266",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@0941b357129e8507",
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 11,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 10,
+      "proposal_seq": 93,
+      "dispatch_seq": 94,
+      "return_seq": 95,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 11,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "13:text_fields:333",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@3050458f6b80f948",
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "note@1",
+      "observation_id": 13,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 11,
+      "proposal_seq": 107,
+      "dispatch_seq": 108,
+      "return_seq": 109,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 12,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "14:elements:346",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@9ed573e4706b829a",
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 14,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 12,
+      "proposal_seq": 116,
+      "dispatch_seq": 117,
+      "return_seq": 118,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 13,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "16:text_fields:416",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@143583889570d697",
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "note@1",
+      "observation_id": 16,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 13,
+      "proposal_seq": 130,
+      "dispatch_seq": 131,
+      "return_seq": 132,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 14,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "17:elements:429",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@3bde6703da596b6e",
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 17,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 14,
+      "proposal_seq": 139,
+      "dispatch_seq": 140,
+      "return_seq": 141,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 15,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "18:text_fields:502",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@ae03020aa0afa912",
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "note@1",
+      "observation_id": 18,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 15,
+      "proposal_seq": 148,
+      "dispatch_seq": 149,
+      "return_seq": 150,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 16,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "19:elements:515",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@debf418a82b6873d",
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 19,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 16,
+      "proposal_seq": 157,
+      "dispatch_seq": 158,
+      "return_seq": 159,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 17,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "20:text_fields:591",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@bb45fbdf418c47d5",
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "note@1",
+      "observation_id": 20,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 17,
+      "proposal_seq": 166,
+      "dispatch_seq": 167,
+      "return_seq": 168,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 18,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "21:elements:604",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@174281f2792bb682",
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 21,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 18,
+      "proposal_seq": 175,
+      "dispatch_seq": 176,
+      "return_seq": 177,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 19,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "22:text_fields:683",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@43da00e0e8e2045c",
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "note@1",
+      "observation_id": 22,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 19,
+      "proposal_seq": 184,
+      "dispatch_seq": 185,
+      "return_seq": 186,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 20,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "23:elements:696",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@f1c5bbaf3bbfdc71",
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 23,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 20,
+      "proposal_seq": 193,
+      "dispatch_seq": 194,
+      "return_seq": 195,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 21,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "24:text_fields:778",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@f016b2efe608f9fb",
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "note@1",
+      "observation_id": 24,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 21,
+      "proposal_seq": 202,
+      "dispatch_seq": 203,
+      "return_seq": 204,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 22,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "25:elements:791",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@0bb0153bf8644fe4",
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 25,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 22,
+      "proposal_seq": 211,
+      "dispatch_seq": 212,
+      "return_seq": 213,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 23,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "26:text_fields:876",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@927af40b092e1fba",
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "note@1",
+      "observation_id": 26,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 23,
+      "proposal_seq": 220,
+      "dispatch_seq": 221,
+      "return_seq": 222,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    }
+  ],
+  "budget": {
+    "steps": 30,
+    "model_calls": 29,
+    "dispatches": 23,
+    "limits": {
+      "wall_seconds": 120.0,
+      "max_steps": 64,
+      "max_model_calls": 96,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 34,
+    "remaining_model_calls": 67,
+    "remaining_wall_seconds": 79.476,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 40.512
+  },
+  "handoff": {
+    "schema_version": "browser-handoff/0.1-partial",
+    "reason": "no_confident_action",
+    "task_id": "order-note-125",
+    "revision": 1,
+    "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+    "observation_ref": 29,
+    "page": "http://127.0.0.1:8770/orders/125",
+    "operations": [
+      {
+        "id": 1,
+        "operation": "navigate",
+        "option_ref": null,
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "applied"
+      },
+      {
+        "id": 2,
+        "operation": "type_text",
+        "option_ref": "1:text_fields:25",
+        "slot_ref": "order@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 3,
+        "operation": "click",
+        "option_ref": "2:elements:26",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 4,
+        "operation": "click",
+        "option_ref": "3:elements:62",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 5,
+        "operation": "type_text",
+        "option_ref": "4:text_fields:102",
+        "slot_ref": "note@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 6,
+        "operation": "click",
+        "option_ref": "5:elements:115",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 7,
+        "operation": "type_text",
+        "option_ref": "7:text_fields:176",
+        "slot_ref": "note@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 8,
+        "operation": "click",
+        "option_ref": "8:elements:189",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 9,
+        "operation": "type_text",
+        "option_ref": "10:text_fields:253",
+        "slot_ref": "note@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 10,
+        "operation": "click",
+        "option_ref": "11:elements:266",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 11,
+        "operation": "type_text",
+        "option_ref": "13:text_fields:333",
+        "slot_ref": "note@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 12,
+        "operation": "click",
+        "option_ref": "14:elements:346",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 13,
+        "operation": "type_text",
+        "option_ref": "16:text_fields:416",
+        "slot_ref": "note@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 14,
+        "operation": "click",
+        "option_ref": "17:elements:429",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 15,
+        "operation": "type_text",
+        "option_ref": "18:text_fields:502",
+        "slot_ref": "note@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 16,
+        "operation": "click",
+        "option_ref": "19:elements:515",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 17,
+        "operation": "type_text",
+        "option_ref": "20:text_fields:591",
+        "slot_ref": "note@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 18,
+        "operation": "click",
+        "option_ref": "21:elements:604",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 19,
+        "operation": "type_text",
+        "option_ref": "22:text_fields:683",
+        "slot_ref": "note@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 20,
+        "operation": "click",
+        "option_ref": "23:elements:696",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 21,
+        "operation": "type_text",
+        "option_ref": "24:text_fields:778",
+        "slot_ref": "note@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 22,
+        "operation": "click",
+        "option_ref": "25:elements:791",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 23,
+        "operation": "type_text",
+        "option_ref": "26:text_fields:876",
+        "slot_ref": "note@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      }
+    ],
+    "permissions": [
+      "click",
+      "go_back",
+      "navigate",
+      "scroll",
+      "select_option",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ],
+    "text_slot_refs": [
+      "order@1",
+      "note@1"
+    ],
+    "continuation": {
+      "allowed": false,
+      "reason": "resume_not_implemented"
+    }
+  },
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": true
+    },
+    "chromium": "Google Chrome for Testing 153.0.8010.12",
+    "chromium_sandbox": false,
+    "headless": true,
+    "decision_provider": {
+      "kind": "jev",
+      "config_id": "openrouter:~typesafe/jev-latest",
+      "requested_model": "~typesafe/jev-latest"
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "closed",
+    "profile_removed": true,
+    "browser_processes_left": 0
+  },
+  "watchdog": {
+    "watchdog_kill": false,
+    "worker_stopped": true
+  },
+  "decision": {
+    "kind": "jev",
+    "requested_model": "~typesafe/jev-latest",
+    "served_models": [
+      "typesafe/jev-1.13-20260917"
+    ],
+    "config_id": "openrouter:~typesafe/jev-latest"
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:d6f1326cc08946c2ac8811072ec47202:permissions",
+    "runtime:d6f1326cc08946c2ac8811072ec47202:dispatch_ordering",
+    "runtime:d6f1326cc08946c2ac8811072ec47202:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 40.512,
+    "total_seconds": 40.568
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:1",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:2",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "text",
+      "slot_ref": "order@1"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:2",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "text",
+      "slot_ref": "order@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:3",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 3,
+      "generation": 3,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:4",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 4,
+      "generation": 4,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:5",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 5,
+      "generation": 5,
+      "classification": "text",
+      "slot_ref": "note@1"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:5",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 5,
+      "generation": 5,
+      "classification": "text",
+      "slot_ref": "note@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:6",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 6,
+      "generation": 6,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:7",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 7,
+      "generation": 7,
+      "classification": "text",
+      "slot_ref": "note@1"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:7",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 7,
+      "generation": 7,
+      "classification": "text",
+      "slot_ref": "note@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:8",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 8,
+      "generation": 8,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:9",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 9,
+      "generation": 9,
+      "classification": "text",
+      "slot_ref": "note@1"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:9",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 9,
+      "generation": 9,
+      "classification": "text",
+      "slot_ref": "note@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:10",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 10,
+      "generation": 10,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:11",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 11,
+      "generation": 11,
+      "classification": "text",
+      "slot_ref": "note@1"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:11",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 11,
+      "generation": 11,
+      "classification": "text",
+      "slot_ref": "note@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:12",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 12,
+      "generation": 12,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:13",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 13,
+      "generation": 13,
+      "classification": "text",
+      "slot_ref": "note@1"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:13",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 13,
+      "generation": 13,
+      "classification": "text",
+      "slot_ref": "note@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:14",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 14,
+      "generation": 14,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:15",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 15,
+      "generation": 15,
+      "classification": "text",
+      "slot_ref": "note@1"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:15",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 15,
+      "generation": 15,
+      "classification": "text",
+      "slot_ref": "note@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:16",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 16,
+      "generation": 16,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:17",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 17,
+      "generation": 17,
+      "classification": "text",
+      "slot_ref": "note@1"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:17",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 17,
+      "generation": 17,
+      "classification": "text",
+      "slot_ref": "note@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:18",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 18,
+      "generation": 18,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:19",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 19,
+      "generation": 19,
+      "classification": "text",
+      "slot_ref": "note@1"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:19",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 19,
+      "generation": 19,
+      "classification": "text",
+      "slot_ref": "note@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:20",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 20,
+      "generation": 20,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:21",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 21,
+      "generation": 21,
+      "classification": "text",
+      "slot_ref": "note@1"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:21",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 21,
+      "generation": 21,
+      "classification": "text",
+      "slot_ref": "note@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:22",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 22,
+      "generation": 22,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:commitment:23",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 23,
+      "generation": 23,
+      "classification": "text",
+      "slot_ref": "note@1"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:handoff:23",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 23,
+      "generation": 23,
+      "classification": "text",
+      "slot_ref": "note@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:d6f1326cc08946c2ac8811072ec47202:immutable-slots:coverage:23",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "d6f1326cc08946c2ac8811072ec47202",
+      "run_id": "d6f1326cc08946c2ac8811072ec47202",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 23,
+      "dispatches": 23,
+      "text_dispatches": 11,
+      "nontext_dispatches": 12,
+      "unknown_dispatches": 0,
+      "sealed_generation": 23,
+      "status": "pass"
+    }
+  ]
+}

@@ -137,6 +137,7 @@ class Journal:
             self.actions.append({
                 "id": action_id, "operation": desc.get("operation"), "risk": desc.get("risk"),
                 "option_ref": desc.get("option_ref"), "target_id": desc.get("target_id"),
+                "mutation_key": desc.get("mutation_key"),
                 "target": desc.get("target"), "slot_ref": desc.get("slot_ref"),
                 "observation_id": desc.get("observation_id"), "producer": self.producer,
                 "bootstrap": desc.get("bootstrap", False), "destination": desc.get("destination"),
@@ -177,6 +178,7 @@ class BrowserControlledEnvironment:
         self._last_state: str | None = None
         self._unchanged = 0
         self._done_in_state: set[str] = set()
+        self._mutations: set[str] = set()
 
     def _stop(self, reason: str) -> RuntimeStop:
         self.last_stop = reason
@@ -280,6 +282,14 @@ class BrowserControlledEnvironment:
             self.journal.put(("rejected", "repeated_action"))
             self.journal.put(("reobserve", "repeated_action"))
             return SkippedAction()
+        mutation_key = self.inner.mutation_key(prepared) if prepared.risk == "write" else None
+        if mutation_key is not None and mutation_key in self._mutations:
+            # A write's server effect is unknown in this build, and a write changes the page (the saved
+            # note shows up), so a new page state does not make the same Save a new operation (V0.6
+            # section 9). A real Jev run saved one note nine times before this check existed.
+            self.journal.put(("rejected", "repeated_mutation"))
+            self.journal.put(("reobserve", "repeated_mutation"))
+            return SkippedAction()
         classification = "text" if prepared.action == "type_text" else "nontext"
         try:
             action_id, gate_seq = self.gate.commit_dispatch_seq(classification, operation=operation,
@@ -294,6 +304,9 @@ class BrowserControlledEnvironment:
             raise self._stop(exc.reason) from None
         descriptor = prepared.descriptor()
         self._done_in_state.add(state_key)
+        if mutation_key is not None:
+            self._mutations.add(mutation_key)
+            descriptor["mutation_key"] = mutation_key
         self.journal.put(("dispatch", action_id, {**descriptor, "gate_seq": gate_seq,
                                                   "policy_revision": self.observed_revision,
                                                   "target_id": state_key}))
