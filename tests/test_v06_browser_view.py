@@ -139,6 +139,23 @@ class Derivation(unittest.TestCase):
         self.assertEqual(view["result"]["stop_reason"], "verification_unknown")
         self.assertIsNotNone(view["meta"]["start"]["driver_ms"])
 
+    def test_the_verifier_is_shown_as_its_own_actor_with_the_criteria(self):
+        """M4a: the reopen is the verifier's, not a model decision; each step carries the runtime's criterion
+        judgement. Read from the stored real Jev run."""
+        folder = ROOT / "docs/research/evidence/V0.6-M4a-verifier-2026-10-13"
+        records = [json.loads(line) for line in (folder / "jev-trace.jsonl").read_text("utf-8").splitlines()]
+        view = build_view(records, json.loads((folder / "jev-result.json").read_text("utf-8")))
+        verifying = [s for s in view["steps"] if s.get("kind") == "verification"]
+        self.assertEqual(len(verifying), 1)
+        self.assertNotIn("decision", verifying[0])
+        self.assertEqual((verifying[0]["outcome"]["kind"], verifying[0]["verifier"]["ok"]), ("verifier_reopen", True))
+        seen = [(c["status"], c["reason"]) for s in view["steps"] for c in s.get("criteria") or []]
+        self.assertIn(("fail", "value_differs"), seen)
+        self.assertEqual(seen[-1], ("pass", "value_matches"))
+        self.assertEqual(view["result"]["criteria"], [{"id": "note_saved", "status": "pass", "reason": "value_matches",
+                                                        "scope": "ui_after_reopen"}])
+        self.assertEqual(view["summary"]["authors"], {"typesafe/jev-1.13-20260917": 5})
+
     def test_a_half_written_last_line_is_ignored(self):
         with tempfile.TemporaryDirectory() as directory:
             Path(directory, "trace.jsonl").write_text(json.dumps(rec(1, 0.0, "attempt_started")) + '\n{"seq": 2, "t"',

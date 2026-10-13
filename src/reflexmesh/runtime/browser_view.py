@@ -122,6 +122,18 @@ def build_view(records: list[dict], result: dict | None) -> dict:
         elif kind == "admission_rejected":
             current["admission_ms"] = _ms(t - current.get("proposal_t", t))
             current["outcome"] = {"kind": "rejected", "reason": row.get("reason")}
+        elif kind == "criterion_assessed":
+            # The runtime's own judgement of a task criterion on this page (no values, only status).
+            entry = {k: row.get(k) for k in ("id", "status", "reason", "stage")}
+            if entry not in current.setdefault("criteria", []):
+                current["criteria"].append(entry)
+        elif kind == "dispatch_committed" and row.get("producer") == "verifier":
+            # Not the model: the verifier reopening the document to check a revisit_match criterion.
+            current["verifier"] = {"operation": row.get("operation"), "destination": row.get("destination"),
+                                   "action_id": row.get("action_id")}
+            current["dispatch_t"] = t
+            current["outcome"] = {"kind": "verifier_reopen"}
+            by_action[row.get("action_id")] = current
         elif kind == "dispatch_committed":
             current["admission_ms"] = _ms(t - current.get("proposal_t", t))
             current["dispatch"] = {k: row.get(k) for k in ("action_id", "operation", "risk", "option_ref", "target",
@@ -134,7 +146,10 @@ def build_view(records: list[dict], result: dict | None) -> dict:
             if owner is not None:
                 owner["driver_ms"] = _ms(t - owner.get("dispatch_t", t))
                 good = row.get("ok") is True and not row.get("error")
-                owner["outcome"] = {"kind": "done" if good else "driver_error"}
+                if owner.get("verifier") is not None:
+                    owner["verifier"]["ok"] = good
+                else:
+                    owner["outcome"] = {"kind": "done" if good else "driver_error"}
         elif kind == "effect_assessed":
             owner = by_action.get(row.get("action_id"))
             if owner is not None and not owner.get("start"):
@@ -146,8 +161,14 @@ def build_view(records: list[dict], result: dict | None) -> dict:
 
     terminated = bool(meta.get("terminal")) or bool(result)
     for step in steps:
-        if not step.get("decision") and not step.get("decision_error") and "outcome" not in step:
-            # No decision was asked for here: either the look after `finish`, or one still being made.
+        if step.get("verifier") is not None or (not step.get("decision") and not step.get("decision_error") and
+                                                 "outcome" not in step and any(c.get("stage") == "page" and c.get("reason")
+                                                 in ("not_reopened", "value_matches", "value_extracted")
+                                                 for c in step.get("criteria") or []) and step is not steps[-1]):
+            # The criteria held here, so the runtime stopped asking the model and verified instead.
+            step["kind"] = "verification"
+        elif not step.get("decision") and not step.get("decision_error") and "outcome" not in step:
+            # No decision was asked for here: either the last look before the end, or one still being made.
             step["kind"] = "final_observation" if terminated and step is steps[-1] else "awaiting_decision"
         decision = step.get("decision")
         filled = (decision or {}).get("filled_by_translator") or {}
@@ -179,6 +200,8 @@ def build_view(records: list[dict], result: dict | None) -> dict:
         shown = {k: result.get(k) for k in ("attempt_status", "stop_reason", "task_outcome", "execution_outcome")}
         shown["budget"] = {k: (result.get("budget") or {}).get(k) for k in ("steps", "model_calls", "dispatches")}
         shown["decision"] = result.get("decision")
+        shown["criteria"] = [{k: row.get(k) for k in ("id", "status", "reason", "scope")}
+                             for row in result.get("verification") or [] if row.get("kind") == "postcondition"]
     return {"state": state, "meta": meta, "summary": summary, "steps": steps, "result": shown}
 
 

@@ -7,7 +7,8 @@ the chain options -> decision -> admission -> dispatch -> driver -> observed eff
 
 What this build does not do, stated here so a green run is not misread:
   * no process isolation (the loop runs in a thread; a watchdog kills the browser on a hang),
-  * no verifier for task criteria (M4), so a finished run is `incomplete/verification_unknown`,
+  * criteria are judged on the page (section 11), but `completed` also needs every runtime constraint
+    and every action effect settled, which this build cannot yet establish on an arbitrary site,
   * no handoff continuation (M3), only the package that explains the stop.
 """
 
@@ -38,6 +39,7 @@ from reflexmesh.runtime.runner import (
 from reflexmesh.text.slots import SlotRegistry
 from reflexmesh.tracing.slot_evidence import SlotEvidence
 from reflexmesh.verification.constraints import ConstraintAssessments, assess_constraints
+from reflexmesh.verification.page_verifier import PREDICATES as PAGE_PREDICATES, judge, normalized
 
 RESULT_SCHEMA = "browser-result/0.1"
 SOH_PIN = "ab8e8f08b4a6268c0633a474423d556599ee06a4"
@@ -46,7 +48,6 @@ STALE_LIMIT = 3
 NO_PROGRESS_LIMIT = 3  # cycles in a row whose observation shows no new essential state (V0.6 section 8)
 HANDOFF_REASONS = {"no_confident_action": "no_confident_action", "escalation_requested": "escalation_requested",
                    "repeated_action": "no_progress", "stale_loop": "stale_loop"}
-PREDICATE_PENDING = "No verifier for this predicate exists in this build (V0.6 M4); the criterion stays unknown."
 MIN_SCRUBBED_NORMAL = 4
 
 
@@ -139,7 +140,7 @@ class Journal:
                 "option_ref": desc.get("option_ref"), "target_id": desc.get("target_id"),
                 "mutation_key": desc.get("mutation_key"),
                 "target": desc.get("target"), "slot_ref": desc.get("slot_ref"),
-                "observation_id": desc.get("observation_id"), "producer": self.producer,
+                "observation_id": desc.get("observation_id"), "producer": desc.get("producer") or self.producer,
                 "bootstrap": desc.get("bootstrap", False), "destination": desc.get("destination"),
                 "policy_revision": desc.get("policy_revision"), "gate_seq": desc.get("gate_seq"),
                 "proposal_seq": self._proposal_seq, "dispatch_seq": seq, "return_seq": None,
@@ -166,6 +167,86 @@ class Journal:
             self._file = None
 
 
+class CriteriaVerifier:
+    """Task criteria judged by the runtime on fresh observations (V0.6 sections 8 and 11), never by the
+    model's word. Every cycle looks at the page (no navigation); a `revisit_match` passes only after the
+    verifier itself opened the document again through the dispatch gate."""
+
+    def __init__(self, task: BrowserTask, attempt_id: str, journal: Journal):
+        self.task, self.attempt_id, self.journal = task, attempt_id, journal
+        self.rows = {c.id: {"id": c.id, "kind": "postcondition", "predicate": c.predicate, "status": "unknown",
+                            "reason": "not_assessed", "scope": None, "observed_at": None, "evidence_refs": []}
+                     for c in task.criteria}
+        self.outputs: dict[str, dict] = {}
+        self.ready: dict[str, bool] = {}   # revisit_match whose page check passed and awaits the reopen
+
+    def _slot(self, ref: str):
+        return next((s for s in self.task.slots if s.reference == ref), None)
+
+    def _judge(self, criterion, adapter) -> dict:
+        if criterion.predicate not in PAGE_PREDICATES:
+            return {"status": "unknown", "reason": "no_registered_check", "facts": {}}
+        anchor = self._slot(criterion.args["anchor_slot_ref"])
+        expected = self._slot(criterion.args["expected_slot_ref"]) if "expected_slot_ref" in criterion.args else None
+        if anchor is None or anchor.sensitivity != "normal" or (expected is not None and expected.sensitivity != "normal"):
+            return {"status": "unknown", "reason": "secret_slot_not_compared", "facts": {}}
+        try:
+            probe = adapter.inspect(normalized(anchor.value), normalized(criterion.args["field_name"]))
+        except Exception:
+            probe = None
+        return judge(criterion.predicate, probe, expected.value if expected is not None else None)
+
+    def _record(self, criterion, verdict: dict, stage: str, *, always: bool = False) -> None:
+        row = self.rows[criterion.id]
+        status, reason = verdict["status"], verdict["reason"]
+        if criterion.predicate == "revisit_match" and stage == "page":
+            # The page shows the value; the criterion still needs the reopen.
+            self.ready[criterion.id] = status == "pass"
+            if status == "pass":
+                status, reason = "unknown", "not_reopened"
+        if not always and (row["status"], row["reason"]) == (status, reason):
+            return
+        seq = self.journal.emit("criterion_assessed", id=criterion.id, predicate=criterion.predicate, status=status,
+                                reason=reason, stage=stage, **verdict["facts"])
+        row.update(status=status, reason=reason, scope="ui_after_reopen" if stage == "reopened" else "ui_observation",
+                   observed_at=time.time(), evidence_refs=[f"browser:{self.attempt_id}:{seq}"])
+        if criterion.predicate == "scoped_extract":
+            if status == "pass":
+                self.outputs[criterion.id] = {"criterion_id": criterion.id, "key": criterion.args["output_key"],
+                                              "value": verdict["value"], "evidence_refs": list(row["evidence_refs"])}
+            else:
+                self.outputs.pop(criterion.id, None)
+
+    def page_check(self, adapter) -> bool:
+        """Judge every criterion on the page as it is now; True when each one holds here."""
+        held = True
+        for criterion in self.task.criteria:
+            verdict = self._judge(criterion, adapter)
+            self._record(criterion, verdict, "page")
+            held = held and verdict["status"] == "pass"
+        return held and bool(self.task.criteria)
+
+    def final(self, env: "BrowserControlledEnvironment") -> None:
+        """The verification that may complete the attempt: a fresh look, then one reopen for revisit_match."""
+        adapter = env.inner
+        for criterion in self.task.criteria:
+            self._record(criterion, self._judge(criterion, adapter), "page", always=True)
+        waiting = [c for c in self.task.criteria if c.predicate == "revisit_match" and self.ready.get(c.id)]
+        if not waiting:
+            return
+        before = adapter.document_id()
+        reopened = env.reopen()
+        for criterion in waiting:
+            if not reopened or adapter.document_id() in (None, before):
+                self._record(criterion, {"status": "unknown", "reason": "not_reopened", "facts": {}}, "reopened",
+                             always=True)
+            else:
+                self._record(criterion, self._judge(criterion, adapter), "reopened", always=True)
+
+    def result_rows(self) -> list[dict]:
+        return [dict(row, evidence_refs=list(row["evidence_refs"])) for row in self.rows.values()]
+
+
 class BrowserControlledEnvironment:
     """SystemOneHarness `Environment` whose every command passes admission and the dispatch gate."""
 
@@ -179,6 +260,7 @@ class BrowserControlledEnvironment:
         self._unchanged = 0
         self._done_in_state: set[str] = set()
         self._mutations: set[str] = set()
+        self.verifier: CriteriaVerifier | None = None
 
     def _stop(self, reason: str) -> RuntimeStop:
         self.last_stop = reason
@@ -225,6 +307,9 @@ class BrowserControlledEnvironment:
             raise
         effect, self.inner.effect_report = self.inner.effect_report, None
         self.journal.observed(self.inner.report, effect)
+        if self.verifier is not None and self.verifier.page_check(self.inner):
+            # Every criterion holds on this page: the runtime verifies now, whatever the model would say next.
+            raise self._stop("criteria_met")
         state = self.inner.report.get("signature")
         self._unchanged = self._unchanged + 1 if state is not None and state == self._last_state else 0
         self._last_state = state
@@ -233,6 +318,44 @@ class BrowserControlledEnvironment:
             # can see move. Stopping here is the rule, not a judgement on the model.
             raise self._stop("no_progress")
         return obs
+
+    def reopen(self) -> bool:
+        """The verifier opens the observed document again: a navigation like any other (permission, origin,
+        step, gate, journal), produced by the verifier, never a resubmitted form."""
+        url = str(self.inner.report.get("url") or "")
+        if "navigate" not in self.task.permissions or canonical_origin(url) not in self.task.allowed_origins:
+            return False
+        try:
+            self.gate.reserve_step()
+            self.journal.put(("proposal", {"action": "navigate", "producer": "verifier"}))
+            self.observed_revision = self.gate.revision()
+            action_id, gate_seq = self.gate.commit_dispatch_seq("nontext", operation="navigate",
+                                                                revision=self.observed_revision)
+            if self.gate.slot_sink is not None:
+                self.gate.slot_sink.commit(action_id, "nontext", None)
+        except RuntimeStop:
+            return False
+        parts = urlsplit(url)
+        self.journal.put(("dispatch", action_id, {
+            "operation": "navigate", "risk": "write", "producer": "verifier", "gate_seq": gate_seq,
+            "observation_id": self.inner.report.get("observation_id"), "policy_revision": self.observed_revision,
+            "target_id": "reopen", "destination": f"{parts.scheme}://{parts.netloc}{parts.path or '/'}"}))
+        try:
+            self.inner.reopen()
+        except Exception:
+            self.journal.put(("effect_unknown", action_id))
+            return False
+        else:
+            self.journal.put(("driver_return", action_id, True))
+        finally:
+            self.gate.settle(action_id)
+        try:
+            self.inner.observe()
+        except Exception:
+            return False
+        effect, self.inner.effect_report = self.inner.effect_report, None
+        self.journal.observed(self.inner.report, effect)
+        return True
 
     def verification_observation(self):
         """A last read-only look after the loop; it is not a decision cycle and spends no step."""
@@ -514,6 +637,7 @@ class BrowserRun:
         self.journal.emit("attempt_started", attempt_id=self.attempt_id, provider=self.action_provider,
                           config_id=self.config_id, requested_model=self.requested_model)
         self.provider = JournalingProvider(ValidatingProvider(provider), self.journal, self.requested_model)
+        self.verifier = CriteriaVerifier(task, self.attempt_id, self.journal)
         worker = threading.Thread(target=self._work, name="reflexmesh-browser-loop", daemon=True)
         worker.start()
         cleanup_notes = self._supervise(worker)
@@ -540,15 +664,25 @@ class BrowserRun:
             self.adapter.bind_runtime(self.registry, self.slot_evidence.sink)
             space = browser_action_space(self.task.permissions)
             controlled = BrowserControlledEnvironment(self.adapter, self.gate, journal, self.task)
+            controlled.verifier = self.verifier
             counting = CountingProvider(self.provider, self.gate, journal, model=self.action_provider in MODEL_PROVIDERS)
-            run = Controller(space, controlled, counting, gate=JournalGate(space.gate),
-                             max_steps=math.inf, timeout_seconds=None).run(self.task.goal)
-            if controlled.last_stop:
+            try:
+                run = Controller(space, controlled, counting, gate=JournalGate(space.gate),
+                                 max_steps=math.inf, timeout_seconds=None).run(self.task.goal)
+            except RuntimeStop as exc:
+                if exc.reason != "criteria_met":
+                    raise
+                run = None
+            if controlled.last_stop == "criteria_met":
+                self.verifier.final(controlled)
+                self.outcome = {"kind": "verify", "reason": "criteria_met"}
+            elif controlled.last_stop:
                 raise RuntimeStop(controlled.last_stop)
-            if run.status == "failed":
+            elif run.status == "failed":
                 self.outcome = {"kind": "failed", "reason": run.reason}
             elif run.status == "completed":
                 controlled.verification_observation()
+                self.verifier.final(controlled)
                 self.outcome = {"kind": "finish", "reason": run.reason}
             else:
                 self.outcome = {"kind": "handoff", "reason": run.reason}
@@ -619,7 +753,7 @@ class BrowserRun:
             return "failed", ("protocol_error" if out["reason"] == "provider_error" else "executor_error"), None
         if out["kind"] == "handoff":
             return "incomplete", "needs_handoff", HANDOFF_REASONS.get(out["reason"], out["reason"])
-        return "verifying", "finish", None
+        return "verifying", out["reason"] if out["kind"] == "verify" else "finish", None
 
     def _finish(self, started: float, notes: dict) -> dict:
         task, gate, journal = self.task, self.gate, self.journal
@@ -630,12 +764,9 @@ class BrowserRun:
         except RuntimeStop:
             pass
         self.slot_evidence.drain()
-        # Criteria: this build has no verifier, so none can pass (M4). Unknown is not a soft pass.
-        criteria = [{"id": c.id, "kind": "postcondition", "predicate": c.predicate, "status": "unknown",
-                     "reason": PREDICATE_PENDING, "observed_at": None, "evidence_refs": []}
-                    for c in task.criteria]
-        for row in criteria:
-            journal.emit("criterion_assessed", id=row["id"], predicate=row["predicate"], status="unknown")
+        # Criteria as the runtime's verifier last judged them. After a stop other than finish or met criteria
+        # they are late information: the first terminal wins and they never turn the attempt into completed.
+        criteria = self.verifier.result_rows()
         constraints = ConstraintAssessments()
         try:
             snapshot = gate.snapshot()
@@ -645,20 +776,42 @@ class BrowserRun:
         constraints.update(assess_constraints(self.view, snapshot, self.attempt_id, slot_evidence=self.slot_evidence,
                                               coverage=coverage, ownership=None, dispatches=journal.actions,
                                               revocations=[], driver_outcomes=journal.outcomes, effect_snapshot=None))
+        expected_generation = None
         if status == "verifying":
+            verdicts = [row["status"] for row in criteria]
+            dispatches = journal.actions
+            settled = (snapshot is not None and not snapshot["in_flight"] and
+                       len(dispatches) == snapshot["dispatches"] and
+                       all(row["effect"] != "unknown" for row in dispatches))
             if constraints.has_fail():
                 status, reason = "failed", "constraint_violated"
+            elif "fail" in verdicts:
+                status, reason = "failed", "postcondition_failed"
+            elif verdicts and all(v == "pass" for v in verdicts) and constraints.all_pass() and settled:
+                # Section 11: every criterion and constraint passes and no effect is left unknown.
+                status = "completed"
+                reason = ("already_satisfied" if all(row["bootstrap"] or row["producer"] == "verifier"
+                                                     for row in dispatches) else "verified")
+                # Completion is accepted only if no slot evidence moved since it was assessed.
+                expected_generation = gate.generation.value
             else:
                 status, reason = "incomplete", "verification_unknown"
+        accepted = None
         try:
-            accepted = gate.finish()
-        except RuntimeStop:
-            status, reason = "failed", "executor_error"
-        else:
-            if accepted == 1:
-                status, reason = "cancelled", "cancel_requested"
-            elif accepted == 2 and status != "cancelled":
-                status, reason = "incomplete", "deadline"
+            accepted = gate.finish(expected_generation=expected_generation)
+        except RuntimeStop as exc:
+            if exc.reason == "evidence_changed":
+                status, reason = "incomplete", "verification_unknown"
+                try:
+                    accepted = gate.finish()
+                except RuntimeStop:
+                    status, reason = "failed", "executor_error"
+            else:
+                status, reason = "failed", "executor_error"
+        if accepted == 1:
+            status, reason = "cancelled", "cancel_requested"
+        elif accepted == 2 and status != "cancelled":
+            status, reason = "incomplete", "deadline"
         journal.emit("terminal", attempt_status=status, stop_reason=reason, handoff_reason=handoff_reason)
         cleanup = self._cleanup()
         try:
@@ -676,14 +829,14 @@ class BrowserRun:
         unsettled = any(a["effect"] == "unknown" for a in actions) or bool(snapshot["in_flight"])
         outcome = ("fail" if constraints.has_fail() or (status == "failed" and reason in
                                                        ("postcondition_failed", "constraint_violated"))
-                   else "unknown")
+                   else "pass" if status == "completed" else "unknown")
         result = {
             "schema_version": RESULT_SCHEMA, "task_id": task.task_id, "revision": task.revision,
             "chain_id": standalone_chain(self.attempt_id)["root_attempt_id"], "attempt_id": self.attempt_id,
             "parent_attempt_id": None, "attempt_status": status, "stop_reason": reason, "task_outcome": outcome,
             "execution_outcome": ("unknown" if unsettled else "returned" if snapshot["dispatches"]
                                   else "error" if status == "failed" else "not_started"),
-            "outputs": [], "verification": criteria + constraints.rows(),
+            "outputs": list(self.verifier.outputs.values()), "verification": criteria + constraints.rows(),
             "actions": actions, "budget": {
                 "steps": steps, "model_calls": calls, "dispatches": snapshot["dispatches"],
                 "limits": {"wall_seconds": limits.wall_seconds, "max_steps": limits.max_steps,

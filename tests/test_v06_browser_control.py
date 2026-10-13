@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from reflexmesh.adapters.system_one.browser_adapter import PreparedBrowserAction, Target
 from reflexmesh.contracts.browser import BrowserTask, OPERATION_BITS as BROWSER_BITS
 from reflexmesh.contracts.execution import OPERATION_BITS as FIXTURE_BITS, ExecutionTask
-from reflexmesh.runtime.browser_run import AttemptTask, BrowserControlledEnvironment, Journal
+from reflexmesh.runtime.browser_run import AttemptTask, BrowserControlledEnvironment, CriteriaVerifier, Journal
 from reflexmesh.runtime.runner import AttemptGate, RuntimeStop, SkippedAction
 from reflexmesh.text.slots import SlotRegistry
 from reflexmesh.verification.constraints import assess_constraints
@@ -72,6 +72,20 @@ class FakeAdapter:
 
     def mutation_key(self, prepared):
         return f"{prepared.operation}:{prepared.target.name}@{self.report['url']}"
+
+    # verifier hooks: a scripted probe result per call, and a document id that a reopen renews
+    probe = {"state": "unknown", "reason": "no_anchor", "anchors": 0}
+    reopened = 0
+
+    def inspect(self, anchor, field_name):
+        self.inspected = (anchor, field_name)
+        return self.probe
+
+    def document_id(self):
+        return f"loader-{self.reopened}"
+
+    def reopen(self):
+        self.reopened += 1
 
     def close(self):
         self.closed = True
@@ -349,6 +363,85 @@ class UnknownEffects(unittest.TestCase):
         for n in range(6):
             h2.adapter.report = {**h2.adapter.report, "signature": f"s{n // 2}"}
             h2.env.observe()                                  # a change every second cycle never stops
+
+
+class Verification(unittest.TestCase):
+    """V0.6 sections 8 and 11 at the control layer: criteria judged on every observation, the reopen of a
+    revisit_match is the verifier's own gated navigation, and no page value reaches the journal."""
+
+    NOTE = {"state": "bound", "binding": "named_container", "anchors": 1,
+            "values": ["Перезвонить завтра", "Unrelated page text"]}
+
+    def harness(self, task=None):
+        h = Harness(self, task=task)
+        h.verifier = h.env.verifier = CriteriaVerifier(h.task, "attempt-1", h.journal)
+        return h
+
+    def test_the_loop_stops_for_verification_once_every_criterion_holds_on_the_page(self):
+        h = self.harness()
+        h.env.observe()                                          # nothing bound yet: the loop goes on
+        self.assertEqual(h.verifier.rows["note_saved"]["reason"], "no_anchor")
+        h.adapter.probe = self.NOTE
+        with self.assertRaises(RuntimeStop) as caught:
+            h.env.observe()
+        self.assertEqual(caught.exception.reason, "criteria_met")
+        # A revisit_match is not a pass on the page alone.
+        self.assertEqual((h.verifier.rows["note_saved"]["status"], h.verifier.rows["note_saved"]["reason"]),
+                         ("unknown", "not_reopened"))
+        self.assertEqual(h.adapter.inspected, ("125", "Notes"))
+
+    def test_the_reopen_is_a_gated_navigation_by_the_verifier_and_then_the_criterion_passes(self):
+        h = self.harness()
+        h.adapter.probe = self.NOTE
+        with self.assertRaises(RuntimeStop):
+            h.env.observe()
+        steps = h.gate.snapshot()["steps"]
+        h.verifier.final(h.env)
+        row = h.verifier.rows["note_saved"]
+        self.assertEqual((row["status"], row["scope"]), ("pass", "ui_after_reopen"))
+        self.assertEqual(h.adapter.reopened, 1)
+        reopen = h.journal.actions[-1]
+        self.assertEqual((reopen["operation"], reopen["producer"], reopen["target_id"]),
+                         ("navigate", "verifier", "reopen"))
+        self.assertEqual(h.gate.snapshot()["steps"], steps + 1)
+        # Page text is not a slot value, so redaction would not catch it: it must never be written at all.
+        self.assertNotIn("Unrelated page text", json.dumps(h.journal.records, ensure_ascii=False))
+
+    def test_without_navigate_permission_the_value_on_the_page_stays_unknown(self):
+        # Built by hand: the harness's own first navigation needs the permission this task withholds.
+        data = task_dict()
+        data["permissions"] = [p for p in data["permissions"] if p != "navigate"]
+        task = BrowserTask.from_dict(data)
+        view = AttemptTask(task, "attempt-1")
+        gate = AttemptGate(CTX, view, time.monotonic(), slot_registry=SlotRegistry.from_task(view, "attempt-1"))
+        journal = Journal(task, "attempt-1", None, "script")
+        adapter = FakeAdapter()
+        adapter.report = {**adapter.report, "observation_id": 1}
+        env = BrowserControlledEnvironment(adapter, gate, journal, task)
+        env.verifier = verifier = CriteriaVerifier(task, "attempt-1", journal)
+        adapter.probe = self.NOTE
+        verifier.page_check(adapter)
+        verifier.final(env)
+        self.assertEqual((verifier.rows["note_saved"]["status"], verifier.rows["note_saved"]["reason"]), ("unknown", "not_reopened"))
+        self.assertEqual(adapter.reopened, 0)
+
+    def test_a_reopen_that_brings_back_another_value_fails(self):
+        h = self.harness()
+        h.adapter.probe = self.NOTE
+        h.verifier.page_check(h.adapter)
+        h.adapter.reopen = lambda: (setattr(h.adapter, "reopened", 1),
+                                    setattr(h.adapter, "probe", {**self.NOTE, "values": ["No notes yet."]}))
+        h.verifier.final(h.env)
+        self.assertEqual((h.verifier.rows["note_saved"]["status"], h.verifier.rows["note_saved"]["reason"]),
+                         ("fail", "value_differs"))
+
+    def test_a_secret_slot_is_never_compared(self):
+        data = task_dict()
+        data["text_slots"][1]["sensitivity"] = "secret"
+        h = self.harness(task=BrowserTask.from_dict(data))
+        h.adapter.probe = self.NOTE
+        h.verifier.page_check(h.adapter)
+        self.assertEqual(h.verifier.rows["note_saved"]["reason"], "secret_slot_not_compared")
 
 
 class EssentialState(unittest.TestCase):

@@ -107,7 +107,8 @@ function outcome(step) {
   const o = step.outcome || {}, c = el("td");
   const map = {dispatched: ["выполняется", ""], done: ["выполнено", "ok"], driver_error: ["сбой браузера, эффект неизвестен", "bad"],
     rejected: ["отклонено: " + (o.reason || ""), "bad"], finish: ["модель сочла цель достигнутой", "ok"],
-    escalate: ["запрошена помощь", "bad"], refused: ["уверенность ниже порога", "bad"], decision_failed: ["решение не получено", "bad"]};
+    escalate: ["запрошена помощь", "bad"], refused: ["уверенность ниже порога", "bad"], decision_failed: ["решение не получено", "bad"],
+    verifier_reopen: ["проверяющий открыл документ заново", "ok"]};
   const m = map[o.kind] || ["—", "muted"];
   c.append(el("span", m[0], m[1]));
   if (step.effect) {
@@ -124,16 +125,28 @@ function decisionCell(step) {
   const c = el("td"), d = step.decision;
   if (!d) {
     const text = step.decision_error ? "ошибка: " + step.decision_error.error
-      : step.kind === "final_observation" ? "заключительный взгляд на страницу после finish"
+      : step.kind === "verification" ? "модель не спрашивали: критерии выполнены, проверяет runtime"
+      : step.kind === "final_observation" ? "заключительный взгляд на страницу"
       : step.kind === "awaiting_decision" ? "ждём решения…" : "—";
-    c.append(el("span", text, "muted")); return c;
+    c.append(el("span", text, "muted")); criteriaLines(c, step); return c;
   }
   c.append(el("b", d.action));
   for (const ch of step.chosen) {
     const text = ch.label ? ch.label : ch.param + " = " + ch.value;
     c.append(el("div", ch.by === "translator" ? text + " (выбрал переходник, не модель)" : text, "ms"));
   }
+  criteriaLines(c, step);
   return c;
+}
+
+const CRITERION = {pass: ["выполнен", "ok"], fail: ["не выполнен", "bad"], unknown: ["не установлен", "muted"]};
+function criteriaLines(c, step) {
+  // The runtime's judgement on this page, never the model's: status and reason, no page text.
+  for (const k of step.criteria || []) {
+    const [word, cls] = CRITERION[k.status] || [k.status, "muted"];
+    const where = k.stage === "reopened" ? ", после повторного открытия" : "";
+    c.append(el("div", "критерий " + k.id + ": " + word + " (" + k.reason + where + ")", "ms " + cls));
+  }
 }
 
 function detail(step) {
@@ -176,6 +189,7 @@ function renderRows(view) {
     tr.append(el("td", step.n));
     const who = el("td"), d = step.decision;
     if (d) who.append(el("span", d.author, "badge " + (String(d.author).startsWith("script") ? "script" : "model")));
+    else if (step.kind === "verification") who.append(el("span", "проверяющий", "badge script"));
     else who.append(el("span", "—", "muted"));
     tr.append(who, decisionCell(step));
     const conf = el("td", null, "hide-s");
@@ -200,6 +214,8 @@ function renderHead(view) {
   if (m.task_id) parts.push("задача " + m.task_id);
   if (m.config_id) parts.push("провайдер " + m.config_id);
   if (view.result) parts.push("итог: " + view.result.attempt_status + " / " + view.result.stop_reason);
+  if (view.result && view.result.criteria && view.result.criteria.length)
+    parts.push("критерии: " + view.result.criteria.map((k) => k.id + " " + k.status).join(", "));
   else if (m.terminal) parts.push("итог: " + m.terminal.attempt_status + " / " + m.terminal.stop_reason);
   $("meta").textContent = parts.join(" · ");
   $("foot").textContent = m.start ? "Первая навигация (с запуском браузера): " + ms(m.start.driver_ms) + ". Время решения — разница между записями «запрос» и «ответ» в журнале; оно включает проверку ответа и учёт бюджета." : "";

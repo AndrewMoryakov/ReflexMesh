@@ -124,6 +124,46 @@ class GenericPath(BrowserCase):
         self.assertTrue(all(a["ui_effect"]["field_shows_slot_value"] for a in typed))
         self.assertTrue(all(a["effect"] == "unknown" for a in result["actions"] if a["operation"] != "navigate"))
 
+    def anchored(self, **changes):
+        """The demo task with the anchor V0.6 section 11 describes: a slot holding the order's own title."""
+        data = task_dict(start_url=self.origin + "/orders", allowed_origins=[self.origin], **changes)
+        data["text_slots"].append({"id": "record", "version": 1, "value": "Заказ №125", "sensitivity": "normal"})
+        data["criteria"][0]["args"]["anchor_slot_ref"] = "record@1"
+        return BrowserTask.from_dict(data)
+
+    def test_the_runtime_verifies_the_saved_note_by_reopening_the_order(self):
+        """M4: the criterion is judged on the page after every step, and the verifier itself reopens the
+        order. The script never gets to its `finish`: the runtime stopped as soon as the note was there."""
+        result = self.start(self.anchored(), label_script(HAPPY_PATH)).run()
+        rows = {r["id"]: r for r in result["verification"]}
+        self.assertEqual((rows["note_saved"]["status"], rows["note_saved"]["scope"]), ("pass", "ui_after_reopen"))
+        self.assertEqual(len(self.posts()), 1)
+        reopen = result["actions"][-1]
+        self.assertEqual((reopen["operation"], reopen["producer"], reopen["effect"]), ("navigate", "verifier", "applied"))
+        self.assertEqual([r["path"] for r in SITE.REQUESTS if r["method"] == "GET"].count("/orders/125"), 3)
+        stages = [(r["status"], r["reason"]) for r in self.trace() if r["kind"] == "criterion_assessed"]
+        self.assertEqual(stages, [("unknown", "no_anchor"), ("unknown", "no_field"), ("fail", "value_differs"),
+                                  ("unknown", "not_reopened"), ("unknown", "not_reopened"), ("pass", "value_matches")])
+        # Verified on the page, still not `completed`: ownership, repeats and click effects are unproven here.
+        self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
+                         ("incomplete", "verification_unknown", "unknown"))
+        self.assertNotIn("Customer: Petrov", (Path(self.out.name) / "run" / "trace.jsonl").read_text("utf-8"))
+
+    def test_a_finish_before_saving_is_a_confirmed_failure(self):
+        early = HAPPY_PATH[:3] + [{"action": "finish"}]
+        result = self.start(self.anchored(), label_script(early)).run()
+        self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
+                         ("failed", "postcondition_failed", "fail"))
+        self.assertEqual(self.posts(), [])
+
+    def test_a_finish_on_the_results_page_cannot_be_judged(self):
+        """The early DONE of laya-browser: the order is listed, its notes are not on this page."""
+        early = HAPPY_PATH[:2] + [{"action": "finish"}]
+        result = self.start(self.anchored(), label_script(early)).run()
+        rows = {r["id"]: r for r in result["verification"]}
+        self.assertEqual((rows["note_saved"]["status"], rows["note_saved"]["reason"]), ("unknown", "no_field"))
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "verification_unknown"))
+
     def test_no_reflexmesh_markup_or_site_ids_are_used(self):
         import ast
 

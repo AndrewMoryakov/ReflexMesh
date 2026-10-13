@@ -455,6 +455,34 @@ class GenericBrowserAdapter:
             self._pending_effect = None
         return obs
 
+    # ── verification (V0.6 section 11) ──
+    def inspect(self, anchor: str, field_name: str) -> dict | None:
+        """Run the verifier's read-only probe in the main frame. The result holds page text: it goes to
+        the verifier, not to the journal."""
+        from reflexmesh.verification.page_verifier import PROBE
+
+        async def probe():
+            cdp = await self.backend._session.get_or_create_cdp_session()
+            expression = f"({PROBE})({json.dumps(anchor)}, {json.dumps(field_name)})"
+            answer = await cdp.cdp_client.send.Runtime.evaluate(
+                params={"expression": expression, "returnByValue": True}, session_id=cdp.session_id)
+            return (answer.get("result") or {}).get("value")
+
+        if self.backend is None:
+            return None
+        return self.backend._run(probe())
+
+    def document_id(self) -> str | None:
+        """The loader of the document last observed: a new one means the document was opened again."""
+        return self._doc.get("loader_id")
+
+    def reopen(self) -> None:
+        """Open the observed document again (a GET of its URL; a form is never resubmitted). The caller has
+        passed it through the dispatch gate."""
+        backend = self.backend
+        backend._run(backend._session.navigate_to(str(self.report["url"])))
+        backend._run(asyncio.sleep(1.0))
+
     @staticmethod
     def _page_signature(obs, url: str) -> str:
         """The essential state (V0.6 section 8): URL, visible text and the values set so far. Browser Use
