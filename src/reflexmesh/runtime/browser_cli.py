@@ -38,6 +38,8 @@ def _script_steps(raw: object) -> list[dict]:
 def run_browser(args) -> int:
     try:
         task = BrowserTask.from_json(_read(args.input))
+        if args.action_provider == "laya" and args.model:
+            raise ValidationError("the laya provider has no model choice")
         if args.action_provider == "script":
             if not args.script:
                 raise ValidationError("the script provider requires --script")
@@ -61,6 +63,11 @@ def run_browser(args) -> int:
             from reflexmesh.adapters.system_one.decision_providers import LabelScriptProvider
 
             return LabelScriptProvider(steps), "script:label", None
+        if args.action_provider == "laya":
+            from reflexmesh.adapters.system_one.laya_provider import laya_provider
+
+            provider, config_id = laya_provider(getattr(args, "decisions_url", None))
+            return provider, config_id, provider.model
         from reflexmesh.adapters.system_one.decision_providers import jev_provider_from_env
 
         provider, config_id = jev_provider_from_env(args.model, base_url=getattr(args, "decisions_url", None))

@@ -313,6 +313,10 @@ class _DriverFailure:
         return {"ok": False, "text": self.text, "artifacts": [], "terminal": False, "fields": {}}
 
 
+# Providers whose every request is a model call, reserved against `max_model_calls` before it is sent.
+MODEL_PROVIDERS = ("jev", "laya")
+
+
 class JournalingProvider:
     """Writes `decision_requested` / `decision_received` around one provider request."""
 
@@ -347,7 +351,9 @@ class JournalingProvider:
                           request_id=decision.request_id, latency_ms=decision.latency_ms, usage=decision.usage,
                           action=chosen, params=params,
                           confidence=(answers.get("next_action") or {}).get("confidence"),
-                          goal_reached=(answers.get("goal_reached") or {}).get("noul"))
+                          goal_reached=(answers.get("goal_reached") or {}).get("noul"),
+                          **({"translated": decision.raw["translated"]}
+                             if isinstance(getattr(decision, "raw", None), dict) and "translated" in decision.raw else {}))
         return decision
 
     def close(self):
@@ -466,7 +472,7 @@ class BrowserRun:
         self.gate = AttemptGate(ctx, view, started, slot_registry=self.registry, slot_sink=self.slot_evidence.sink)
         self.slot_evidence.bind_dispatch_counter(self.gate.dispatches)
         self.journal = Journal(task, self.attempt_id, self.out_dir / "trace.jsonl" if self.out_dir else None,
-                               "jev" if self.action_provider == "jev" else "script")
+                               self.action_provider if self.action_provider in MODEL_PROVIDERS else "script")
         self.journal.emit("task_accepted", task_id=task.task_id, revision=task.revision,
                           permissions=sorted(task.permissions), origins=list(task.allowed_origins),
                           slots=[{"ref": s.reference, "sensitivity": s.sensitivity} for s in task.slots],
@@ -502,7 +508,7 @@ class BrowserRun:
             self.adapter.bind_runtime(self.registry, self.slot_evidence.sink)
             space = browser_action_space(self.task.permissions)
             controlled = BrowserControlledEnvironment(self.adapter, self.gate, journal, self.task)
-            counting = CountingProvider(self.provider, self.gate, journal, model=self.action_provider == "jev")
+            counting = CountingProvider(self.provider, self.gate, journal, model=self.action_provider in MODEL_PROVIDERS)
             run = Controller(space, controlled, counting, gate=JournalGate(space.gate),
                              max_steps=math.inf, timeout_seconds=None).run(self.task.goal)
             if controlled.last_stop:

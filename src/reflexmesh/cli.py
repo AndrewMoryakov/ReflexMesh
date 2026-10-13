@@ -76,8 +76,9 @@ def main(argv: list[str] | None = None) -> int:
     brun = browser_sub.add_parser("run", help="execute one browser-task/0.1 attempt")
     brun.add_argument("--input", default="-", metavar="FILE")
     brun.add_argument("--output-dir", required=True, metavar="DIR")
-    brun.add_argument("--action-provider", choices=("script", "jev"), required=True,
-                      help="script plays fixed steps against the offered options (mechanics only); jev calls the real provider")
+    brun.add_argument("--action-provider", choices=("script", "jev", "laya"), required=True,
+                      help="script plays fixed steps against the offered options (mechanics only); jev calls the real "
+                           "provider; laya asks a local laya-browser server (--decisions-url) in its training format")
     brun.add_argument("--script", metavar="FILE", help="JSON list of steps for the script provider")
     brun.add_argument("--model", metavar="NAME", help="Jev model name; the provider key comes from the environment")
     brun.add_argument("--decisions-url", metavar="URL",
