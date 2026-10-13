@@ -73,6 +73,14 @@ class SameSession(BrowserCase):
         chain = core.chains[first["chain_id"]]
         browser = dict(chain.session.session)
         old_run = chain.runs[0]
+        # F07 while the session is still open: the old owner's options are still in the shared adapter, admission
+        # would pass, and the gate refuses because that attempt is terminal. Nothing reaches the site.
+        pages = len([r for r in SITE.REQUESTS if not r["path"].startswith("/__")])
+        key = next(k for (kind, k) in old_run.adapter._table if kind == "elements")
+        with self.assertRaises(RuntimeStop) as refused:
+            old_run.controlled.execute("click", {"element": key})
+        self.assertEqual(refused.exception.reason, "terminal")
+        self.assertEqual(len([r for r in SITE.REQUESTS if not r["path"].startswith("/__")]), pages)
         second = core.resume({**self.resume_token(first), "operation": "start", "mode": "jev", "task": rev2})
         self.assertEqual((second["attempt_status"], second["stop_reason"]), ("completed", "verified"))
         # Same session, new attempt and owner epoch, linked to the first.
@@ -89,8 +97,6 @@ class SameSession(BrowserCase):
         stored = json.loads((Path(self.out.name) / "chain/attempt-1/result.json").read_text())
         self.assertEqual(stored["attempt_status"], "incomplete")
         self.assertEqual(stored["handoff"]["continuation"]["token"], "[withheld]")   # never on disk
-        with self.assertRaises(RuntimeStop):
-            old_run.controlled.execute("click", {"element": "1"})
         self.assertEqual(core.resume({**self.resume_token(first), "operation": "start", "mode": "jev"})["error"]["code"],
                          "token_invalid")
         self.assertEqual(SITE.NOTES, {"125": ["Перезвонить завтра"]})
@@ -155,6 +161,79 @@ class SameSession(BrowserCase):
         refused = core.resume({**self.resume_token(first), "operation": "start", "mode": "jev"})
         self.assertIn(refused["error"]["code"], ("chain_closed", "session_closed", "token_expired"))
         self.assertEqual(SITE.CLAIM, {})
+
+    def test_a_refused_continuation_closes_the_session_it_cannot_use(self):
+        import psutil
+
+        from reflexmesh.adapters.system_one.decision_providers import LabelScriptProvider, ProviderUnavailable
+
+        calls = []
+
+        def factory():
+            calls.append(1)
+            if len(calls) > 1:
+                raise ProviderUnavailable("no key")
+            return LabelScriptProvider([{"action": "escalate"}]), "script:label", None
+
+        core = self.core([])
+        core.provider_factory = factory
+        first = core.execute(BrowserTask.from_dict(self.task(without_order=True)))
+        chain = core.chains[first["chain_id"]]
+        pid = chain.session.session["pid"]
+        refused = core.resume({**self.resume_token(first), "operation": "start", "mode": "jev"})
+        self.assertEqual((refused["attempt_status"], refused["stop_reason"]), ("blocked", "executor_unavailable"))
+        self.assertTrue(chain.closed)
+        time.sleep(0.5)
+        self.assertFalse(psutil.pid_exists(pid) and psutil.Process(pid).status() != psutil.STATUS_ZOMBIE)
+        self.assertEqual(SITE.CLAIM, {})
+
+    def test_a_second_controller_at_a_handoff_is_a_violation_not_a_transfer(self):
+        import subprocess
+
+        holder = []
+        core = self.core([])
+
+        from reflexmesh.adapters.system_one.decision_providers import LabelScriptProvider
+
+        class Attach(LabelScriptProvider):
+            def decide(self, state, questions):
+                if self.calls == 1 and not holder:
+                    port = core.chains[next(iter(core.chains))].runs[0].adapter.session["port"]
+                    holder.append(subprocess.Popen([sys.executable, "-c",
+                        f"import socket,time; s=socket.create_connection(('127.0.0.1',{port})); time.sleep(60)"]))
+                    time.sleep(0.5)
+                return super().decide(state, questions)
+
+        core.provider_factory = lambda: (Attach(TO_ORDER[:2] + [{"action": "escalate"}]), "script:label", None)
+        try:
+            first = core.execute(BrowserTask.from_dict(self.task()))
+        finally:
+            for process in holder:
+                process.kill()
+                process.wait()
+        self.assertEqual((first["attempt_status"], first["stop_reason"]), ("failed", "constraint_violated"))
+        self.assertNotEqual(first["cleanup"]["status"], "retained")
+        self.assertTrue(core.chains[first["chain_id"]].closed)
+
+    def test_a_lease_that_runs_out_while_waiting_for_a_proposal_ends_the_assistance(self):
+        import psutil
+
+        core = self.core([[{"action": "escalate"}]], lease=1.5)
+        first = core.execute(BrowserTask.from_dict(self.task(without_order=True)))
+        chain = core.chains[first["chain_id"]]
+        pid = chain.session.session["pid"]
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        self.assertEqual(progress["phase"], "awaiting_proposal")
+        time.sleep(3.0)
+        self.assertTrue(chain.closed)
+        self.assertFalse(psutil.pid_exists(pid) and psutil.Process(pid).status() != psutil.STATUS_ZOMBIE)
+        stored = json.loads((Path(self.out.name) / "chain/attempt-2/result.json").read_text())
+        self.assertEqual((stored["attempt_status"], stored["stop_reason"], stored["handoff"]["reason"]),
+                         ("incomplete", "needs_handoff", "lease_expired"))
+        self.assertFalse(stored["handoff"]["continuation"]["allowed"])
+        late = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"],
+                            "operation": "step", "proposal": {}})
+        self.assertIn("error", late)
 
     def test_a_revision_may_not_widen_authority(self):
         core = self.core([[{"action": "escalate"}]])

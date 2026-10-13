@@ -663,6 +663,9 @@ class BrowserRun:
     def run(self) -> dict:
         problem = self._begin()
         if problem is not None:
+            if self.chain is not None:
+                # The token is already spent: a refused continuation must not leave the browser open unleased.
+                self.chain.close()
             return problem
         worker = threading.Thread(target=self._work, name="reflexmesh-browser-loop", daemon=True)
         worker.start()
@@ -1158,6 +1161,10 @@ class BrowserRun:
                 expected_generation = gate.generation.value
             else:
                 status, reason = "incomplete", "verification_unknown"
+        elif constraints.has_fail() and status not in ("cancelled", "failed"):
+            # Section 13: a confirmed constraint violation ends the attempt as failed, whatever stopped the loop;
+            # in particular a session with a second controller is never handed over.
+            status, reason, handoff_reason = "failed", "constraint_violated", None
         accepted = None
         try:
             accepted = gate.finish(expected_generation=expected_generation)

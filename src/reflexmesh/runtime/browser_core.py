@@ -89,6 +89,7 @@ class TaskChain:
         self._token_attempt: str | None = None
         self._token_deadline: float | None = None
         self._timer: threading.Timer | None = None
+        self._generation = 0                # which token a lease timer belongs to
 
     # ── budget ──
     def deadline(self) -> float:
@@ -119,7 +120,9 @@ class TaskChain:
             self._token_deadline = time.monotonic() + lease
             if self._timer is not None:
                 self._timer.cancel()
-            self._timer = threading.Timer(lease, self.expire)
+            self._generation += 1
+            # A timer that already fired and waits for the lock must not kill a token issued after it.
+            self._timer = threading.Timer(lease, self.expire, args=(self._generation,))
             self._timer.daemon = True
             self._timer.start()
             return token, lease
@@ -144,10 +147,10 @@ class TaskChain:
                 self.owner_epoch += 1
             return None
 
-    def expire(self) -> None:
+    def expire(self, generation: int | None = None) -> None:
         """The lease ran out with nobody resuming: the session is closed, not left open for anyone."""
         with self.lock:
-            if self._token_hash is None or self.closed:
+            if self._token_hash is None or self.closed or (generation is not None and generation != self._generation):
                 return
             self._token_hash = self._token_attempt = None
             assist, self.assist = self.assist, None
