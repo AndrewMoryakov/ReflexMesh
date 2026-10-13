@@ -105,7 +105,9 @@ def build_view(records: list[dict], result: dict | None) -> dict:
                     "author": row.get("served_model"), "requested_model": row.get("requested_model"),
                     "request_id": row.get("request_id"), "provider_ms": row.get("latency_ms"),
                     "usage": row.get("usage"), "action": row.get("action"), "params": row.get("params") or {},
-                    "confidence": row.get("confidence"), "goal_reached": row.get("goal_reached")}
+                    "confidence": row.get("confidence"), "goal_reached": row.get("goal_reached"),
+                    # answers a translating provider filled in itself; the model did not make these
+                    "filled_by_translator": (row.get("translated") or {}).get("derived") or {}}
             else:
                 current["decision_error"] = {"error": row.get("error"), "status": row.get("status"),
                                              "protocol": row.get("protocol")}
@@ -148,8 +150,11 @@ def build_view(records: list[dict], result: dict | None) -> dict:
             # No decision was asked for here: either the look after `finish`, or one still being made.
             step["kind"] = "final_observation" if terminated and step is steps[-1] else "awaiting_decision"
         decision = step.get("decision")
+        filled = (decision or {}).get("filled_by_translator") or {}
         step["chosen"] = [] if not decision else [
-            {"param": name, "value": value, "label": _label(step["options"], value)}
+            {"param": name, "value": value, "label": _label(step["options"], value),
+             **({"by": "translator", "how": filled[f"{decision['action']}__{name}"]}
+                if f"{decision['action']}__{name}" in filled else {})}
             for name, value in decision["params"].items()]
         for key in ("decision_t", "proposal_t", "dispatch_t"):
             step.pop(key, None)

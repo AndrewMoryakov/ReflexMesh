@@ -129,7 +129,10 @@ function decisionCell(step) {
     c.append(el("span", text, "muted")); return c;
   }
   c.append(el("b", d.action));
-  for (const ch of step.chosen) c.append(el("div", ch.label ? ch.label : ch.param + " = " + ch.value, "ms"));
+  for (const ch of step.chosen) {
+    const text = ch.label ? ch.label : ch.param + " = " + ch.value;
+    c.append(el("div", ch.by === "translator" ? text + " (выбрал переходник, не модель)" : text, "ms"));
+  }
   return c;
 }
 
@@ -147,6 +150,8 @@ function detail(step) {
   add("время решения у нас", ms(step.decision_ms));
   add("токены (вход / выход)", d.usage ? d.usage.input_tokens + " / " + d.usage.output_tokens : undefined);
   add("цель достигнута, оценка", d.goal_reached);
+  const filled = Object.entries(d.filled_by_translator || {});
+  add("заполнил переходник, не модель", filled.length ? filled.map(([k, how]) => k + " (" + how + ")").join(", ") : undefined);
   if (step.dispatch) add("команда", step.dispatch.operation + (step.dispatch.slot_ref ? " ← " + step.dispatch.slot_ref : ""));
   td.append(kv, el("div", "Что было в меню (выбранное выделено):", "muted"));
   const ul = el("ul");

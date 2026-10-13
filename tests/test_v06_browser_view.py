@@ -67,6 +67,18 @@ class Derivation(unittest.TestCase):
         self.assertEqual(view["summary"]["authors"], {"served/x": 1})
         self.assertEqual(view["meta"]["config_id"], "openrouter:m")
 
+    def test_answers_a_translator_filled_in_are_not_attributed_to_the_model(self):
+        records, result = read_run(ROOT / "docs/research/evidence/V0.6-laya-run-2026-10-13")
+        view = build_view(records, result)
+        first = view["steps"][0]
+        self.assertEqual(first["decision"]["author"], "laya-browser")
+        chosen = {c["param"]: c for c in first["chosen"]}
+        self.assertEqual(chosen["value"]["by"], "translator")
+        self.assertEqual(chosen["value"]["how"], "reference_matches_field_name")
+        self.assertNotIn("by", chosen["field"])
+        self.assertEqual(first["decision"]["filled_by_translator"]["goal_reached"], "laya_p_done")
+        self.assertIn("выбрал переходник, не модель", PAGE)
+
     def test_a_stale_choice_is_shown_as_rejected_with_its_admission_time(self):
         view = build_view(one_step(outcome="stale"), None)
         step = view["steps"][0]
