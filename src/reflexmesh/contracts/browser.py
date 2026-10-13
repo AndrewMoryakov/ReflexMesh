@@ -37,7 +37,7 @@ CRITERION_ARGS = {
     "revisit_match": {"anchor_slot_ref": str, "field_name": str, "expected_slot_ref": str},
     "registered_check": {"check_id": str, "subject": str, "expected_slot_refs": list},
 }
-# `registered_check` ids the service has a trusted source for (section 11). A task cannot add one.
+# `registered_check` ids known without a service checks file: none. A task cannot add one (section 11).
 REGISTERED_CHECKS: frozenset[str] = frozenset()
 LIMIT_FIELDS = {"wall_seconds", "max_steps", "max_model_calls", "max_action_retries", "max_handoffs"}
 SENSITIVITIES = ("normal", "secret")
@@ -170,8 +170,12 @@ class BrowserTask:
     def unsupported_criteria(self) -> tuple[str, ...]:
         """IDs of criteria this build cannot judge (`blocked/unsupported_criterion`): an undefined predicate, or
         a `registered_check` whose `check_id` names no check registered with the service."""
+        return self.criteria_unsupported(REGISTERED_CHECKS)
+
+    def criteria_unsupported(self, registered: frozenset) -> tuple[str, ...]:
+        """The same, against the checks a service actually registered."""
         return tuple(c.id for c in self.criteria if c.predicate not in CRITERION_ARGS or
-                     (c.predicate == "registered_check" and c.args.get("check_id") not in REGISTERED_CHECKS))
+                     (c.predicate == "registered_check" and c.args.get("check_id") not in registered))
 
     @property
     def unsupported_constraints(self) -> tuple[str, ...]:

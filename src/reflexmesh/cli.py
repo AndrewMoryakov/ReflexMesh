@@ -88,6 +88,8 @@ def main(argv: list[str] | None = None) -> int:
     brun.add_argument("--no-sandbox", action="store_true",
                       help="start Chromium without its sandbox (or REFLEXMESH_CHROME_NO_SANDBOX=1); recorded in the result")
     brun.add_argument("--attempt-id", metavar="HEX32")
+    brun.add_argument("--checks", metavar="FILE",
+                      help="the service's registered checks (JSON); a task's registered_check can name only these")
     bview = browser_sub.add_parser("view", help="read-only local page: who decided each step, what, and how long it took")
     bview.add_argument("--run-dir", required=True, metavar="DIR", help="a run's output directory (may be still running)")
     bview.add_argument("--port", type=int, default=8780, help="loopback port; 0 picks a free one")

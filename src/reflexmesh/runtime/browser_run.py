@@ -138,7 +138,7 @@ class Journal:
             self.actions.append({
                 "id": action_id, "operation": desc.get("operation"), "risk": desc.get("risk"),
                 "option_ref": desc.get("option_ref"), "target_id": desc.get("target_id"),
-                "mutation_key": desc.get("mutation_key"),
+                "mutation_key": desc.get("mutation_key"), "request": desc.get("request"),
                 "target": desc.get("target"), "slot_ref": desc.get("slot_ref"),
                 "observation_id": desc.get("observation_id"), "producer": desc.get("producer") or self.producer,
                 "bootstrap": desc.get("bootstrap", False), "destination": desc.get("destination"),
@@ -172,8 +172,9 @@ class CriteriaVerifier:
     model's word. Every cycle looks at the page (no navigation); a `revisit_match` passes only after the
     verifier itself opened the document again through the dispatch gate."""
 
-    def __init__(self, task: BrowserTask, attempt_id: str, journal: Journal):
+    def __init__(self, task: BrowserTask, attempt_id: str, journal: Journal, checks: dict | None = None):
         self.task, self.attempt_id, self.journal = task, attempt_id, journal
+        self.checks = checks or {}
         self.rows = {c.id: {"id": c.id, "kind": "postcondition", "predicate": c.predicate, "status": "unknown",
                             "reason": "not_assessed", "scope": None, "observed_at": None, "evidence_refs": []}
                      for c in task.criteria}
@@ -183,7 +184,31 @@ class CriteriaVerifier:
     def _slot(self, ref: str):
         return next((s for s in self.task.slots if s.reference == ref), None)
 
+    def _registered(self, criterion, evidence: dict | None = None) -> dict:
+        """A registered check judges from its own source; `evidence` is passed when the caller already read it."""
+        check = self.checks.get(criterion.args.get("check_id"))
+        if check is None:
+            return {"status": "unknown", "reason": "no_registered_check", "facts": {}}
+        expected = [self._slot(ref) for ref in criterion.args["expected_slot_refs"]]
+        if any(slot is None or slot.sensitivity != "normal" for slot in expected):
+            return {"status": "unknown", "reason": "secret_slot_not_compared", "facts": {}}
+        if evidence is None:
+            try:
+                evidence = check.evidence(timeout=1.0)
+            except Exception:
+                evidence = None
+        return check.judge(criterion.args, [slot.value for slot in expected], evidence)
+
+    def settle_registered(self, evidence_by_check: dict) -> None:
+        """The final word of each registered check, read after the browser stopped (V0.6 section 11)."""
+        for criterion in self.task.criteria:
+            if criterion.predicate == "registered_check":
+                verdict = self._registered(criterion, evidence_by_check.get(criterion.args["check_id"]))
+                self._record(criterion, verdict, "registered", always=True)
+
     def _judge(self, criterion, adapter) -> dict:
+        if criterion.predicate == "registered_check":
+            return self._registered(criterion)
         if criterion.predicate not in PAGE_PREDICATES:
             return {"status": "unknown", "reason": "no_registered_check", "facts": {}}
         anchor = self._slot(criterion.args["anchor_slot_ref"])
@@ -208,7 +233,9 @@ class CriteriaVerifier:
             return
         seq = self.journal.emit("criterion_assessed", id=criterion.id, predicate=criterion.predicate, status=status,
                                 reason=reason, stage=stage, **verdict["facts"])
-        row.update(status=status, reason=reason, scope="ui_after_reopen" if stage == "reopened" else "ui_observation",
+        scope = {"reopened": "ui_after_reopen", "registered": "registered_source"}.get(
+            stage, "registered_source_while_running" if criterion.predicate == "registered_check" else "ui_observation")
+        row.update(status=status, reason=reason, scope=scope,
                    observed_at=time.time(), evidence_refs=[f"browser:{self.attempt_id}:{seq}"])
         if criterion.predicate == "scoped_extract":
             if status == "pass":
@@ -542,8 +569,11 @@ class BrowserRun:
 
     def __init__(self, task: BrowserTask, *, chrome: str | None, provider_factory, action_provider: str,
                  out_dir: Path | None = None, sandbox: bool = True, headless: bool = True,
-                 attempt_id: str | None = None):
+                 attempt_id: str | None = None, checks: dict | None = None):
         self.task, self.chrome = task, chrome
+        # Registered checks come from the service's configuration, never from the task (V0.6 section 11).
+        self.checks = dict(checks or {})
+        self._claimed: list = []
         self.provider_factory, self.action_provider = provider_factory, action_provider
         self.sandbox, self.headless = sandbox, headless
         self.attempt_id = attempt_id or uuid.uuid4().hex
@@ -605,8 +635,9 @@ class BrowserRun:
     def run(self) -> dict:
         task = self.task
         started = time.monotonic()
-        if task.unsupported_criteria:
-            return self._refusal("blocked", "unsupported_criterion", {"criteria": list(task.unsupported_criteria)})
+        unsupported = task.criteria_unsupported(frozenset(self.checks))
+        if unsupported:
+            return self._refusal("blocked", "unsupported_criterion", {"criteria": list(unsupported)})
         if task.unsupported_constraints:
             return self._refusal("blocked", "unsupported_constraint", {"constraints": list(task.unsupported_constraints)})
         problem = self._preflight()
@@ -617,6 +648,18 @@ class BrowserRun:
         except ProviderUnavailable as exc:
             return self._refusal("blocked", "executor_unavailable", {"detail": "decision_provider_unavailable",
                                                                       "message": str(exc)})
+        used = sorted({c.args["check_id"] for c in task.criteria if c.predicate == "registered_check"})
+        for check_id in used:
+            # The claim comes before the first navigation: everything the site records after it is this attempt's.
+            try:
+                self.checks[check_id].claim(self.attempt_id, timeout=2.0)
+            except Exception as exc:
+                self._release_checks()
+                return self._refusal("blocked", "unsupported_criterion",
+                                     {"criteria": [c.id for c in task.criteria if c.args.get("check_id") == check_id],
+                                      "check_id": check_id, "detail": str(exc) if str(exc).startswith("check_") else
+                                      "check_unavailable"})
+            self._claimed.append(self.checks[check_id])
         if self.out_dir is not None:
             self.out_dir.mkdir(parents=True, exist_ok=True)
         ctx = mp.get_context("fork")
@@ -637,7 +680,8 @@ class BrowserRun:
         self.journal.emit("attempt_started", attempt_id=self.attempt_id, provider=self.action_provider,
                           config_id=self.config_id, requested_model=self.requested_model)
         self.provider = JournalingProvider(ValidatingProvider(provider), self.journal, self.requested_model)
-        self.verifier = CriteriaVerifier(task, self.attempt_id, self.journal)
+        self.verifier = CriteriaVerifier(task, self.attempt_id, self.journal,
+                                         {check.check_id: check for check in self._claimed})
         worker = threading.Thread(target=self._work, name="reflexmesh-browser-loop", daemon=True)
         worker.start()
         cleanup_notes = self._supervise(worker)
@@ -721,6 +765,92 @@ class BrowserRun:
         notes["worker_stopped"] = not worker.is_alive()
         return notes
 
+    def _settle_registered(self, notes: dict) -> tuple[str, str] | None:
+        """Read each registered check once the browser can send nothing more; judge its criteria, settle action
+        effects, and return the repeat verdict (None when no check decides it)."""
+        adapter = self.adapter
+        stopped = bool(notes.get("worker_stopped")) and (adapter is None or adapter.closed)
+        if not self._claimed or not stopped:
+            return None
+        evidence, verdicts = {}, []
+        for check in self._claimed:
+            try:
+                evidence[check.check_id] = check.evidence(timeout=min(2.0, max(0.1, self.gate.wall_remaining() or 2.0)))
+            except Exception:
+                evidence[check.check_id] = None
+        self.verifier.settle_registered(evidence)
+        for check in self._claimed:
+            if evidence[check.check_id] is None:
+                verdicts.append(None)
+                continue
+            verdict = check.settle(self.journal.actions, evidence[check.check_id], browser_stopped=True)
+            verdicts.append(verdict)
+            self.journal.emit("effects_settled", check_id=check.check_id, repeats=verdict[0] if verdict else "unknown",
+                              applied=sum(1 for a in self.journal.actions if a["effect"] == "applied"),
+                              not_applied=sum(1 for a in self.journal.actions if a["effect"] == "not_applied"),
+                              unknown=sum(1 for a in self.journal.actions if a["effect"] == "unknown"))
+        failed = [v for v in verdicts if v and v[0] == "fail"]
+        if failed:
+            return failed[0]
+        if verdicts and all(v and v[0] == "pass" for v in verdicts):
+            return verdicts[0]
+        return None
+
+    def _constraint_rows(self, snapshot, coverage, repeats) -> list[dict]:
+        """The six runtime constraints: the shared assessors, plus this path's own evidence for ownership (the
+        browser session it launched) and repeats (a registered source that saw every request)."""
+        rows = assess_constraints(self.view, snapshot, self.attempt_id, slot_evidence=self.slot_evidence,
+                                  coverage=coverage, ownership=None, dispatches=self.journal.actions, revocations=[],
+                                  driver_outcomes=self.journal.outcomes, effect_snapshot=None)
+        by_id = {row["id"]: row for row in rows}
+        ownership = self._ownership_row()
+        if ownership is not None:
+            by_id["runtime.ownership"].update(ownership)
+        gate_repeats = by_id["runtime.no_uncertain_repeats"]
+        if repeats is not None and gate_repeats["status"] != "fail":
+            gate_repeats.update(status=repeats[0], reason=repeats[1], observed_at=time.time(),
+                                evidence_refs=[f"runtime:{self.attempt_id}:no_uncertain_repeats"] +
+                                [f"check:{c.check_id}:{c.claim_id}" for c in self._claimed],
+                                scope="registered_source")
+        return rows
+
+    def _ownership_row(self) -> dict | None:
+        """V0.6 section 11, ownership within its stated scope: the browser session this attempt launched.
+        CDP on a loopback port has no authentication, so a client connecting between two looks is not excluded;
+        the reason says so."""
+        adapter = self.adapter
+        if adapter is None or adapter.session is None:
+            return None
+        facts, seen = adapter.session, adapter.controllers
+        ref = [f"runtime:{self.attempt_id}:ownership"]
+        scope = "browser_session_launched_by_attempt"
+        if seen["foreign_pids"] or seen["session_changed"]:
+            return {"status": "fail", "observed_at": time.time(), "evidence_refs": ref, "scope": scope,
+                    "reason": ("Another process held a connection to this attempt's browser debugging port."
+                               if seen["foreign_pids"] else "The browser process changed during the attempt.")}
+        leftover = processes_using(adapter.profile_dir) if adapter.closed else None
+        missing = [why for bad, why in (
+            (not facts.get("pid") or not facts.get("child_of_runtime"), "the browser is not a known child process"),
+            (not seen["samples"] or not seen["own_seen"], "no observation saw this runtime on the debugging port"),
+            (seen["unattributed"] or seen["errors"], "a connection's owner could not be read"),
+            (not adapter.closed or leftover, "the browser is not closed")) if bad]
+        if missing:
+            return {"status": "unknown", "observed_at": None, "evidence_refs": [], "scope": scope,
+                    "reason": "Browser session ownership is not established: " + "; ".join(missing) + "."}
+        return {"status": "pass", "observed_at": time.time(), "evidence_refs": ref, "scope": scope,
+                "reason": (f"The browser was launched by this attempt (a child process with its own profile, verified "
+                           f"in use), stayed the same process, had only this runtime on its debugging port at each of "
+                           f"{seen['samples']} observations, and was closed with no process left. A client connecting "
+                           f"between two observations is not excluded.")}
+
+    def _release_checks(self) -> None:
+        for check in self._claimed:
+            try:
+                check.release(timeout=1.0)
+            except Exception:
+                pass
+        self._claimed = []
+
     # ── the result ──
     def _refusal(self, status: str, reason: str, detail: dict) -> dict:
         result = {"schema_version": RESULT_SCHEMA, "task_id": self.task.task_id, "revision": self.task.revision,
@@ -764,6 +894,7 @@ class BrowserRun:
         except RuntimeStop:
             pass
         self.slot_evidence.drain()
+        repeats = self._settle_registered(notes)
         # Criteria as the runtime's verifier last judged them. After a stop other than finish or met criteria
         # they are late information: the first terminal wins and they never turn the attempt into completed.
         criteria = self.verifier.result_rows()
@@ -773,9 +904,7 @@ class BrowserRun:
             coverage = gate.slot_snapshot()
         except RuntimeStop:
             snapshot = coverage = None
-        constraints.update(assess_constraints(self.view, snapshot, self.attempt_id, slot_evidence=self.slot_evidence,
-                                              coverage=coverage, ownership=None, dispatches=journal.actions,
-                                              revocations=[], driver_outcomes=journal.outcomes, effect_snapshot=None))
+        constraints.update(self._constraint_rows(snapshot, coverage, repeats))
         expected_generation = None
         if status == "verifying":
             verdicts = [row["status"] for row in criteria]
@@ -817,10 +946,7 @@ class BrowserRun:
         try:
             snapshot = gate.snapshot()
             # The terminal transition now owns its gate number: assess once more with it counted.
-            constraints.update(assess_constraints(self.view, snapshot, self.attempt_id,
-                                                  slot_evidence=self.slot_evidence, coverage=gate.slot_snapshot(),
-                                                  ownership=None, dispatches=journal.actions, revocations=[],
-                                                  driver_outcomes=journal.outcomes, effect_snapshot=None))
+            constraints.update(self._constraint_rows(snapshot, gate.slot_snapshot(), repeats))
         except RuntimeStop:
             pass
         limits = task.limits
@@ -860,6 +986,7 @@ class BrowserRun:
             result["detail"] = {"exception": self.outcome["detail"]}
         if self.outcome.get("kind") == "stopped" and status == "failed":
             result["detail"] = {"stop": self.outcome["reason"]}
+        self._release_checks()
         self.slot_evidence.close()
         journal.close()
         if self.out_dir is not None:

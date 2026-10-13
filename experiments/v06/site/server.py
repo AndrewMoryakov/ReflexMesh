@@ -16,10 +16,22 @@ Routes:
   /orders/<id>/tracking    a small page, opened by the order page in a new tab
   POST /orders/<id>/note   saves a note (303 back to the order)
   /__state             JSON: recorded requests and notes
+  POST /__claim        claim the site for one attempt: {"attempt_id"} -> {"claim_id", "token"}; 409 while claimed
+  GET /__evidence      with `Authorization: Bearer <token>`: what happened under the claim (requests, notes
+                       added, requests still being handled); the registered check `order_desk` reads this
+  POST /__release      with the token: end the claim
+
+The claim is what binds the server's record to one attempt: every request is tagged with the claim that was
+active when it arrived, and a second claim is refused while one is active. It cannot tell a browser driven by
+ReflexMesh from any other client that reaches the site during the claim; the site is local and started for runs.
 """
 import argparse
+import hashlib
+import hmac
 import json
+import secrets
 import threading
+import uuid
 from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
@@ -33,6 +45,8 @@ ORDERS = {
 NOTES: dict[str, list[str]] = {}
 META: dict[str, dict] = {}
 REQUESTS: list[dict] = []
+CLAIM: dict = {}          # claim_id, attempt_id, token_hash, notes_at
+IN_FLIGHT = [0]           # page requests being handled right now
 
 
 def page(title: str, body: str) -> bytes:
@@ -98,6 +112,9 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
     def _send(self, code: int, body: bytes, ctype: str = "text/html; charset=utf-8", location: str | None = None):
+        # The state change is done once a response is ready: stop counting the request before the client can
+        # see the answer, or a client that asks for evidence right after it would still find it pending.
+        self._done()
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
@@ -107,10 +124,50 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _record(self, method: str, path: str) -> None:
+        self._counted = not path.startswith("/__")
+        with LOCK:
+            REQUESTS.append({"method": method, "path": path, "host": self.headers.get("Host"),
+                             "claim": CLAIM.get("claim_id")})
+            if self._counted:
+                IN_FLIGHT[0] += 1
+
+    def _done(self, *_) -> None:
+        if getattr(self, "_counted", False):
+            self._counted = False
+            with LOCK:
+                IN_FLIGHT[0] -= 1
+
+    def _authorized(self) -> bool:
+        given = (self.headers.get("Authorization") or "").removeprefix("Bearer ").strip()
+        with LOCK:
+            expected = CLAIM.get("token_hash")
+        return bool(expected and given) and hmac.compare_digest(hashlib.sha256(given.encode()).hexdigest(), expected)
+
+    def _json(self, code: int, value) -> None:
+        self._send(code, json.dumps(value, ensure_ascii=False).encode(), "application/json")
+
     def do_GET(self):
         parts = urlsplit(self.path)
-        with LOCK:
-            REQUESTS.append({"method": "GET", "path": parts.path, "host": self.headers.get("Host")})
+        self._record("GET", parts.path)
+        try:
+            self._get(parts)
+        finally:
+            self._done(parts.path)
+
+    def _get(self, parts):
+        if parts.path == "/__evidence":
+            if not self._authorized():
+                return self._json(401, {"error": "not_authorized"})
+            with LOCK:
+                claim = CLAIM.get("claim_id")
+                data = {"claim_id": claim, "attempt_id": CLAIM.get("attempt_id"),
+                        "requests": [{"method": r["method"], "path": r["path"]} for r in REQUESTS
+                                     if r.get("claim") == claim and not r["path"].startswith("/__")],
+                        "notes_added": {oid: list(notes[CLAIM["notes_at"].get(oid, 0):])
+                                        for oid, notes in NOTES.items() if len(notes) > CLAIM["notes_at"].get(oid, 0)},
+                        "pending": IN_FLIGHT[0]}
+            return self._json(200, data)
         if parts.path == "/__state":
             with LOCK:
                 data = json.dumps({"notes": NOTES, "meta": META, "requests": REQUESTS}, ensure_ascii=False).encode()
@@ -134,11 +191,39 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parts = urlsplit(self.path)
+        self._record("POST", parts.path)
+        try:
+            self._post(parts)
+        finally:
+            self._done(parts.path)
+
+    def _post(self, parts):
         pieces = parts.path.strip("/").split("/")
         length = min(int(self.headers.get("Content-Length") or 0), 65536)
-        fields = parse_qs(self.rfile.read(length).decode("utf-8", "replace"))
-        with LOCK:
-            REQUESTS.append({"method": "POST", "path": parts.path, "host": self.headers.get("Host")})
+        raw = self.rfile.read(length)
+        if parts.path == "/__claim":
+            try:
+                attempt = str(json.loads(raw or b"{}").get("attempt_id") or "")
+            except (ValueError, AttributeError):
+                attempt = ""
+            if not attempt:
+                return self._json(400, {"error": "attempt_id_required"})
+            token = secrets.token_urlsafe(32)
+            with LOCK:
+                if CLAIM:
+                    return self._json(409, {"error": "claimed"})
+                CLAIM.update(claim_id=uuid.uuid4().hex, attempt_id=attempt,
+                             token_hash=hashlib.sha256(token.encode()).hexdigest(),
+                             notes_at={oid: len(notes) for oid, notes in NOTES.items()})
+                claim = CLAIM["claim_id"]
+            return self._json(200, {"claim_id": claim, "attempt_id": attempt, "token": token})
+        if parts.path == "/__release":
+            if not self._authorized():
+                return self._json(401, {"error": "not_authorized"})
+            with LOCK:
+                CLAIM.clear()
+            return self._json(200, {"released": True})
+        fields = parse_qs(raw.decode("utf-8", "replace"))
         if len(pieces) == 3 and pieces[0] == "orders" and pieces[2] == "note" and pieces[1] in ORDERS:
             note = fields.get("note", [""])[0].strip()
             if note:

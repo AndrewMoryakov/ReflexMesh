@@ -117,6 +117,7 @@ class Target:
     destination: str | None = None
     option_text: str | None = None
     tab_id: str | None = None
+    request: tuple | None = None   # (METHOD, path) a click sends: a link's href, or a submit button's form
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,6 +147,8 @@ class PreparedBrowserAction:
             info["destination"] = self.destination
         if self.slot_ref is not None:
             info["slot_ref"] = self.slot_ref
+        if self.target is not None and self.target.request is not None:
+            info["request"] = {"method": self.target.request[0], "path": self.target.request[1]}
         return info
 
 
@@ -156,6 +159,25 @@ def essential_text(text: str) -> str:
     """Page text without Browser Use's per-capture element numbers and new-element marks."""
     lines = (" ".join(_INDEX_MARK.sub("", line).split()) for line in str(text or "").splitlines())
     return "\n".join(line for line in lines if line and line != "*")
+
+
+def form_request(node, page_url: str) -> tuple | None:
+    """(METHOD, path) a submit button sends, read from its form in the DOM snapshot; None when it is not a
+    plain form submit (a script handler may send anything, and that stays unknown)."""
+    tag = str(node.tag_name or "").lower()
+    attrs = node.attributes or {}
+    kind = str(attrs.get("type") or ("submit" if tag == "button" else "")).lower()
+    if tag not in ("button", "input") or kind not in ("submit", "image") or attrs.get("form"):
+        return None
+    form = node.parent_node
+    while form is not None and str(form.tag_name or "").lower() != "form":
+        form = form.parent_node
+    if form is None:
+        return None
+    fattrs = form.attributes or {}
+    method = str(attrs.get("formmethod") or fattrs.get("method") or "get").upper()
+    action = attrs.get("formaction") or fattrs.get("action") or page_url
+    return method, urlsplit(urljoin(page_url, action)).path
 
 
 def action_identity(prepared: "PreparedBrowserAction") -> str:
@@ -215,6 +237,11 @@ class GenericBrowserAdapter:
         self._pending_effect: dict | None = None
         self.effect_report: dict | None = None
         self.closed = False
+        # Ownership witness (V0.6 section 11, scope: the session this attempt launched): who the browser is,
+        # and who was connected to its debugging port each time we looked.
+        self.session: dict | None = None
+        self.controllers = {"samples": 0, "own_seen": 0, "foreign_pids": [], "unattributed": 0,
+                            "session_changed": False, "errors": 0}
 
     # ── binding ──
     def bind_runtime(self, registry: SlotRegistry, sink) -> None:
@@ -248,6 +275,7 @@ class GenericBrowserAdapter:
         if os.path.realpath(actual) != os.path.realpath(self.profile_dir):
             # Cleanup removes the directory we made; a different one in use would be left behind.
             raise RuntimeStop("adapter_contract_unsupported")
+        self._record_session()
         backend.reset(goal)
 
     def close(self) -> None:
@@ -312,8 +340,59 @@ class GenericBrowserAdapter:
                 text = text.replace(slot.value, "[secret]")
         return text
 
+    def _record_session(self) -> None:
+        """The browser this attempt launched: its process (a child of this one) and its debugging port."""
+        session = self.backend._session
+        process = getattr(getattr(session, "_local_browser_watchdog", None), "_subprocess", None)
+        try:
+            port = urlsplit(str(session.cdp_url or "")).port
+        except ValueError:
+            port = None
+        facts = {"pid": None, "port": port, "child_of_runtime": False, "created": None, "profile_verified": True}
+        try:
+            if process is not None:
+                facts.update(pid=process.pid, child_of_runtime=process.ppid() == os.getpid(),
+                             created=process.create_time())
+        except Exception:
+            pass
+        self.session = facts
+
+    def _sample_controllers(self) -> None:
+        """Who holds a connection to the browser's debugging port right now. CDP has no authentication, so any
+        local process could attach; a client that is not this process is a second controller."""
+        import psutil
+
+        facts, seen = self.session, self.controllers
+        if not facts or not facts.get("port"):
+            return
+        seen["samples"] += 1
+        try:
+            process = psutil.Process(facts["pid"])
+            if process.create_time() != facts["created"]:
+                seen["session_changed"] = True
+        except Exception:
+            seen["session_changed"] = True
+        try:
+            connections = psutil.net_connections(kind="tcp")
+        except Exception:
+            seen["errors"] += 1
+            return
+        mine = os.getpid()
+        for conn in connections:
+            if conn.status != psutil.CONN_ESTABLISHED or not conn.raddr or conn.raddr.port != facts["port"]:
+                continue
+            if conn.raddr.ip not in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):
+                continue
+            if conn.pid is None:
+                seen["unattributed"] += 1          # another user's socket: its owner is not visible to us
+            elif conn.pid == mine:
+                seen["own_seen"] += 1
+            elif conn.pid not in seen["foreign_pids"]:
+                seen["foreign_pids"].append(conn.pid)
+
     def observe(self):
         self._ensure_backend()
+        self._sample_controllers()
         obs, state, nodes, doc = self.backend._run(self._capture())
         # A window that has just opened shows about:blank until its page arrives; that is not a
         # policy question. Give it a moment, then report it as the empty page it is.
@@ -355,9 +434,13 @@ class GenericBrowserAdapter:
             attrs = node.attributes or {}
             href = attrs.get("href")
             destination = urljoin(url, href) if href and kind == "elements" else None
+            request = None
+            if kind == "elements":
+                request = ("GET", urlsplit(destination).path) if destination else form_request(node, url)
             return Target(kind=kind, key=key, operation=KIND_OPERATION[kind], index=int(key.partition(":")[0]),
                           backend_node_id=node.backend_node_id, target_id=node.target_id, frame_id=node.frame_id,
-                          signature=sig, role=sig[1] or sig[0], name=sig[2], destination=destination, **extra)
+                          signature=sig, role=sig[1] or sig[0], name=sig[2], destination=destination,
+                          request=request, **extra)
 
         if "click" in granted:
             for key, label in (obs.candidates.get("elements") or {}).items():

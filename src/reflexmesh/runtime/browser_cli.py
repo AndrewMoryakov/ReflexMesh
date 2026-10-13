@@ -48,6 +48,11 @@ def run_browser(args) -> int:
             raise ValidationError("--script requires the script provider")
         else:
             steps = None
+        checks = {}
+        if getattr(args, "checks", None):
+            from reflexmesh.verification.checks import load_checks
+
+            checks = load_checks(args.checks)
     except (OSError, UnicodeError, ValueError, RecursionError):
         return _error("invalid_input")
     output = Path(args.output_dir)
@@ -76,7 +81,7 @@ def run_browser(args) -> int:
     chrome = args.chrome or os.environ.get("REFLEXMESH_CHROME")
     sandbox = not (args.no_sandbox or os.environ.get("REFLEXMESH_CHROME_NO_SANDBOX") == "1")
     run = BrowserRun(task, chrome=chrome, provider_factory=provider_factory, action_provider=args.action_provider,
-                     out_dir=output, sandbox=sandbox, attempt_id=args.attempt_id)
+                     out_dir=output, sandbox=sandbox, attempt_id=args.attempt_id, checks=checks)
     signal.signal(signal.SIGINT, lambda *_: run.cancel())
     signal.signal(signal.SIGTERM, lambda *_: run.cancel())
     try:

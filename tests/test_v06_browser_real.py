@@ -77,6 +77,8 @@ class BrowserCase(unittest.TestCase):
         SITE.NOTES.clear()
         SITE.META.clear()
         SITE.REQUESTS.clear()
+        SITE.CLAIM.clear()
+        SITE.IN_FLIGHT[0] = 0
         self.out = tempfile.TemporaryDirectory()
         self.addCleanup(self.out.cleanup)
 
@@ -108,9 +110,11 @@ class GenericPath(BrowserCase):
         self.assertEqual(result["budget"]["dispatches"], 6)
         self.assertEqual(result["budget"]["model_calls"], 0)
         rows = {r["id"]: r["status"] for r in result["verification"]}
-        for ok in ("runtime.permissions", "runtime.immutable_slots", "runtime.dispatch_ordering", "runtime.budget"):
+        for ok in ("runtime.permissions", "runtime.immutable_slots", "runtime.dispatch_ordering", "runtime.budget",
+                   "runtime.ownership"):
             self.assertEqual(rows[ok], "pass", ok)
-        for unproven in ("runtime.ownership", "runtime.no_uncertain_repeats", "note_saved"):
+        # No registered source saw the server side, and this task's anchor ("125") names no element whole.
+        for unproven in ("runtime.no_uncertain_repeats", "note_saved"):
             self.assertEqual(rows[unproven], "unknown", unproven)
         self.assertEqual(result["cleanup"]["status"], "closed")
         self.assertTrue(result["cleanup"]["profile_removed"])
@@ -163,6 +167,78 @@ class GenericPath(BrowserCase):
         rows = {r["id"]: r for r in result["verification"]}
         self.assertEqual((rows["note_saved"]["status"], rows["note_saved"]["reason"]), ("unknown", "no_field"))
         self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "verification_unknown"))
+
+    def verified(self):
+        """The anchored task plus the registered order-desk check, as a service would configure it."""
+        from reflexmesh.verification.checks import OrderDeskCheck
+
+        data = task_dict(start_url=self.origin + "/orders", allowed_origins=[self.origin])
+        data["text_slots"].append({"id": "record", "version": 1, "value": "Заказ №125", "sensitivity": "normal"})
+        data["criteria"][0]["args"]["anchor_slot_ref"] = "record@1"
+        data["criteria"].append({"id": "note_saved_once", "predicate": "registered_check",
+                                 "args": {"check_id": "desk", "subject": "125", "expected_slot_refs": ["note@1"]}})
+        return BrowserTask.from_dict(data), {"desk": OrderDeskCheck("desk", self.origin)}
+
+    def test_completed_needs_every_criterion_constraint_and_effect(self):
+        """M4: the first path to `completed`. The registered source settles every effect and the repeats; the
+        browser session's ownership is evidenced; both criteria pass."""
+        task, checks = self.verified()
+        result = self.start(task, label_script(HAPPY_PATH), checks=checks).run()
+        self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
+                         ("completed", "verified", "pass"))
+        rows = {r["id"]: r for r in result["verification"]}
+        self.assertTrue(all(r["status"] == "pass" for r in rows.values()), rows)
+        self.assertEqual(rows["runtime.ownership"]["scope"], "browser_session_launched_by_attempt")
+        self.assertEqual(rows["runtime.no_uncertain_repeats"]["scope"], "registered_source")
+        effects = [(a["operation"], (a.get("request") or {}).get("method"), a["effect"]) for a in result["actions"]]
+        self.assertIn(("click", "POST", "applied"), effects)
+        self.assertNotIn("unknown", [e for _, _, e in effects])
+        self.assertEqual(SITE.CLAIM, {})                      # released
+        self.assertNotIn(checks["desk"]._token or "no-token", json.dumps(result))
+
+    def test_a_second_controller_on_the_debugging_port_is_a_violation(self):
+        """M4c: another process holding a connection to the browser's CDP port is a second controller."""
+        import subprocess
+
+        task, checks = self.verified()
+        holder = []
+
+        def attach(calls, provider):
+            if calls == 1 and not holder:
+                port = self.run_.adapter.session["port"]
+                holder.append(subprocess.Popen([sys.executable, "-c",
+                    f"import socket,time; s=socket.create_connection(('127.0.0.1',{port})); time.sleep(60)"]))
+                time.sleep(0.5)
+
+        try:
+            result = self.start(task, label_script(HAPPY_PATH, before=attach), checks=checks).run()
+        finally:
+            for process in holder:
+                process.kill()
+                process.wait()
+        rows = {r["id"]: r for r in result["verification"]}
+        self.assertEqual(rows["runtime.ownership"]["status"], "fail")
+        self.assertIn("Another process", rows["runtime.ownership"]["reason"])
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("failed", "constraint_violated"))
+
+    def test_a_busy_registered_source_blocks_before_the_browser_starts(self):
+        from reflexmesh.verification.checks import OrderDeskCheck
+
+        other = OrderDeskCheck("other", self.origin)
+        other.claim("someone-else")
+        try:
+            task, checks = self.verified()
+            result = self.start(task, label_script(HAPPY_PATH), checks=checks).run()
+        finally:
+            other.release()
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("blocked", "unsupported_criterion"))
+        self.assertEqual(result["detail"]["detail"], "check_busy")
+        self.assertEqual([r for r in SITE.REQUESTS if not r["path"].startswith("/__")], [])
+
+    def test_an_unregistered_check_is_refused_whatever_the_task_says(self):
+        task, _ = self.verified()
+        result = self.start(task, label_script(HAPPY_PATH)).run()   # the service registered nothing
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("blocked", "unsupported_criterion"))
 
     def test_no_reflexmesh_markup_or_site_ids_are_used(self):
         import ast
