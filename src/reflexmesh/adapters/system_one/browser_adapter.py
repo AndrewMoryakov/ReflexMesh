@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -145,6 +147,24 @@ class PreparedBrowserAction:
         if self.slot_ref is not None:
             info["slot_ref"] = self.slot_ref
         return info
+
+
+_INDEX_MARK = re.compile(r"\*?\[\d+\]")
+
+
+def essential_text(text: str) -> str:
+    """Page text without Browser Use's per-capture element numbers and new-element marks."""
+    lines = (" ".join(_INDEX_MARK.sub("", line).split()) for line in str(text or "").splitlines())
+    return "\n".join(line for line in lines if line and line != "*")
+
+
+def action_identity(prepared: "PreparedBrowserAction") -> str:
+    target = prepared.target
+    if target is None:
+        return f"{prepared.operation}:{prepared.ref}"      # wait, scroll:up|down
+    parts = [prepared.operation, target.role, target.name, target.option_text or "", target.destination or "",
+             prepared.slot_ref or ""]
+    return json.dumps(parts, ensure_ascii=False)
 
 
 def _backend_class():
@@ -437,7 +457,9 @@ class GenericBrowserAdapter:
 
     @staticmethod
     def _page_signature(obs, url: str) -> str:
-        return hashlib.sha256((url + "\n" + obs.text).encode("utf-8", "replace")).hexdigest()[:16]
+        """The essential state (V0.6 section 8): URL, visible text and the values set so far. Browser Use
+        renumbers every control on every capture and marks new ones with `*`; neither is a new state."""
+        return hashlib.sha256((url + "\n" + essential_text(obs.text)).encode("utf-8", "replace")).hexdigest()[:16]
 
     def _assess_effect(self, pending: dict, nodes) -> dict:
         """What the page shows after the action. A UI observation, never a server effect."""
@@ -562,6 +584,6 @@ class GenericBrowserAdapter:
 
     def state_key(self, prepared: PreparedBrowserAction) -> str:
         """Identity of "this action on this page state", for the repeat check: the same target on
-        an unchanged page is a repeat, the same button on a page that moved on is not."""
-        base = f"{prepared.target.role}:{prepared.target.name}" if prepared.target else prepared.ref
-        return f"{base}@{self.report.get('signature', '')}"
+        an unchanged page is a repeat, the same button on a page that moved on is not. The target is
+        named by what it is (role, name, option, destination, slot), never by Browser Use's index."""
+        return f"{action_identity(prepared)}@{self.report.get('signature', '')}"

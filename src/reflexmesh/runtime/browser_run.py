@@ -43,6 +43,7 @@ RESULT_SCHEMA = "browser-result/0.1"
 SOH_PIN = "ab8e8f08b4a6268c0633a474423d556599ee06a4"
 BROWSER_USE_PIN = "5c892e013a73e6622e6f50336e1eb0aa2c4405f2"
 STALE_LIMIT = 3
+NO_PROGRESS_LIMIT = 3  # cycles in a row whose observation shows no new essential state (V0.6 section 8)
 HANDOFF_REASONS = {"no_confident_action": "no_confident_action", "escalation_requested": "escalation_requested",
                    "repeated_action": "no_progress", "stale_loop": "stale_loop"}
 PREDICATE_PENDING = "No verifier for this predicate exists in this build (V0.6 M4); the criterion stays unknown."
@@ -173,6 +174,9 @@ class BrowserControlledEnvironment:
         self.uncertain = False
         self.observed_revision: int | None = None
         self._stale_streak = 0
+        self._last_state: str | None = None
+        self._unchanged = 0
+        self._done_in_state: set[str] = set()
 
     def _stop(self, reason: str) -> RuntimeStop:
         self.last_stop = reason
@@ -219,6 +223,13 @@ class BrowserControlledEnvironment:
             raise
         effect, self.inner.effect_report = self.inner.effect_report, None
         self.journal.observed(self.inner.report, effect)
+        state = self.inner.report.get("signature")
+        self._unchanged = self._unchanged + 1 if state is not None and state == self._last_state else 0
+        self._last_state = state
+        if self._unchanged >= NO_PROGRESS_LIMIT:
+            # Three cycles and the page is where it was: no new state, and no effect or criterion this build
+            # can see move. Stopping here is the rule, not a judgement on the model.
+            raise self._stop("no_progress")
         return obs
 
     def verification_observation(self):
@@ -262,6 +273,13 @@ class BrowserControlledEnvironment:
             # Looking again (scroll, wait, switch_tab) is still allowed; changing things is not.
             self.journal.put(("rejected", "effect_unknown"))
             raise self._stop("effect_unknown")
+        state_key = self.inner.state_key(prepared)
+        if operation != "wait" and state_key in self._done_in_state:
+            # The same action in the same essential state is not repeated (V0.6 section 8). Waiting again is
+            # what waiting is for; the no-progress count bounds it.
+            self.journal.put(("rejected", "repeated_action"))
+            self.journal.put(("reobserve", "repeated_action"))
+            return SkippedAction()
         classification = "text" if prepared.action == "type_text" else "nontext"
         try:
             action_id, gate_seq = self.gate.commit_dispatch_seq(classification, operation=operation,
@@ -275,9 +293,10 @@ class BrowserControlledEnvironment:
             self.journal.put(("rejected", exc.reason))
             raise self._stop(exc.reason) from None
         descriptor = prepared.descriptor()
+        self._done_in_state.add(state_key)
         self.journal.put(("dispatch", action_id, {**descriptor, "gate_seq": gate_seq,
                                                   "policy_revision": self.observed_revision,
-                                                  "target_id": self.inner.state_key(prepared)}))
+                                                  "target_id": state_key}))
         try:
             result = self.inner.execute_prepared(prepared, action_id)
         except RuntimeStop as exc:
@@ -578,8 +597,8 @@ class BrowserRun:
                     ("incomplete", "deadline", None) if terminal == 2 else ("failed", "executor_error", None))
         if out["kind"] == "stopped":
             reason = out["reason"]
-            if reason == "stale_loop":
-                return "incomplete", "needs_handoff", "stale_loop"
+            if reason in ("stale_loop", "no_progress"):
+                return "incomplete", "needs_handoff", reason
             if reason in STOP_CODES:
                 return STOP_CODES[reason], reason, None
             return "failed", "executor_error", None

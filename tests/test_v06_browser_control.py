@@ -68,7 +68,7 @@ class FakeAdapter:
         return outcome
 
     def state_key(self, prepared):
-        return f"{prepared.ref}@{self.report['signature']}"
+        return f"{prepared.operation}:{prepared.ref}@{self.report['signature']}"
 
     def close(self):
         self.closed = True
@@ -259,9 +259,10 @@ class UnknownEffects(unittest.TestCase):
         # The loop may still look at the page.
         h.env.observe()
 
-    def test_read_operations_repeat_freely_and_are_checked_at_the_gate(self):
+    def test_read_operations_are_checked_at_the_gate_and_repeat_once_the_page_moved(self):
         h = Harness(self)
-        for _ in range(3):
+        for n in range(3):
+            h.adapter.report = {**h.adapter.report, "signature": f"scrolled-{n}"}
             self.assertTrue(h.env.execute("scroll", {"direction": "down"}).ok)
         snapshot = h.gate.snapshot()
         self.assertEqual(snapshot["unchecked_commits"], 0)
@@ -280,15 +281,65 @@ class UnknownEffects(unittest.TestCase):
         self.assertEqual(rows["runtime.ownership"]["status"], "unknown")
         self.assertEqual(rows["runtime.no_uncertain_repeats"]["status"], "unknown")
 
-    def test_repeating_one_action_on_an_unchanged_page_is_a_repeat(self):
+    def test_one_action_is_not_repeated_on_an_unchanged_page(self):
+        """V0.6 section 8: refused before dispatch, not found afterwards; the same click once the page moved
+        on is a new action."""
         h = Harness(self)
-        h.env.execute("click", {"element": "1"})
-        h.env.execute("click", {"element": "1"})  # same target, same page signature
+        self.assertTrue(h.env.execute("click", {"element": "1"}).ok)
+        skipped = h.env.execute("click", {"element": "1"})  # same target, same page signature
+        self.assertIsInstance(skipped, SkippedAction)
+        self.assertEqual(h.gate.snapshot()["dispatches"], 2)  # bootstrap + the first click
+        self.assertEqual([r["reason"] for r in h.journal.records if r["kind"] == "admission_rejected"],
+                         ["repeated_action"])
+        self.assertTrue(h.env.execute("scroll", {"direction": "down"}).ok)   # another action is fine
+        self.assertIsInstance(h.env.execute("scroll", {"direction": "down"}), SkippedAction)  # reads too
+        self.assertTrue(h.env.execute("wait", {}).ok)
+        self.assertTrue(h.env.execute("wait", {}).ok)                         # waiting again is allowed
+        h.adapter.report = {**h.adapter.report, "signature": "moved"}
+        self.assertTrue(h.env.execute("click", {"element": "1"}).ok)
         h.gate.seal_dispatches()
         rows = {r["id"]: r for r in assess_constraints(
             h.view, h.gate.snapshot(), "attempt-1", dispatches=h.journal.actions, revocations=[],
             driver_outcomes=h.journal.outcomes)}
-        self.assertEqual(rows["runtime.no_uncertain_repeats"]["status"], "fail")
+        self.assertNotEqual(rows["runtime.no_uncertain_repeats"]["status"], "fail")
+
+    def test_three_cycles_without_a_new_state_stop_as_no_progress(self):
+        h = Harness(self)                                     # the harness has looked once already
+        for _ in range(2):
+            h.env.observe()                                   # two cycles without a new state
+        with self.assertRaises(RuntimeStop) as caught:
+            h.env.observe()                                   # third unchanged cycle
+        self.assertEqual(caught.exception.reason, "no_progress")
+        h2 = Harness(self)
+        for n in range(6):
+            h2.adapter.report = {**h2.adapter.report, "signature": f"s{n // 2}"}
+            h2.env.observe()                                  # a change every second cycle never stops
+
+
+class EssentialState(unittest.TestCase):
+    """Browser Use renumbers every control on every capture; that alone is not a new state."""
+
+    def test_renumbering_and_new_marks_do_not_change_the_essential_text(self):
+        from reflexmesh.adapters.system_one.browser_adapter import essential_text
+
+        first = "Orders\n[25]<input id=q />\n[26]<button />\n\tSearch\nSet so far: Order number: '125'."
+        again = "Orders\n*[62]<input id=q />\n*[63]<button />\n\tSearch\nSet so far: Order number: '125'."
+        self.assertEqual(essential_text(first), essential_text(again))
+        self.assertNotEqual(essential_text(first), essential_text(first.replace("'125'", "'126'")))
+
+    def test_an_action_is_named_by_its_target_not_its_index(self):
+        from reflexmesh.adapters.system_one.browser_adapter import action_identity
+
+        def click(index, name="Search", oid=1):
+            target = Target(kind="elements", key=str(index), operation="click", index=index, role="button", name=name)
+            return PreparedBrowserAction("click", "click", "write", oid, f"{oid}:elements:{index}",
+                                         (("element", str(index)),), target)
+
+        self.assertEqual(action_identity(click(26)), action_identity(click(92, oid=7)))
+        self.assertNotEqual(action_identity(click(26)), action_identity(click(26, name="Save")))
+        scroll = PreparedBrowserAction("scroll", "scroll", "read", 1, "scroll:down", (("direction", "down"),))
+        self.assertNotEqual(action_identity(scroll), action_identity(
+            PreparedBrowserAction("scroll", "scroll", "read", 1, "scroll:up", (("direction", "up"),))))
 
 
 class JournalRedaction(unittest.TestCase):

@@ -222,6 +222,19 @@ class GenericPath(BrowserCase):
         self.assertEqual([a["operation"] for a in result["actions"]], ["navigate", "wait"])  # the repeat never ran
         self.assertNotEqual({r["id"]: r["status"] for r in result["verification"]}["runtime.no_uncertain_repeats"], "fail")
 
+    def test_a_button_pressed_again_on_an_unchanged_page_is_refused_then_no_progress(self):
+        """A laya run clicked Search 60 times until the deadline: Browser Use renumbers every control on
+        every capture, so neither SOH's repeat check nor a raw-text page signature saw a repeat."""
+        steps = HAPPY_PATH[:2] + [{"action": "click", "element": "button 'Search'"}] * 6 + [{"action": "finish"}]
+        result = self.start(self.task(), label_script(steps)).run()
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "needs_handoff"))
+        self.assertEqual(result["handoff"]["reason"], "no_progress")
+        searches = [a for a in result["actions"] if (a.get("target") or {}).get("name") == "Search"]
+        self.assertEqual(len(searches), 2)        # once on the form, once on the results; then refused
+        self.assertFalse(searches[1]["ui_effect"]["content_changed"])   # the reload showed the same page
+        rejected = [r["reason"] for r in self.trace() if r["kind"] == "admission_rejected"]
+        self.assertIn("repeated_action", rejected)
+
     def test_a_second_tab_is_offered_and_can_be_switched_to(self):
         steps = HAPPY_PATH[:3] + [{"action": "click", "element": "Open tracking"},
                                   {"action": "switch_tab", "tab": "orders/125$"}, {"action": "finish"}]
