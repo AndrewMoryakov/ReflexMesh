@@ -56,6 +56,9 @@ class SameSession(BrowserCase):
         self.addCleanup(core.close)
         return core
 
+    def attempt_dir(self, result, n):
+        return Path(self.out.name) / "chain" / f"chain-{result['chain_id']}" / f"attempt-{n}"
+
     @staticmethod
     def resume_token(result):
         cont = result["handoff"]["continuation"]
@@ -94,7 +97,7 @@ class SameSession(BrowserCase):
         self.assertEqual(second["chain_budget"]["used"]["steps"], first["budget"]["steps"] + second["budget"]["steps"])
         self.assertEqual(second["budget"]["limits"]["max_steps"], 64 - first["budget"]["steps"])
         # The first attempt keeps its status, its owner cannot act, its token is spent.
-        stored = json.loads((Path(self.out.name) / "chain/attempt-1/result.json").read_text())
+        stored = json.loads((self.attempt_dir(first, 1) / "result.json").read_text())
         self.assertEqual(stored["attempt_status"], "incomplete")
         self.assertEqual(stored["handoff"]["continuation"]["token"], "[withheld]")   # never on disk
         self.assertEqual(core.resume({**self.resume_token(first), "operation": "start", "mode": "jev"})["error"]["code"],
@@ -130,7 +133,7 @@ class SameSession(BrowserCase):
         chain = core.chains[first["chain_id"]]
         producers = [a["producer"] for a in chain.actions]
         self.assertIn("llm", producers)
-        assisted = json.loads((Path(self.out.name) / "chain/attempt-2/result.json").read_text())
+        assisted = json.loads((self.attempt_dir(first, 2) / "result.json").read_text())
         self.assertEqual((assisted["attempt_status"], assisted["handoff"]["reason"]),
                          ("incomplete", "assistance_returned"))
         self.assertEqual(chain.handoffs_used, 2)                   # start(llm) and the return to Jev
@@ -227,7 +230,7 @@ class SameSession(BrowserCase):
         time.sleep(3.0)
         self.assertTrue(chain.closed)
         self.assertFalse(psutil.pid_exists(pid) and psutil.Process(pid).status() != psutil.STATUS_ZOMBIE)
-        stored = json.loads((Path(self.out.name) / "chain/attempt-2/result.json").read_text())
+        stored = json.loads((self.attempt_dir(first, 2) / "result.json").read_text())
         self.assertEqual((stored["attempt_status"], stored["stop_reason"], stored["handoff"]["reason"]),
                          ("incomplete", "needs_handoff", "lease_expired"))
         self.assertFalse(stored["handoff"]["continuation"]["allowed"])

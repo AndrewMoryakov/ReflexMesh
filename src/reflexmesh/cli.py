@@ -90,6 +90,29 @@ def main(argv: list[str] | None = None) -> int:
     brun.add_argument("--attempt-id", metavar="HEX32")
     brun.add_argument("--checks", metavar="FILE",
                       help="the service's registered checks (JSON); a task's registered_check can name only these")
+    bserve = browser_sub.add_parser("serve", help="session service: keeps browser sessions open across a handoff so "
+                                                  "an attempt can be resumed (local Unix socket)")
+    bserve.add_argument("--socket", required=True, metavar="PATH", help="Unix socket to listen on (created 0600)")
+    bserve.add_argument("--state-dir", required=True, metavar="DIR", help="where each chain's attempts are written")
+    bserve.add_argument("--action-provider", choices=("script", "jev", "laya"), required=True)
+    bserve.add_argument("--script", metavar="FILE", help="script provider: a list of steps, or one list per attempt")
+    bserve.add_argument("--model", metavar="NAME")
+    bserve.add_argument("--decisions-url", metavar="URL")
+    bserve.add_argument("--checks", metavar="FILE", help="the service's registered checks (JSON)")
+    bserve.add_argument("--chrome", metavar="FILE", help="Chromium executable (or REFLEXMESH_CHROME)")
+    bserve.add_argument("--no-sandbox", action="store_true")
+    bserve.add_argument("--lease-seconds", type=float, default=60.0,
+                        help="how long a handed-over session waits for resume (capped by the task deadline)")
+    for name, text in (("submit", "send a browser-task/0.1 to a running service"),
+                       ("resume", "send a continuation (token, parent_attempt_id, operation, mode, ...)"),
+                       ("cancel", "cancel a chain"), ("status", "list the service's chains"),
+                       ("shutdown", "close every session and stop the service")):
+        client = browser_sub.add_parser(name, help=text)
+        client.add_argument("--socket", required=True, metavar="PATH")
+        if name in ("submit", "resume"):
+            client.add_argument("--input", default="-", metavar="FILE")
+        if name == "cancel":
+            client.add_argument("--chain-id", required=True)
     bview = browser_sub.add_parser("view", help="read-only local page: who decided each step, what, and how long it took")
     bview.add_argument("--run-dir", required=True, metavar="DIR", help="a run's output directory (may be still running)")
     bview.add_argument("--port", type=int, default=8780, help="loopback port; 0 picks a free one")
@@ -107,6 +130,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "browser" and args.browser_command == "view":
             from reflexmesh.runtime.browser_view import serve as serve_view
             return serve_view(args)
+        if args.command == "browser" and args.browser_command == "serve":
+            from reflexmesh.runtime.browser_cli import serve_browser
+            return serve_browser(args)
+        if args.command == "browser" and args.browser_command in ("submit", "resume", "cancel", "status", "shutdown"):
+            from reflexmesh.runtime.browser_cli import call_service
+            return call_service(args)
         if args.command == "browser":
             from reflexmesh.runtime.browser_cli import run_browser
             return run_browser(args)

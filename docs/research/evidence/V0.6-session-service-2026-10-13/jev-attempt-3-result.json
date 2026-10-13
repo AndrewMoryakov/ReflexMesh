@@ -1,0 +1,307 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "order-note-125-verified",
+  "revision": 2,
+  "chain_id": "d557c2627c584b9a9620d4c177a61d5d",
+  "attempt_id": "9d91ac4638b54df1b0e40cf762b4e37e",
+  "parent_attempt_id": "8889e7c2cbbe4799851e9821045ddbe4",
+  "attempt_status": "completed",
+  "stop_reason": "verified",
+  "task_outcome": "pass",
+  "execution_outcome": "returned",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "note_saved",
+      "kind": "postcondition",
+      "predicate": "revisit_match",
+      "status": "pass",
+      "reason": "value_matches",
+      "scope": "ui_after_reopen",
+      "observed_at": 1791926713.8891234,
+      "evidence_refs": [
+        "browser:9d91ac4638b54df1b0e40cf762b4e37e:23"
+      ]
+    },
+    {
+      "id": "note_saved_once",
+      "kind": "postcondition",
+      "predicate": "registered_check",
+      "status": "pass",
+      "reason": "saved_once",
+      "scope": "registered_source",
+      "observed_at": 1791926714.0265741,
+      "evidence_refs": [
+        "browser:9d91ac4638b54df1b0e40cf762b4e37e:24"
+      ]
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1791926714.0437036,
+      "evidence_refs": [
+        "runtime:9d91ac4638b54df1b0e40cf762b4e37e:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1791926714.0436468,
+      "evidence_refs": [
+        "runtime:9d91ac4638b54df1b0e40cf762b4e37e:immutable-slots:coverage:2"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "The browser was launched by this chain (a child process with its own profile, verified in use), stayed the same process, had only this runtime on its debugging port at each of 18 observations, and was closed with no process left. A client connecting between two observations is not excluded.",
+      "observed_at": 1791926714.0573153,
+      "evidence_refs": [
+        "runtime:9d91ac4638b54df1b0e40cf762b4e37e:ownership"
+      ],
+      "scope": "browser_session_of_chain"
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1791926714.0437338,
+      "evidence_refs": [
+        "runtime:9d91ac4638b54df1b0e40cf762b4e37e:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "The registered order-desk record shows each committed form submit requested exactly once, none pending, and no other state change.",
+      "observed_at": 1791926714.057331,
+      "evidence_refs": [
+        "runtime:9d91ac4638b54df1b0e40cf762b4e37e:no_uncertain_repeats",
+        "check:order_desk.note_saved_once:443fc57296d74d94872700272636c28e"
+      ],
+      "scope": "registered_source"
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1791926714.0437531,
+      "evidence_refs": [
+        "runtime:9d91ac4638b54df1b0e40cf762b4e37e:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "16:elements:149",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@5edacf72082957c7",
+      "mutation_key": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@http://127.0.0.1:8770/orders/125?",
+      "request": {
+        "method": "POST",
+        "path": "/orders/125/note"
+      },
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 16,
+      "producer": "llm",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 8,
+      "dispatch_seq": 9,
+      "return_seq": 10,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "check:order_desk.note_saved_once:443fc57296d74d94872700272636c28e"
+      ],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 2,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "reopen",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 17,
+      "producer": "verifier",
+      "bootstrap": false,
+      "destination": "http://127.0.0.1:8770/orders/125",
+      "policy_revision": 1,
+      "gate_seq": 2,
+      "proposal_seq": 18,
+      "dispatch_seq": 19,
+      "return_seq": 20,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "browser:9d91ac4638b54df1b0e40cf762b4e37e:21"
+      ],
+      "driver_ok": true
+    }
+  ],
+  "budget": {
+    "steps": 3,
+    "model_calls": 0,
+    "dispatches": 2,
+    "limits": {
+      "wall_seconds": 120.0,
+      "max_steps": 48,
+      "max_model_calls": 81,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 45,
+    "remaining_model_calls": 81,
+    "remaining_wall_seconds": 99.41,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 20.555
+  },
+  "handoff": null,
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": true
+    },
+    "chromium": "Google Chrome for Testing 153.0.8010.12",
+    "chromium_sandbox": false,
+    "headless": true,
+    "decision_provider": {
+      "kind": "llm",
+      "config_id": "caller:llm_assistance",
+      "requested_model": null
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "closed",
+    "profile_removed": true,
+    "browser_processes_left": 0
+  },
+  "watchdog": {
+    "worker_stopped": true,
+    "watchdog_kill": false
+  },
+  "decision": {
+    "kind": "llm",
+    "requested_model": null,
+    "served_models": [],
+    "config_id": "caller:llm_assistance"
+  },
+  "session_id": "f3f267b6c824430796b0f4ccb8110c2b",
+  "owner_epoch": 2,
+  "chain_budget": {
+    "used": {
+      "steps": 19,
+      "model_calls": 15
+    },
+    "remaining": {
+      "steps": 45,
+      "model_calls": 81,
+      "wall_seconds": 99.379,
+      "handoffs": 1
+    }
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:9d91ac4638b54df1b0e40cf762b4e37e:permissions",
+    "runtime:9d91ac4638b54df1b0e40cf762b4e37e:dispatch_ordering",
+    "runtime:9d91ac4638b54df1b0e40cf762b4e37e:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 20.555,
+    "total_seconds": 20.621
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:9d91ac4638b54df1b0e40cf762b4e37e:immutable-slots:commitment:1",
+      "task_id": "order-note-125-verified",
+      "task_revision": 2,
+      "attempt_id": "9d91ac4638b54df1b0e40cf762b4e37e",
+      "run_id": "9d91ac4638b54df1b0e40cf762b4e37e",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:9d91ac4638b54df1b0e40cf762b4e37e:immutable-slots:commitment:2",
+      "task_id": "order-note-125-verified",
+      "task_revision": 2,
+      "attempt_id": "9d91ac4638b54df1b0e40cf762b4e37e",
+      "run_id": "9d91ac4638b54df1b0e40cf762b4e37e",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:9d91ac4638b54df1b0e40cf762b4e37e:immutable-slots:coverage:2",
+      "task_id": "order-note-125-verified",
+      "task_revision": 2,
+      "attempt_id": "9d91ac4638b54df1b0e40cf762b4e37e",
+      "run_id": "9d91ac4638b54df1b0e40cf762b4e37e",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 2,
+      "dispatches": 2,
+      "text_dispatches": 0,
+      "nontext_dispatches": 2,
+      "unknown_dispatches": 0,
+      "sealed_generation": 2,
+      "status": "pass"
+    }
+  ]
+}

@@ -70,7 +70,7 @@ class TaskChain:
         self.task = task
         self.root_limits = task.limits
         self.started = time.monotonic()
-        self.out_dir = out_dir
+        self.out_dir = out_dir / f"chain-{self.chain_id}" if out_dir is not None else None   # one folder per chain
         self.lease_seconds = lease_seconds
         self.lock = threading.RLock()
         self.used = {"steps": 0, "model_calls": 0}

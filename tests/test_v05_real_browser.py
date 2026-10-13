@@ -42,6 +42,9 @@ class RealBrowserAdapter(unittest.TestCase):
         cls.server = subprocess.Popen([sys.executable, str(ROOT / "experiments/v05/site/server.py"),
                                        "--port", str(cls.port), "--run-id", cls.run_id],
                                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Registered at once: class cleanups run even when setUpClass fails later (tearDownClass would not),
+        # so a failed setup no longer leaves the site listening on a random port.
+        cls.addClassCleanup(cls._stop_server)
         cls.origin = f"http://127.0.0.1:{cls.port}"
         opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         for _ in range(100):
@@ -56,13 +59,17 @@ class RealBrowserAdapter(unittest.TestCase):
         data["text_slots"].append({"id": "email", "version": 1, "value": "a@example.test"})
         cls.task = ExecutionTask.from_dict(data)
         cls.browser = FixtureBrowser(cls.task, chrome=CHROME)
+        cls.addClassCleanup(cls.browser.close)
         cls.browser.reset(cls.task.goal)
 
     @classmethod
-    def tearDownClass(cls):
-        cls.browser.close()
+    def _stop_server(cls):
         cls.server.terminate()
-        cls.server.wait(timeout=5)
+        try:
+            cls.server.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            cls.server.kill()
+            cls.server.wait(timeout=5)
 
     def setUp(self):
         self.goto("/form")
