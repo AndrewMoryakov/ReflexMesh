@@ -54,9 +54,14 @@ MIN_SCRUBBED_NORMAL = 4
 class AttemptTask:
     """The accepted task plus the attempt identity that the gate, slot ledger and constraint rows bind to."""
 
-    def __init__(self, task: BrowserTask, attempt_id: str):
+    def __init__(self, task: BrowserTask, attempt_id: str, limits=None):
         self._task = task
         self.run_id = attempt_id
+        self._limits = limits   # a continued attempt sees what is left of the chain's budget
+
+    @property
+    def limits(self):
+        return self._limits if self._limits is not None else self._task.limits
 
     def __getattr__(self, name):
         return getattr(self._task, name)
@@ -288,13 +293,26 @@ class BrowserControlledEnvironment:
         self._done_in_state: set[str] = set()
         self._mutations: set[str] = set()
         self.verifier: CriteriaVerifier | None = None
+        self.continued = False   # an attempt that continues a chain: same session, no first navigation
+
+    def carry(self) -> dict:
+        """What the repeat guard remembers; it belongs to the chain, not to one attempt (V0.6 section 9)."""
+        return {"mutations": set(self._mutations), "done_in_state": set(self._done_in_state)}
+
+    def restore(self, carry: dict | None) -> None:
+        if carry:
+            self._mutations |= carry["mutations"]
+            self._done_in_state |= carry["done_in_state"]
 
     def _stop(self, reason: str) -> RuntimeStop:
         self.last_stop = reason
         return RuntimeStop(reason)
 
     def reset(self, goal):
-        """The first navigation is a dispatch like any other: permission, step, gate, journal."""
+        """The first navigation is a dispatch like any other: permission, step, gate, journal. A continued
+        attempt has none: it looks at the page the session is on (section 10)."""
+        if self.continued:
+            return
         self.gate.reserve_step()
         self.journal.put(("proposal", {"action": "navigate"}))
         if "navigate" not in self.task.permissions or canonical_origin(self.task.start_url) not in self.task.allowed_origins:
@@ -432,7 +450,12 @@ class BrowserControlledEnvironment:
             self.journal.put(("rejected", "repeated_action"))
             self.journal.put(("reobserve", "repeated_action"))
             return SkippedAction()
-        mutation_key = self.inner.mutation_key(prepared) if prepared.risk == "write" else None
+        # A click known to send a GET (a link, a GET form) changes nothing on the server by the protocol's
+        # contract; the document-level guard is for writes that may (section 9). The state-level guard above
+        # still refuses it on an unchanged page.
+        request = getattr(prepared.target, "request", None)
+        mutation_key = (self.inner.mutation_key(prepared)
+                        if prepared.risk == "write" and not (request and request[0] == "GET") else None)
         if mutation_key is not None and mutation_key in self._mutations:
             # A write's server effect is unknown in this build, and a write changes the page (the saved
             # note shows up), so a new page state does not make the same Save a new operation (V0.6
@@ -569,8 +592,10 @@ class BrowserRun:
 
     def __init__(self, task: BrowserTask, *, chrome: str | None, provider_factory, action_provider: str,
                  out_dir: Path | None = None, sandbox: bool = True, headless: bool = True,
-                 attempt_id: str | None = None, checks: dict | None = None):
+                 attempt_id: str | None = None, checks: dict | None = None, chain=None):
         self.task, self.chrome = task, chrome
+        self.chain = chain             # a TaskChain when run by BrowserCore (handoff in the same session)
+        self.retained = False          # the session outlives this attempt, handed to the chain
         # Registered checks come from the service's configuration, never from the task (V0.6 section 11).
         self.checks = dict(checks or {})
         self._claimed: list = []
@@ -583,6 +608,9 @@ class BrowserRun:
         self.config_id: str | None = None
         self.requested_model: str | None = None
         self.outcome: dict = {}
+        self.provider = None
+        self.controlled = None
+        self.assist_left = 0
 
     def cancel(self) -> None:
         self._cancel.set()
@@ -633,8 +661,19 @@ class BrowserRun:
 
     # ── the attempt ──
     def run(self) -> dict:
-        task = self.task
-        started = time.monotonic()
+        problem = self._begin()
+        if problem is not None:
+            return problem
+        worker = threading.Thread(target=self._work, name="reflexmesh-browser-loop", daemon=True)
+        worker.start()
+        cleanup_notes = self._supervise(worker)
+        return self._finish(self.started, cleanup_notes)
+
+    def _begin(self, *, provider_needed: bool = True) -> dict | None:
+        """Everything before the browser is touched: acceptance, provider, claims, gate, journal. Returns a
+        refusal result, or None when the attempt may start."""
+        task, chain = self.task, self.chain
+        started = self.started = chain.started if chain is not None else time.monotonic()
         unsupported = task.criteria_unsupported(frozenset(self.checks))
         if unsupported:
             return self._refusal("blocked", "unsupported_criterion", {"criteria": list(unsupported)})
@@ -643,16 +682,24 @@ class BrowserRun:
         problem = self._preflight()
         if problem:
             return self._refusal("blocked", "executor_unavailable", {"detail": problem})
-        try:
-            provider, self.config_id, self.requested_model = self.provider_factory()
-        except ProviderUnavailable as exc:
-            return self._refusal("blocked", "executor_unavailable", {"detail": "decision_provider_unavailable",
-                                                                      "message": str(exc)})
-        used = sorted({c.args["check_id"] for c in task.criteria if c.predicate == "registered_check"})
-        for check_id in used:
-            # The claim comes before the first navigation: everything the site records after it is this attempt's.
+        provider = None
+        if provider_needed:
             try:
-                self.checks[check_id].claim(self.attempt_id, timeout=2.0)
+                provider, self.config_id, self.requested_model = self.provider_factory()
+            except ProviderUnavailable as exc:
+                return self._refusal("blocked", "executor_unavailable", {"detail": "decision_provider_unavailable",
+                                                                          "message": str(exc)})
+        else:
+            self.config_id = "caller:llm_assistance"
+        if chain is not None:
+            self._claimed = list(chain.claimed)
+        used = sorted({c.args["check_id"] for c in task.criteria if c.predicate == "registered_check"} -
+                      {check.check_id for check in self._claimed})
+        for check_id in used:
+            # The claim comes before the first navigation: everything the site records after it is this attempt's
+            # (the chain's, when there is one: the claim lasts as long as the session).
+            try:
+                self.checks[check_id].claim(chain.chain_id if chain is not None else self.attempt_id, timeout=2.0)
             except Exception as exc:
                 self._release_checks()
                 return self._refusal("blocked", "unsupported_criterion",
@@ -660,17 +707,19 @@ class BrowserRun:
                                       "check_id": check_id, "detail": str(exc) if str(exc).startswith("check_") else
                                       "check_unavailable"})
             self._claimed.append(self.checks[check_id])
+            if chain is not None:
+                chain.claimed.append(self.checks[check_id])
         if self.out_dir is not None:
             self.out_dir.mkdir(parents=True, exist_ok=True)
         ctx = mp.get_context("fork")
-        view = AttemptTask(task, self.attempt_id)
+        view = AttemptTask(task, self.attempt_id, chain.remaining_limits() if chain is not None else None)
         self.view = view
         self.registry = SlotRegistry.from_task(view, self.attempt_id)
         self.slot_evidence = SlotEvidence(ctx, view, self.attempt_id, registry=self.registry)
         self.gate = AttemptGate(ctx, view, started, slot_registry=self.registry, slot_sink=self.slot_evidence.sink)
         self.slot_evidence.bind_dispatch_counter(self.gate.dispatches)
-        self.journal = Journal(task, self.attempt_id, self.out_dir / "trace.jsonl" if self.out_dir else None,
-                               self.action_provider if self.action_provider in MODEL_PROVIDERS else "script")
+        producer = self.action_provider if self.action_provider in MODEL_PROVIDERS + ("llm",) else "script"
+        self.journal = Journal(task, self.attempt_id, self.out_dir / "trace.jsonl" if self.out_dir else None, producer)
         self.journal.emit("task_accepted", task_id=task.task_id, revision=task.revision,
                           permissions=sorted(task.permissions), origins=list(task.allowed_origins),
                           slots=[{"ref": s.reference, "sensitivity": s.sensitivity} for s in task.slots],
@@ -678,14 +727,55 @@ class BrowserRun:
                           limits={"wall_seconds": task.limits.wall_seconds, "max_steps": task.limits.max_steps,
                                   "max_model_calls": task.limits.max_model_calls})
         self.journal.emit("attempt_started", attempt_id=self.attempt_id, provider=self.action_provider,
-                          config_id=self.config_id, requested_model=self.requested_model)
-        self.provider = JournalingProvider(ValidatingProvider(provider), self.journal, self.requested_model)
+                          config_id=self.config_id, requested_model=self.requested_model,
+                          **({"chain_id": chain.chain_id, "parent_attempt_id": chain.parent(),
+                              "owner_epoch": chain.owner_epoch, "session_id": chain.session_id}
+                             if chain is not None else {}))
+        if chain is not None and chain.session is not None:
+            self.journal.emit("owner_transferred", session_id=chain.session_id, owner_epoch=chain.owner_epoch,
+                              from_attempt=chain.parent())
+        if provider is not None:
+            self.provider = JournalingProvider(ValidatingProvider(provider), self.journal, self.requested_model)
         self.verifier = CriteriaVerifier(task, self.attempt_id, self.journal,
                                          {check.check_id: check for check in self._claimed})
-        worker = threading.Thread(target=self._work, name="reflexmesh-browser-loop", daemon=True)
-        worker.start()
-        cleanup_notes = self._supervise(worker)
-        return self._finish(started, cleanup_notes)
+        return None
+
+    def _environment(self) -> "BrowserControlledEnvironment":
+        """The adapter (the chain's open session, or a new browser) wrapped in this attempt's gate and journal."""
+        chain = self.chain
+        continued = chain is not None and chain.session is not None
+        if continued:
+            self.adapter, chain.session = chain.session, None
+        else:
+            self.adapter = GenericBrowserAdapter(self.task, chrome=self.chrome, sandbox=self.sandbox,
+                                                 headless=self.headless)
+        # The slot ledger and the task revision are this attempt's: a continued session is rebound to them.
+        self.adapter.rebind_task(self.task)
+        self.adapter.bind_runtime(self.registry, self.slot_evidence.sink)
+        controlled = BrowserControlledEnvironment(self.adapter, self.gate, self.journal, self.task)
+        controlled.verifier = self.verifier
+        controlled.continued = continued
+        if chain is not None:
+            controlled.restore(chain.carry)
+        self.controlled = controlled
+        return controlled
+
+    def _retainable(self) -> bool:
+        """Section 10: a session is handed over only after a handoff, with nothing in flight and no driver-level
+        unknown effect (a write whose driver call failed); otherwise it is closed."""
+        out, controlled = self.outcome, self.controlled
+        handoff = out.get("kind") == "handoff" or (out.get("kind") == "stopped" and
+                                                    out.get("reason") in ("no_progress", "stale_loop"))
+        return (self.chain is not None and handoff and not getattr(self, "_no_transfer", False) and
+                not self.chain.closed and controlled is not None and not controlled.uncertain and
+                self.adapter is not None and not self.adapter.closed and not self.gate.in_flight.value)
+
+    def _release_session(self) -> None:
+        if self.chain is not None and self.controlled is not None:
+            self.chain.carry = self.controlled.carry()
+        self.retained = self._retainable()
+        if not self.retained and self.adapter is not None:
+            self.adapter.close()
 
     def _work(self) -> None:
         from systemone_harness.controller import Controller
@@ -703,12 +793,8 @@ class BrowserRun:
 
         controlled = None
         try:
-            self.adapter = GenericBrowserAdapter(self.task, chrome=self.chrome, sandbox=self.sandbox,
-                                                 headless=self.headless)
-            self.adapter.bind_runtime(self.registry, self.slot_evidence.sink)
+            controlled = self._environment()
             space = browser_action_space(self.task.permissions)
-            controlled = BrowserControlledEnvironment(self.adapter, self.gate, journal, self.task)
-            controlled.verifier = self.verifier
             counting = CountingProvider(self.provider, self.gate, journal, model=self.action_provider in MODEL_PROVIDERS)
             try:
                 run = Controller(space, controlled, counting, gate=JournalGate(space.gate),
@@ -738,10 +824,143 @@ class BrowserRun:
             try:
                 self.provider.close()
             finally:
-                if controlled is not None:
-                    controlled.close()
-                elif self.adapter is not None:
-                    self.adapter.close()
+                self._release_session()
+
+    # ── LLM assistance (section 10): one proposal at a time from the fresh finite options ──
+    def start_assist(self) -> dict:
+        from reflexmesh.runtime.browser_core import ASSIST_STEPS
+
+        problem = self._begin(provider_needed=False)
+        if problem is not None:
+            self.chain.assist = None
+            self.chain.close()
+            return problem
+        self.assist_left = ASSIST_STEPS
+        try:
+            self._environment()
+            obs = self.controlled.observe()       # the action from the old handoff is never executed (section 14)
+        except RuntimeStop as exc:
+            return self._assist_stop(exc.reason)
+        except Exception as exc:
+            self.outcome = {"kind": "failed", "reason": "worker_exception", "detail": type(exc).__name__}
+            return self._assist_close()
+        return self._progress(obs, None)
+
+    def _proposal(self, proposal) -> tuple[str, dict] | str:
+        """A proposal names an option of the latest observation; anything else is refused before admission."""
+        if type(proposal) is not dict:
+            return "invalid_proposal"
+        report = self.adapter.report
+        if proposal.get("observation_id") != report.get("observation_id"):
+            return "stale_observation"
+        operation = proposal.get("operation")
+        if operation in ("scroll", "wait"):
+            if operation not in self.task.permissions:
+                return "not_permitted"
+            if operation == "wait":
+                return "wait", {}
+            if proposal.get("direction") not in ("up", "down"):
+                return "invalid_proposal"
+            return "scroll", {"direction": proposal["direction"]}
+        options = {o["ref"]: o for o in report.get("option_list") or []}
+        ref = proposal.get("option_ref")
+        if ref not in options:
+            return "unknown_option"
+        if options[ref]["operation"] != operation:
+            return "operation_mismatch"
+        _, kind, key = ref.split(":", 2)
+        if kind == "elements":
+            return "click", {"element": key}
+        if kind == "text_fields":
+            if proposal.get("slot_ref") not in self.task.slot_references:
+                return "unknown_slot"
+            return "type_text", {"field": key, "value": proposal["slot_ref"]}
+        if kind == "options":
+            return "select_option", {"option": key}
+        if kind == "tabs":
+            return "switch_tab", {"tab": key}
+        if kind == "history":
+            return "go_back", {}
+        return "invalid_proposal"
+
+    def assist_step(self, proposal) -> dict:
+        if self.assist_left <= 0:
+            return self._progress(self._last_obs, {"rejected": "assistance_limit"})
+        converted = self._proposal(proposal)
+        if isinstance(converted, str):
+            return self._progress(self._last_obs, {"rejected": converted})
+        action, params = converted
+        before = len(self.journal.actions)
+        try:
+            self.controlled.execute(action, params)
+            dispatched = len(self.journal.actions) > before
+            if dispatched:
+                self.assist_left -= 1
+            rejected = None if dispatched else next(
+                (r["reason"] for r in reversed(self.journal.records) if r["kind"] == "admission_rejected"), "rejected")
+            obs = self.controlled.observe()
+        except RuntimeStop as exc:
+            return self._assist_stop(exc.reason)
+        except Exception as exc:
+            self.outcome = {"kind": "failed", "reason": "worker_exception", "detail": type(exc).__name__}
+            return self._assist_close()
+        return self._progress(obs, {"accepted": True, "dispatched": dispatched,
+                                    **({"rejected": rejected} if rejected else {})})
+
+    def assist_end(self, why: str) -> dict:
+        """`stop` or `return_to_jev`: the assisted attempt ends as a handoff; the session stays with the chain."""
+        self.outcome = {"kind": "handoff", "reason": why}
+        return self._assist_close()
+
+    def assist_abandon(self, why: str) -> dict | None:
+        """Lease expiry or cancel while waiting for a proposal: the attempt ends and gives nothing away."""
+        if why == "cancel_requested":
+            self.gate.stop("cancel_requested")
+        self.outcome = {"kind": "stopped", "reason": why}
+        self._no_transfer = True
+        try:
+            return self._assist_close()
+        except Exception:
+            return None
+
+    def _assist_stop(self, reason: str) -> dict:
+        if reason == "criteria_met":
+            self.verifier.final(self.controlled)
+            self.outcome = {"kind": "verify", "reason": "criteria_met"}
+        else:
+            self.outcome = {"kind": "stopped", "reason": reason}
+        return self._assist_close()
+
+    def _assist_close(self) -> dict:
+        self.chain.assist = None
+        self._release_session()
+        return self._finish(self.started, {"worker_stopped": True, "watchdog_kill": False})
+
+    def _progress(self, obs, last: dict | None) -> dict:
+        """`browser-progress/0.1`: never completed, never a result; a new one-time token every time."""
+        self._last_obs = obs
+        chain, report = self.chain, self.adapter.report
+        token, lease = chain.issue_token(self.attempt_id)
+        parts = urlsplit(str(report.get("url") or ""))
+        options = list(report.get("option_list") or [])
+        options += [{"ref": None, "operation": op} for op in ("scroll", "wait") if op in self.task.permissions]
+        snapshot = self.gate.snapshot()
+        return {"schema_version": "browser-progress/0.1", "task_id": self.task.task_id,
+                "revision": self.task.revision, "chain_id": chain.chain_id, "attempt_id": self.attempt_id,
+                "phase": "awaiting_proposal",
+                "observation": {"observation_id": report.get("observation_id"),
+                                "page": f"{parts.scheme}://{parts.netloc}{parts.path}",
+                                "title": (obs.fields or {}).get("title"), "text": obs.text,
+                                "coverage": report.get("coverage")},
+                "action_options": options, "text_slot_refs": list(self.task.slot_references),
+                "criteria": [{k: r.get(k) for k in ("id", "status", "reason")} for r in self.verifier.result_rows()],
+                "assistance_steps_remaining": self.assist_left,
+                "remaining_budget": {"steps": max(0, self.view.limits.max_steps - snapshot["steps"]),
+                                     "model_calls": max(0, self.view.limits.max_model_calls - snapshot["model_calls"]),
+                                     "wall_seconds": round(self.gate.wall_remaining() or 0.0, 3),
+                                     "handoffs": chain.remaining()["handoffs"]},
+                "continuation_token": token, "expires_in_seconds": round(lease, 3),
+                "parent_attempt_id": self.attempt_id, "last_proposal": last}
 
     def _supervise(self, worker: threading.Thread) -> dict:
         """Cancel and deadline are accepted here, at the gate, whatever the loop is waiting on."""
@@ -783,18 +1002,23 @@ class BrowserRun:
             if evidence[check.check_id] is None:
                 verdicts.append(None)
                 continue
-            verdict = check.settle(self.journal.actions, evidence[check.check_id], browser_stopped=True)
+            rows = self._chain_actions()   # earlier attempts' submits are this claim's requests too
+            verdict = check.settle(rows, evidence[check.check_id], browser_stopped=True)
             verdicts.append(verdict)
             self.journal.emit("effects_settled", check_id=check.check_id, repeats=verdict[0] if verdict else "unknown",
-                              applied=sum(1 for a in self.journal.actions if a["effect"] == "applied"),
-                              not_applied=sum(1 for a in self.journal.actions if a["effect"] == "not_applied"),
-                              unknown=sum(1 for a in self.journal.actions if a["effect"] == "unknown"))
+                              applied=sum(1 for a in rows if a["effect"] == "applied"),
+                              not_applied=sum(1 for a in rows if a["effect"] == "not_applied"),
+                              unknown=sum(1 for a in rows if a["effect"] == "unknown"))
         failed = [v for v in verdicts if v and v[0] == "fail"]
         if failed:
             return failed[0]
         if verdicts and all(v and v[0] == "pass" for v in verdicts):
             return verdicts[0]
         return None
+
+    def _chain_actions(self) -> list[dict]:
+        """The effect registry (section 9): every action of the chain, this attempt's last."""
+        return (self.chain.actions if self.chain is not None else []) + self.journal.actions
 
     def _constraint_rows(self, snapshot, coverage, repeats) -> list[dict]:
         """The six runtime constraints: the shared assessors, plus this path's own evidence for ownership (the
@@ -812,6 +1036,13 @@ class BrowserRun:
                                 evidence_refs=[f"runtime:{self.attempt_id}:no_uncertain_repeats"] +
                                 [f"check:{c.check_id}:{c.claim_id}" for c in self._claimed],
                                 scope="registered_source")
+        if self.chain is not None:
+            # A confirmed failure stays with the chain through every later attempt (section 11).
+            for cid, failed in self.chain.failed_constraints.items():
+                if by_id[cid]["status"] != "fail":
+                    by_id[cid].update(status="fail", observed_at=failed["observed_at"],
+                                      evidence_refs=list(failed["evidence_refs"]),
+                                      reason="Confirmed earlier in this chain: " + failed["reason"])
         return rows
 
     def _ownership_row(self) -> dict | None:
@@ -823,7 +1054,7 @@ class BrowserRun:
             return None
         facts, seen = adapter.session, adapter.controllers
         ref = [f"runtime:{self.attempt_id}:ownership"]
-        scope = "browser_session_launched_by_attempt"
+        scope = "browser_session_launched_by_attempt" if self.chain is None else "browser_session_of_chain"
         if seen["foreign_pids"] or seen["session_changed"]:
             return {"status": "fail", "observed_at": time.time(), "evidence_refs": ref, "scope": scope,
                     "reason": ("Another process held a connection to this attempt's browser debugging port."
@@ -838,7 +1069,8 @@ class BrowserRun:
             return {"status": "unknown", "observed_at": None, "evidence_refs": [], "scope": scope,
                     "reason": "Browser session ownership is not established: " + "; ".join(missing) + "."}
         return {"status": "pass", "observed_at": time.time(), "evidence_refs": ref, "scope": scope,
-                "reason": (f"The browser was launched by this attempt (a child process with its own profile, verified "
+                "reason": (f"The browser was launched by this {'attempt' if self.chain is None else 'chain'} "
+                           f"(a child process with its own profile, verified "
                            f"in use), stayed the same process, had only this runtime on its debugging port at each of "
                            f"{seen['samples']} observations, and was closed with no process left. A client connecting "
                            f"between two observations is not excluded.")}
@@ -874,7 +1106,7 @@ class BrowserRun:
                     ("incomplete", "deadline", None) if terminal == 2 else ("failed", "executor_error", None))
         if out["kind"] == "stopped":
             reason = out["reason"]
-            if reason in ("stale_loop", "no_progress"):
+            if reason in ("stale_loop", "no_progress", "lease_expired"):
                 return "incomplete", "needs_handoff", reason
             if reason in STOP_CODES:
                 return STOP_CODES[reason], reason, None
@@ -886,7 +1118,8 @@ class BrowserRun:
         return "verifying", out["reason"] if out["kind"] == "verify" else "finish", None
 
     def _finish(self, started: float, notes: dict) -> dict:
-        task, gate, journal = self.task, self.gate, self.journal
+        task, gate, journal, chain = self.task, self.gate, self.journal, self.chain
+        parent = chain.parent() if chain is not None else None
         terminal_at = time.monotonic()
         status, reason, handoff_reason = self._terminal()
         try:
@@ -908,9 +1141,9 @@ class BrowserRun:
         expected_generation = None
         if status == "verifying":
             verdicts = [row["status"] for row in criteria]
-            dispatches = journal.actions
+            dispatches = self._chain_actions()
             settled = (snapshot is not None and not snapshot["in_flight"] and
-                       len(dispatches) == snapshot["dispatches"] and
+                       len(journal.actions) == snapshot["dispatches"] and
                        all(row["effect"] != "unknown" for row in dispatches))
             if constraints.has_fail():
                 status, reason = "failed", "constraint_violated"
@@ -941,6 +1174,14 @@ class BrowserRun:
             status, reason = "cancelled", "cancel_requested"
         elif accepted == 2 and status != "cancelled":
             status, reason = "incomplete", "deadline"
+        refused_transfer = None
+        if self.retained and (status, reason) != ("incomplete", "needs_handoff"):
+            refused_transfer = "attempt_not_handed_off"
+        elif self.retained and (chain.closed or chain.handoffs_used >= chain.root_limits.max_handoffs):
+            refused_transfer = "chain_closed" if chain.closed else "handoff_limit"
+        if refused_transfer:
+            self.retained = False
+            self.adapter.close()
         journal.emit("terminal", attempt_status=status, stop_reason=reason, handoff_reason=handoff_reason)
         cleanup = self._cleanup()
         try:
@@ -949,17 +1190,36 @@ class BrowserRun:
             constraints.update(self._constraint_rows(snapshot, gate.slot_snapshot(), repeats))
         except RuntimeStop:
             pass
-        limits = task.limits
+        limits = self.view.limits
         steps, calls = snapshot["steps"], snapshot["model_calls"]
         actions = journal.actions
+        continuation = None
+        if chain is not None:
+            chain.record(self.attempt_id, snapshot, actions, constraints.rows())
+            if self.retained:
+                chain.session = self.adapter
+                token, lease = chain.issue_token(self.attempt_id)
+                journal.emit("handoff_created", session_id=chain.session_id, owner_epoch=chain.owner_epoch,
+                             lease_seconds=round(lease, 3))
+                continuation = {"allowed": True, "token": token, "expires_in_seconds": round(lease, 3),
+                                "parent_attempt_id": self.attempt_id, "modes": ["jev", "llm"],
+                                "session_id": chain.session_id}
+            else:
+                continuation = {"allowed": False, "reason": refused_transfer or "session_not_transferable"}
+                if chain.assist is None:
+                    chain.close()
+        else:
+            # A one-shot attempt holds no session after it returns: nothing to resume (section 14).
+            continuation = {"allowed": False, "reason": "no_session_service"}
         unsettled = any(a["effect"] == "unknown" for a in actions) or bool(snapshot["in_flight"])
         outcome = ("fail" if constraints.has_fail() or (status == "failed" and reason in
                                                        ("postcondition_failed", "constraint_violated"))
                    else "pass" if status == "completed" else "unknown")
         result = {
             "schema_version": RESULT_SCHEMA, "task_id": task.task_id, "revision": task.revision,
-            "chain_id": standalone_chain(self.attempt_id)["root_attempt_id"], "attempt_id": self.attempt_id,
-            "parent_attempt_id": None, "attempt_status": status, "stop_reason": reason, "task_outcome": outcome,
+            "chain_id": chain.chain_id if chain is not None else standalone_chain(self.attempt_id)["root_attempt_id"],
+            "attempt_id": self.attempt_id,
+            "parent_attempt_id": parent, "attempt_status": status, "stop_reason": reason, "task_outcome": outcome,
             "execution_outcome": ("unknown" if unsettled else "returned" if snapshot["dispatches"]
                                   else "error" if status == "failed" else "not_started"),
             "outputs": list(self.verifier.outputs.values()), "verification": criteria + constraints.rows(),
@@ -972,10 +1232,15 @@ class BrowserRun:
                 "remaining_wall_seconds": round(gate.wall_remaining(), 3),
                 "model_call_limit_scope": "locally_controlled_provider_requests",
                 "elapsed_seconds": round(terminal_at - started, 3)},
-            "handoff": self._handoff(handoff_reason, reason) if status == "incomplete" else None,
+            "handoff": (self._handoff(handoff_reason, reason, criteria, continuation)
+                        if status == "incomplete" else None),
             "components": self._components(), "cleanup": cleanup, "watchdog": notes,
             "decision": {"kind": self.action_provider, "requested_model": self.requested_model,
-                         "served_models": list(self.provider.served_models), "config_id": self.config_id},
+                         "served_models": list(self.provider.served_models) if self.provider else [],
+                         "config_id": self.config_id},
+            **({"session_id": chain.session_id, "owner_epoch": chain.owner_epoch,
+                "chain_budget": {"used": dict(chain.used), "remaining": chain.remaining()}}
+               if chain is not None else {}),
             "trace_ref": "trace.jsonl" if self.out_dir else None,
             "evidence_refs": [f"runtime:{self.attempt_id}:{n}" for n in
                               ("permissions", "dispatch_ordering", "budget")],
@@ -986,34 +1251,56 @@ class BrowserRun:
             result["detail"] = {"exception": self.outcome["detail"]}
         if self.outcome.get("kind") == "stopped" and status == "failed":
             result["detail"] = {"stop": self.outcome["reason"]}
-        self._release_checks()
+        if chain is None:
+            self._release_checks()
         self.slot_evidence.close()
         journal.close()
         if self.out_dir is not None:
-            (self.out_dir / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2, default=str),
+            # The continuation token is a bearer right over the open session: the caller gets it in the returned
+            # result, the file on disk does not keep it.
+            stored = json.loads(json.dumps(result, default=str))
+            kept = ((stored.get("handoff") or {}).get("continuation") or {})
+            if "token" in kept:
+                kept["token"] = "[withheld]"
+            (self.out_dir / "result.json").write_text(json.dumps(stored, ensure_ascii=False, indent=2),
                                                       encoding="utf-8")
         return result
 
-    def _handoff(self, handoff_reason: str | None, stop_reason: str) -> dict | None:
+    def _handoff(self, handoff_reason: str | None, stop_reason: str, criteria: list[dict],
+                 continuation: dict | None) -> dict | None:
+        """The package of section 10: enough for a caller to decide the next step, never a slot value."""
         if handoff_reason is None and stop_reason not in ("effect_unknown", "verification_unknown"):
             return None
         last = self.journal.last_observation
+        chain = self.chain
+        report = self.adapter.report if self.adapter is not None else {}
         return {
-            "schema_version": "browser-handoff/0.1-partial",
+            "schema_version": "browser-handoff/0.1",
             "reason": handoff_reason or stop_reason, "task_id": self.task.task_id, "revision": self.task.revision,
-            "attempt_id": self.attempt_id, "observation_ref": (last or {}).get("observation_id"),
-            "page": (last or {}).get("page"),
-            "operations": [{"id": a["id"], "operation": a["operation"], "option_ref": a["option_ref"],
+            "chain_id": chain.chain_id if chain is not None else self.attempt_id, "attempt_id": self.attempt_id,
+            "parent_attempt_id": chain.attempts[-2] if chain is not None and len(chain.attempts) > 1 else None,
+            "observation_ref": (last or {}).get("observation_id"), "page": (last or {}).get("page"),
+            "available_actions": list(report.get("option_list") or []),
+            "operations": [{"id": a["id"], "attempt_id": a.get("attempt_id", self.attempt_id),
+                            "operation": a["operation"], "producer": a.get("producer"), "option_ref": a["option_ref"],
                             "slot_ref": a["slot_ref"], "driver_outcome": a["driver_outcome"], "effect": a["effect"]}
-                           for a in self.journal.actions],
+                           for a in (chain.actions if chain is not None else self.journal.actions)],
+            "unresolved_effects": [a["id"] for a in (chain.actions if chain is not None else self.journal.actions)
+                                   if a["effect"] == "unknown" and a["operation"] != "navigate"],
+            "criteria": [{k: row.get(k) for k in ("id", "status", "reason")} for row in criteria],
             "permissions": sorted(self.task.permissions), "text_slot_refs": list(self.task.slot_references),
-            # A continuation token needs the session service of M3; none is issued here.
-            "continuation": {"allowed": False, "reason": "resume_not_implemented"}}
+            "owner": ({"session_id": chain.session_id, "owner_epoch": chain.owner_epoch, "session_open": self.retained}
+                      if chain is not None else {"session_open": False}),
+            "remaining": chain.remaining() if chain is not None else None,
+            "continuation": continuation}
 
     def _cleanup(self) -> dict:
         adapter = self.adapter
         if adapter is None:
             return {"status": "not_created"}
+        if self.retained:
+            # Handed to the chain: the browser stays open under its lease; the chain closes it.
+            return {"status": "retained", "session_id": self.chain.session_id, "profile_removed": False}
         profile = adapter.profile_dir
         try:
             adapter.close()

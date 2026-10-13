@@ -249,6 +249,11 @@ class GenericBrowserAdapter:
             raise RuntimeStop("adapter_contract_unsupported")
         self._registry, self._sink = registry, sink
 
+    def rebind_task(self, task: BrowserTask) -> None:
+        """A continued session serves the chain's current revision: its slots and its (never wider) origins."""
+        self.task = task
+        self._allowed = frozenset(task.allowed_origins)
+
     def capabilities(self) -> dict:
         return dict(CAPABILITIES)
 
