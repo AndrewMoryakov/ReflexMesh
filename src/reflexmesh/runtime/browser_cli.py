@@ -95,8 +95,9 @@ def run_browser(args) -> int:
 
     chrome = args.chrome or os.environ.get("REFLEXMESH_CHROME")
     sandbox = not (args.no_sandbox or os.environ.get("REFLEXMESH_CHROME_NO_SANDBOX") == "1")
+    headless = not getattr(args, "headed", False)
     run = BrowserRun(task, chrome=chrome, provider_factory=provider_factory, action_provider=args.action_provider,
-                     out_dir=output, sandbox=sandbox, attempt_id=args.attempt_id, checks=checks)
+                     out_dir=output, sandbox=sandbox, headless=headless, attempt_id=args.attempt_id, checks=checks)
     signal.signal(signal.SIGINT, lambda *_: run.cancel())
     signal.signal(signal.SIGTERM, lambda *_: run.cancel())
     try:
@@ -125,7 +126,8 @@ def serve_browser(args) -> int:
     except OSError:
         return _error("output_unavailable")
     core = BrowserCore(chrome=chrome, provider_factory=provider_factory, action_provider=args.action_provider,
-                       out_dir=state, sandbox=sandbox, checks=checks, lease_seconds=args.lease_seconds)
+                       out_dir=state, sandbox=sandbox, headless=not getattr(args, "headed", False),
+                       checks=checks, lease_seconds=args.lease_seconds)
     service = SessionService(core, args.socket)
     try:
         service.start()

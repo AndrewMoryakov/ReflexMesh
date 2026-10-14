@@ -25,6 +25,7 @@ import subprocess
 import tempfile
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from urllib.parse import urljoin, urlsplit
 
 from reflexmesh.contracts.browser import BrowserTask, READ_OPERATIONS, canonical_origin
@@ -93,6 +94,14 @@ def browser_action_space(permissions) -> "ActionSpace":
 
 
 def chrome_version(path: str) -> str | None:
+    if os.name == "nt":
+        # Windows Chrome ignores --version and starts a browser (in the user's session: a window of their own
+        # Chrome). The installer keeps each version's files in a directory named by it, next to chrome.exe.
+        versions = [d.name for d in Path(path).parent.glob("*.*.*.*") if (d / "chrome.dll").exists()]
+        if not versions:
+            return None
+        newest = max(versions, key=lambda v: tuple(int(x) if x.isdigit() else -1 for x in v.split(".")))
+        return f"{Path(path).stem} {newest} (install directory)"
     try:
         out = subprocess.run([path, "--version"], capture_output=True, text=True, timeout=10).stdout.strip()
         return out or None

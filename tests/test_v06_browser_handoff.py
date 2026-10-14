@@ -227,10 +227,22 @@ class SameSession(BrowserCase):
         pid = chain.session.session["pid"]
         progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
         self.assertEqual(progress["phase"], "awaiting_proposal")
-        time.sleep(3.0)
+
+        def alive():
+            try:
+                return psutil.Process(pid).status() != psutil.STATUS_ZOMBIE
+            except psutil.Error:
+                return False
+
+        # Closing Chrome takes longer on Windows than on Linux; the chain is marked closed before the attempt's
+        # result.json is written.
+        result_file = self.attempt_dir(first, 2) / "result.json"
+        deadline = time.monotonic() + 20
+        while (not chain.closed or alive() or not result_file.exists()) and time.monotonic() < deadline:
+            time.sleep(0.2)
         self.assertTrue(chain.closed)
-        self.assertFalse(psutil.pid_exists(pid) and psutil.Process(pid).status() != psutil.STATUS_ZOMBIE)
-        stored = json.loads((self.attempt_dir(first, 2) / "result.json").read_text())
+        self.assertFalse(alive())
+        stored = json.loads(result_file.read_text())
         self.assertEqual((stored["attempt_status"], stored["stop_reason"], stored["handoff"]["reason"]),
                          ("incomplete", "needs_handoff", "lease_expired"))
         self.assertFalse(stored["handoff"]["continuation"]["allowed"])

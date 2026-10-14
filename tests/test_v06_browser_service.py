@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from reflexmesh.runtime.browser_service import SessionService, call  # noqa: E402
+from reflexmesh.runtime.browser_service import WINDOWS, SessionService, call  # noqa: E402
 
 CLI = [sys.executable, "-c", "import sys; from reflexmesh.cli import main; sys.exit(main())"]
 
@@ -58,7 +58,14 @@ class Protocol(unittest.TestCase):
         self.thread.join(5)
 
     def test_the_socket_is_private(self):
-        self.assertEqual(stat.S_IMODE(self.path.stat().st_mode), 0o600)
+        if not WINDOWS:
+            self.assertEqual(stat.S_IMODE(self.path.stat().st_mode), 0o600)
+            return
+        acl = subprocess.run(["icacls", str(self.path)], capture_output=True, text=True).stdout
+        grants = [line for line in acl.splitlines() if ":(" in line]
+        self.assertEqual(len(grants), 1, acl)                 # the current user alone, nothing inherited
+        self.assertIn(os.environ["USERNAME"].lower(), grants[0].lower())
+        self.assertIn("(F)", grants[0])
 
     def test_requests_reach_the_core_and_bad_ones_do_not(self):
         from v06_samples import task_dict
@@ -69,22 +76,52 @@ class Protocol(unittest.TestCase):
                          "token_invalid")
         self.assertEqual(call(self.path, {"op": "nope"})["error"]["code"], "unknown_op")
         self.assertEqual(call(self.path, {"op": "status"})["chains"], [])
+        self.assertEqual(self.raw(b"not json\n")["error"]["code"], "invalid_request")
+        self.assertEqual([c[0] for c in self.core.calls], ["execute", "resume"])
+
+    def raw(self, data: bytes) -> dict:
+        if WINDOWS:
+            from multiprocessing.connection import Client
+
+            address = json.loads(self.path.read_text())
+            with Client(address["pipe"], family="AF_PIPE", authkey=bytes.fromhex(address["key"])) as conn:
+                conn.send_bytes(data)
+                return json.loads(conn.recv_bytes())
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as raw:
             raw.connect(str(self.path))
-            raw.sendall(b"not json\n")
-            self.assertEqual(json.loads(raw.makefile().readline())["error"]["code"], "invalid_request")
-        self.assertEqual([c[0] for c in self.core.calls], ["execute", "resume"])
+            raw.sendall(data)
+            return json.loads(raw.makefile().readline())
+
+    def test_a_caller_without_the_key_gets_nothing(self):
+        if not WINDOWS:
+            self.skipTest("the Unix socket checks the peer's user instead (SO_PEERCRED)")
+        from multiprocessing import AuthenticationError
+        from multiprocessing.connection import Client
+
+        address = json.loads(self.path.read_text())
+        with self.assertRaises((AuthenticationError, EOFError, OSError)):
+            with Client(address["pipe"], family="AF_PIPE", authkey=b"wrong" * 8) as conn:
+                conn.send_bytes(b'{"op": "status"}')
+                conn.recv_bytes()
+        self.assertEqual(call(self.path, {"op": "status"})["chains"], [])     # and the service is still there
 
     def test_a_second_service_on_a_live_socket_is_refused_and_a_stale_one_is_replaced(self):
         with self.assertRaises(FileExistsError):
             SessionService(FakeCore(), self.path).start()
         stale = Path(self.dir.name) / "stale.sock"
-        dead = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        dead.bind(str(stale))
-        dead.close()                                   # a socket file nobody listens on
+        if WINDOWS:                                    # the address of a pipe that no longer exists
+            stale.write_text(json.dumps({"schema_version": "browser-service/0.1", "key": "00",
+                                         "pipe": "\\\\.\\pipe\\reflexmesh-browser-gone"}))
+        else:
+            dead = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            dead.bind(str(stale))
+            dead.close()                               # a socket file nobody listens on
         other = SessionService(FakeCore(), stale)
         other.start()
-        other.server.server_close()
+        if WINDOWS:
+            other.listener.close()
+        else:
+            other.server.server_close()
         plain = Path(self.dir.name) / "file"
         plain.write_text("x")
         with self.assertRaises(FileExistsError):
@@ -150,7 +187,7 @@ class OverTheSocket(BrowserCase):
                     {"action": "click", "element": "Save note"}, {"action": "finish"}]
         self.serve([[{"action": "escalate"}], to_order])
         code, first = self.cli("submit", self.task(without_order=True))
-        self.assertEqual((code, first["attempt_status"]), (4, "incomplete"))
+        self.assertEqual((code, first.get("attempt_status")), (4, "incomplete"), first)
         cont = first["handoff"]["continuation"]
         self.assertTrue(cont["allowed"])                          # the service holds the session: resume is offered
         code, status = self.cli("status")

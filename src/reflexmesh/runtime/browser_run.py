@@ -20,7 +20,6 @@ import math
 import multiprocessing as mp
 import os
 import shutil
-import signal
 import subprocess
 import threading
 import time
@@ -567,15 +566,44 @@ class JournalingProvider:
 
 
 def _pid_alive(pid: int) -> bool:
+    # Not os.kill(pid, 0): on Windows that is TerminateProcess, not a probe.
+    import psutil
+
     try:
-        os.kill(pid, 0)
-        return True
-    except OSError:
+        return psutil.Process(pid).status() != psutil.STATUS_ZOMBIE
+    except psutil.Error:
         return False
 
 
+def _kill(pid: int) -> None:
+    import psutil
+
+    try:
+        psutil.Process(pid).kill()       # SIGKILL on POSIX, TerminateProcess on Windows
+    except psutil.Error:
+        pass
+
+
+def _write_whole(path: Path, data: dict) -> None:
+    """A reader (a test, `browser view` on a live directory) sees the old file or the whole new one, never half."""
+    partial = path.with_name(path.name + ".partial")
+    partial.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(partial, path)
+
+
 def processes_using(path: str) -> list[int]:
-    """PIDs whose command line names `path` (Linux): the browser we started and its children."""
+    """PIDs whose command line names `path`: the browser we started and its children."""
+    if not Path("/proc/self/cmdline").exists():
+        import psutil
+
+        found = []
+        for proc in psutil.process_iter():
+            try:
+                if proc.pid != os.getpid() and any(path in arg for arg in proc.cmdline()):
+                    found.append(proc.pid)
+            except psutil.Error:
+                continue
+        return found
     found = []
     for entry in Path("/proc").iterdir():
         if entry.name.isdigit() and int(entry.name) != os.getpid():
@@ -714,7 +742,8 @@ class BrowserRun:
                 chain.claimed.append(self.checks[check_id])
         if self.out_dir is not None:
             self.out_dir.mkdir(parents=True, exist_ok=True)
-        ctx = mp.get_context("fork")
+        # Shared values and locks only; no process is started from this context. Windows has no fork.
+        ctx = mp.get_context("fork" if "fork" in mp.get_all_start_methods() else "spawn")
         view = AttemptTask(task, self.attempt_id, chain.remaining_limits() if chain is not None else None)
         self.view = view
         self.registry = SlotRegistry.from_task(view, self.attempt_id)
@@ -1096,8 +1125,7 @@ class BrowserRun:
                 "cleanup": {"status": "not_started"}, "trace_ref": None}
         if self.out_dir is not None:
             self.out_dir.mkdir(parents=True, exist_ok=True)
-            (self.out_dir / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2),
-                                                      encoding="utf-8")
+            _write_whole(self.out_dir / "result.json", result)
         return result
 
     def _terminal(self) -> tuple[str, str, dict | None]:
@@ -1269,8 +1297,7 @@ class BrowserRun:
             kept = ((stored.get("handoff") or {}).get("continuation") or {})
             if "token" in kept:
                 kept["token"] = "[withheld]"
-            (self.out_dir / "result.json").write_text(json.dumps(stored, ensure_ascii=False, indent=2),
-                                                      encoding="utf-8")
+            _write_whole(self.out_dir / "result.json", stored)
         return result
 
     def _handoff(self, handoff_reason: str | None, stop_reason: str, criteria: list[dict],
@@ -1317,10 +1344,7 @@ class BrowserRun:
         forced = False
         if leftover:
             for pid in leftover:
-                try:
-                    os.kill(pid, signal.SIGKILL)
-                except OSError:
-                    pass
+                _kill(pid)
             deadline = time.monotonic() + KILL_SECONDS
             while time.monotonic() < deadline and any(_pid_alive(p) for p in leftover):
                 time.sleep(0.05)

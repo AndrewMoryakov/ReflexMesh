@@ -27,7 +27,7 @@ from reflexmesh.verification.constraints import assess_constraints
 from test_v05_runtime import sample
 from v06_samples import task_dict
 
-CTX = mp.get_context("fork")
+CTX = mp.get_context("fork" if "fork" in mp.get_all_start_methods() else "spawn")   # shared values only
 
 
 class FakeAdapter:

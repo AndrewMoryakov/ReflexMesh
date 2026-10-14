@@ -396,9 +396,11 @@ class GenericPath(BrowserCase):
         """
         steps = [{"action": "click", "element": "Partner offer"}, {"action": "finish"}]
         result = self.start(self.task(start="/"), label_script(steps)).run()
-        reached = [r for r in SITE.REQUESTS if (r.get("host") or "").startswith("localhost")]
+        # Full Chrome (not the headless shell) also asks the page's origin for /favicon.ico on its own.
+        reached = [r for r in SITE.REQUESTS if (r.get("host") or "").startswith("localhost") and
+                   r.get("path") != "/favicon.ico"]
         self.assertEqual((result["attempt_status"], result["stop_reason"]), ("blocked", "policy_denied"))
-        self.assertEqual(len(reached), 1)  # detected, not prevented
+        self.assertEqual(len(reached), 1, reached)  # detected, not prevented
         self.assertEqual(result["budget"]["dispatches"], 2)  # the first navigation and the click; nothing after
 
     def test_ungranted_operation_is_not_even_offered(self):

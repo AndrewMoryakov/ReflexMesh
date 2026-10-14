@@ -87,12 +87,15 @@ def main(argv: list[str] | None = None) -> int:
     brun.add_argument("--chrome", metavar="FILE", help="Chromium executable (or REFLEXMESH_CHROME)")
     brun.add_argument("--no-sandbox", action="store_true",
                       help="start Chromium without its sandbox (or REFLEXMESH_CHROME_NO_SANDBOX=1); recorded in the result")
+    brun.add_argument("--headed", action="store_true",
+                      help="show the browser window (default: headless); recorded in the result")
     brun.add_argument("--attempt-id", metavar="HEX32")
     brun.add_argument("--checks", metavar="FILE",
                       help="the service's registered checks (JSON); a task's registered_check can name only these")
     bserve = browser_sub.add_parser("serve", help="session service: keeps browser sessions open across a handoff so "
-                                                  "an attempt can be resumed (local Unix socket)")
-    bserve.add_argument("--socket", required=True, metavar="PATH", help="Unix socket to listen on (created 0600)")
+                                                  "an attempt can be resumed (Unix socket; a named pipe on Windows)")
+    bserve.add_argument("--socket", required=True, metavar="PATH", help="Unix socket to listen on (created 0600); on Windows, the address file "
+                                                                    "of a named pipe")
     bserve.add_argument("--state-dir", required=True, metavar="DIR", help="where each chain's attempts are written")
     bserve.add_argument("--action-provider", choices=("script", "jev", "laya"), required=True)
     bserve.add_argument("--script", metavar="FILE", help="script provider: a list of steps, or one list per attempt")
@@ -101,6 +104,7 @@ def main(argv: list[str] | None = None) -> int:
     bserve.add_argument("--checks", metavar="FILE", help="the service's registered checks (JSON)")
     bserve.add_argument("--chrome", metavar="FILE", help="Chromium executable (or REFLEXMESH_CHROME)")
     bserve.add_argument("--no-sandbox", action="store_true")
+    bserve.add_argument("--headed", action="store_true", help="show the browser windows (default: headless)")
     bserve.add_argument("--lease-seconds", type=float, default=60.0,
                         help="how long a handed-over session waits for resume (capped by the task deadline)")
     for name, text in (("submit", "send a browser-task/0.1 to a running service"),
