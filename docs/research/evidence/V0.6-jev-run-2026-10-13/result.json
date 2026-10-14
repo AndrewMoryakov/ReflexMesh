@@ -1,0 +1,558 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "order-note-125",
+  "revision": 1,
+  "chain_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+  "attempt_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+  "parent_attempt_id": null,
+  "attempt_status": "incomplete",
+  "stop_reason": "needs_handoff",
+  "task_outcome": "unknown",
+  "execution_outcome": "unknown",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "note_saved",
+      "kind": "postcondition",
+      "predicate": "revisit_match",
+      "status": "unknown",
+      "reason": "No verifier for this predicate exists in this build (V0.6 M4); the criterion stays unknown.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1791915852.2994637,
+      "evidence_refs": [
+        "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1791915852.2994254,
+      "evidence_refs": [
+        "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:immutable-slots:coverage:6",
+        "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:immutable-slots:handoff:2",
+        "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:immutable-slots:handoff:5"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "Exclusive fixture claim and browser session/owner identity are not evidenced.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1791915852.299504,
+      "evidence_refs": [
+        "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "No repeated mutation was observed at the controlled boundary; adapter-internal single-shot execution is not established.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1791915852.2995298,
+      "evidence_refs": [
+        "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "start_url",
+      "mutation_key": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 0,
+      "producer": "jev",
+      "bootstrap": true,
+      "destination": "http://127.0.0.1:8770/orders",
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 3,
+      "dispatch_seq": 4,
+      "return_seq": 5,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "browser:e4ee8c820e544ab6bc37dad1853fe1ab:6"
+      ],
+      "driver_ok": true
+    },
+    {
+      "id": 2,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "1:text_fields:25",
+      "target_id": "[\"type_text\", \"textbox\", \"Order number\", \"\", \"\", \"order@1\"]@5ea827e50a544aba",
+      "mutation_key": "[\"type_text\", \"textbox\", \"Order number\", \"\", \"\", \"order@1\"]@http://127.0.0.1:8770/orders?",
+      "target": {
+        "role": "textbox",
+        "name": "Order number"
+      },
+      "slot_ref": "order@1",
+      "observation_id": 1,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 2,
+      "proposal_seq": 11,
+      "dispatch_seq": 12,
+      "return_seq": 13,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 3,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "2:elements:26",
+      "target_id": "[\"click\", \"button\", \"Search\", \"\", \"\", \"\"]@0588a7c7e9357e67",
+      "mutation_key": "[\"click\", \"button\", \"Search\", \"\", \"\", \"\"]@http://127.0.0.1:8770/orders?",
+      "target": {
+        "role": "button",
+        "name": "Search"
+      },
+      "slot_ref": null,
+      "observation_id": 2,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 3,
+      "proposal_seq": 20,
+      "dispatch_seq": 21,
+      "return_seq": 22,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": true,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 4,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "3:elements:62",
+      "target_id": "[\"click\", \"link\", \"Заказ №125\", \"\", \"http://127.0.0.1:8770/orders/125\", \"\"]@e56ecfaaa4dd4235",
+      "mutation_key": "[\"click\", \"link\", \"Заказ №125\", \"\", \"http://127.0.0.1:8770/orders/125\", \"\"]@http://127.0.0.1:8770/orders?1d23197758e9",
+      "target": {
+        "role": "link",
+        "name": "Заказ №125"
+      },
+      "slot_ref": null,
+      "observation_id": 3,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": "http://127.0.0.1:8770/orders/125",
+      "policy_revision": 1,
+      "gate_seq": 4,
+      "proposal_seq": 29,
+      "dispatch_seq": 30,
+      "return_seq": 31,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": true,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 5,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "4:text_fields:102",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@c6fa1bb499474e2e",
+      "mutation_key": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@http://127.0.0.1:8770/orders/125?",
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "note@1",
+      "observation_id": 4,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 5,
+      "proposal_seq": 38,
+      "dispatch_seq": 39,
+      "return_seq": 40,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 6,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "5:elements:115",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@5edacf72082957c7",
+      "mutation_key": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@http://127.0.0.1:8770/orders/125?",
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 5,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 6,
+      "proposal_seq": 47,
+      "dispatch_seq": 48,
+      "return_seq": 49,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    }
+  ],
+  "budget": {
+    "steps": 10,
+    "model_calls": 8,
+    "dispatches": 6,
+    "limits": {
+      "wall_seconds": 120.0,
+      "max_steps": 64,
+      "max_model_calls": 96,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 54,
+    "remaining_model_calls": 88,
+    "remaining_wall_seconds": 106.764,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 13.227
+  },
+  "handoff": {
+    "schema_version": "browser-handoff/0.1-partial",
+    "reason": "no_progress",
+    "task_id": "order-note-125",
+    "revision": 1,
+    "attempt_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+    "observation_ref": 9,
+    "page": "http://127.0.0.1:8770/orders/125",
+    "operations": [
+      {
+        "id": 1,
+        "operation": "navigate",
+        "option_ref": null,
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "applied"
+      },
+      {
+        "id": 2,
+        "operation": "type_text",
+        "option_ref": "1:text_fields:25",
+        "slot_ref": "order@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 3,
+        "operation": "click",
+        "option_ref": "2:elements:26",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 4,
+        "operation": "click",
+        "option_ref": "3:elements:62",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 5,
+        "operation": "type_text",
+        "option_ref": "4:text_fields:102",
+        "slot_ref": "note@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 6,
+        "operation": "click",
+        "option_ref": "5:elements:115",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      }
+    ],
+    "permissions": [
+      "click",
+      "go_back",
+      "navigate",
+      "scroll",
+      "select_option",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ],
+    "text_slot_refs": [
+      "order@1",
+      "note@1"
+    ],
+    "continuation": {
+      "allowed": false,
+      "reason": "resume_not_implemented"
+    }
+  },
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": true
+    },
+    "chromium": "Google Chrome for Testing 153.0.8010.12",
+    "chromium_sandbox": false,
+    "headless": true,
+    "decision_provider": {
+      "kind": "jev",
+      "config_id": "openrouter:~typesafe/jev-latest",
+      "requested_model": "~typesafe/jev-latest"
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "closed",
+    "profile_removed": true,
+    "browser_processes_left": 0
+  },
+  "watchdog": {
+    "watchdog_kill": false,
+    "worker_stopped": true
+  },
+  "decision": {
+    "kind": "jev",
+    "requested_model": "~typesafe/jev-latest",
+    "served_models": [
+      "typesafe/jev-1.13-20260917"
+    ],
+    "config_id": "openrouter:~typesafe/jev-latest"
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:permissions",
+    "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:dispatch_ordering",
+    "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 13.227,
+    "total_seconds": 13.275
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:immutable-slots:commitment:1",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "run_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:immutable-slots:commitment:2",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "run_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "text",
+      "slot_ref": "order@1"
+    },
+    {
+      "ref": "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:immutable-slots:handoff:2",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "run_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "text",
+      "slot_ref": "order@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:immutable-slots:commitment:3",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "run_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 3,
+      "generation": 3,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:immutable-slots:commitment:4",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "run_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 4,
+      "generation": 4,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:immutable-slots:commitment:5",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "run_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 5,
+      "generation": 5,
+      "classification": "text",
+      "slot_ref": "note@1"
+    },
+    {
+      "ref": "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:immutable-slots:handoff:5",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "run_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 5,
+      "generation": 5,
+      "classification": "text",
+      "slot_ref": "note@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:immutable-slots:commitment:6",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "run_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 6,
+      "generation": 6,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:e4ee8c820e544ab6bc37dad1853fe1ab:immutable-slots:coverage:6",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "run_id": "e4ee8c820e544ab6bc37dad1853fe1ab",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 6,
+      "dispatches": 6,
+      "text_dispatches": 2,
+      "nontext_dispatches": 4,
+      "unknown_dispatches": 0,
+      "sealed_generation": 6,
+      "status": "pass"
+    }
+  ]
+}

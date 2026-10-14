@@ -5,6 +5,7 @@ from __future__ import annotations
 import inspect
 import logging
 import os
+import re
 import stat
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
@@ -15,12 +16,14 @@ from reflexmesh.text.slots import PreparedAction, PreparedTextCommand, SlotRegis
 
 OPERATIONS = {
     "home": "navigate", "profile": "navigate", "settings": "navigate",
-    "reports": "navigate", "form": "navigate", "danger": "navigate", "export": "navigate",
+    "reports": "navigate", "form": "navigate", "support": "navigate", "danger": "navigate", "export": "navigate",
     "notify-email": "toggle_setting", "save-settings": "save_settings",
     "name": "type_text", "email": "type_text", "send-form": "submit_form",
+    "support-name": "type_text", "support-email": "type_text", "support-message": "type_text",
+    "send-support": "submit_form",
     "start-export": "start_export", "delete-account": "delete_account",
 }
-PATHS = {"/", "/profile", "/reports", "/settings", "/form", "/danger", "/slow"}
+PATHS = {"/", "/profile", "/reports", "/settings", "/form", "/support", "/danger", "/slow"}
 CLAIM_FIELDS = frozenset({"task_id", "task_revision", "attempt_id", "run_id", "claim_id",
                           "instance_id", "owner_epoch"})
 SESSION_FIELDS = CLAIM_FIELDS | {"session_id", "profile_id"}
@@ -347,8 +350,9 @@ class FixtureBrowser:
         self.backend.reset(goal)
         self._assert_ownership()
 
-    def _map(self) -> dict[str, tuple]:
-        nodes = self.backend._run(self.backend._session.get_selector_map())
+    def _map(self, nodes=None) -> dict[str, tuple]:
+        if nodes is None:
+            nodes = self.backend._run(self.backend._session.get_selector_map())
         result = {}
         seen_ids = set()
         for index, node in nodes.items():
@@ -368,6 +372,41 @@ class FixtureBrowser:
                                   str(attrs.get("type") or ""), str(attrs.get("href") or ""))
         return result
 
+    def _text_state(self, nodes) -> dict:
+        """Privacy-safe live field metadata, never an inference from a typed command.
+
+        Pinned Browser Use exposes DOMSnapshot inputValue/textValue as
+        snapshot_node.input_value. A missing snapshot/value is unknown, not
+        empty; the static value attribute can lag the live DOM property.
+        """
+        filled, empty, gaps, identities = [], [], [], {}
+        for index, node in nodes.items():
+            target = self.targets.get(str(index))
+            if target is None or OPERATIONS[target[1]] != "type_text" or target[2] not in ("input", "textarea"):
+                continue
+            attrs = getattr(node, "attributes", None) or {}
+            if ("disabled" in attrs or "readonly" in attrs or
+                    str(attrs.get("aria-disabled", "")).lower() == "true" or
+                    getattr(node, "is_visible", None) is False):
+                continue
+            value = getattr(getattr(node, "snapshot_node", None), "input_value", None)
+            if type(value) is not str:
+                continue
+            target_id = target[1]
+            (filled if value else empty).append(target_id)
+            if not value and "required" in attrs:
+                gaps.append(target_id)
+            # DOM IDs carry no text values, URLs, selectors or local paths.
+            frame = getattr(node, "frame_id", None)
+            document_target = getattr(node, "target_id", None)
+            if (type(target[0]) is int and target[0] > 0 and
+                    all(type(part) is str and re.fullmatch(r"[A-Za-z0-9_.-]{1,128}", part)
+                        for part in (frame, document_target))):
+                identities[target_id] = {"backend_node_id": target[0], "frame_id": frame,
+                                         "target_id": document_target}
+        return {"filled_targets": sorted(filled), "empty_targets": sorted(empty),
+                "content_gaps": sorted(gaps), "target_nodes": identities}
+
     def observe(self):
         self._assert_ownership()
         obs = self.backend.observe()
@@ -376,7 +415,8 @@ class FixtureBrowser:
         self.unsupported = False
         if not self._valid_url(self.observation_url):
             raise ValueError("fixture_url_outside_origin")
-        self.targets = self._map()
+        nodes = self.backend._run(self.backend._session.get_selector_map())
+        self.targets = self._map(nodes)
         if self.unsupported:
             raise RuntimeStop("adapter_contract_unsupported")
         permitted = {index: OPERATIONS[node[1]] for index, node in self.targets.items()
@@ -398,6 +438,7 @@ class FixtureBrowser:
             obs.candidates.pop(name, None)
         obs.fields["run_id"] = self.task.run_id
         obs.fields["target_ids"] = [node[1] for node in self.targets.values()]
+        obs.fields.update(self._text_state(nodes))
         obs.fields["ownership"] = self._assert_ownership()
         return obs
 
@@ -449,6 +490,68 @@ class FixtureBrowser:
         if now != before:
             return "stale_target"
         return None
+
+    def replace_target_for_acceptance(self, target_id: str) -> None:
+        """Explicit fault hook: replace the observed fixture node, without retargeting.
+
+        The closed acceptance configuration supplies only a fixture ID. The
+        runtime never accepts selectors or JavaScript here; the fixed function
+        operates on the observed backend node in the already owned session.
+        Leave `targets` unchanged so ordinary admission must detect the stale
+        identity. This is not a general browser action or an ownership bypass.
+        """
+        self._assert_ownership()
+        matches = [node for node in self.targets.values() if node[1] == target_id]
+        if (len(matches) != 1 or type(matches[0][0]) is not int or matches[0][0] <= 0 or
+                not callable(getattr(self.backend, "_run", None)) or
+                not self._valid_url(self.observation_url)):
+            raise RuntimeStop("adapter_contract_unsupported")
+        backend_id = matches[0][0]
+
+        async def replace_observed_node():
+            self._assert_ownership()
+            get_cdp = self._owned_session.get_or_create_cdp_session
+            if not inspect.iscoroutinefunction(inspect.unwrap(get_cdp)):
+                raise RuntimeStop("adapter_contract_unsupported")
+            cdp = await get_cdp()
+            self._assert_ownership()
+            resolve = cdp.cdp_client.send.DOM.resolveNode
+            replace_node = cdp.cdp_client.send.Runtime.callFunctionOn
+            if (type(cdp.session_id) is not str or not cdp.session_id or
+                    any(not inspect.iscoroutinefunction(inspect.unwrap(method))
+                        for method in (resolve, replace_node))):
+                raise RuntimeStop("adapter_contract_unsupported")
+            self._check_private_transport(cdp.cdp_client)
+            resolved = await resolve(params={"backendNodeId": backend_id}, session_id=cdp.session_id)
+            self._assert_ownership()
+            remote = resolved.get("object") if type(resolved) is dict else None
+            object_id = remote.get("objectId") if type(remote) is dict else None
+            if type(object_id) is not str or not object_id:
+                raise RuntimeStop("adapter_contract_unsupported")
+            response = await replace_node(params={
+                "objectId": object_id,
+                "functionDeclaration": (
+                    "function (url, target) { "
+                    "if (!this.isConnected || !this.parentNode || window !== window.top || "
+                    "this.ownerDocument !== document || document.location.href !== url || "
+                    "this.getAttribute('data-reflex-id') !== target) return false; "
+                    "this.replaceWith(this.cloneNode(true)); return true; }"),
+                "arguments": [{"value": self.observation_url}, {"value": target_id}],
+                "returnByValue": True,
+            }, session_id=cdp.session_id)
+            self._assert_ownership()
+            result = response.get("result") if type(response) is dict else None
+            if (type(response) is not dict or response.get("exceptionDetails") or
+                    type(result) is not dict or result.get("value") is not True):
+                raise RuntimeStop("adapter_contract_unsupported")
+
+        try:
+            self.backend._run(replace_observed_node())
+            self._assert_ownership()
+        except RuntimeStop:
+            raise
+        except Exception:
+            raise RuntimeStop("adapter_contract_unsupported") from None
 
     def prepare(self, action: str, params: dict) -> PreparedAction:
         """Snapshot before admission; resolve exactly once after it succeeds."""

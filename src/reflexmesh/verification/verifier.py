@@ -64,7 +64,7 @@ class FixtureVerifier:
             # passing count on a mixed or malformed source response.
             if (len(events) != len(current["effects"]) or
                     any(not _same_binding(e.get("binding"), binding) or e.get("method") != "POST" or
-                        e.get("path") not in ("/settings", "/form", "/slow/export", "/danger/delete")
+                        e.get("path") not in ("/settings", "/form", "/support", "/slow/export", "/danger/delete")
                         for e in events) or
                     len({e["seq"] for e in events}) != len(events) or
                     any(e["seq"] > current["sequence"] for e in events)):
@@ -110,6 +110,22 @@ class FixtureVerifier:
                 if type(state.get("exports")) is int and type(base.get("exports")) is int:
                     status = "pass" if len(posts) == 1 and state["exports"] == base["exports"] + 1 else "fail"
                 operations = ["start_export"]
+            elif predicate == "support_request_sent_once":
+                slots = {s.reference: s.value for s in task.slots}
+                posts = [e for e in events if e.get("path") == "/support"]
+                support = state.get("support")
+                if (type(state.get("support_requests")) is int and
+                        type(base.get("support_requests")) is int):
+                    status = "pass" if (
+                        len(posts) == 1 and state["support_requests"] == base["support_requests"] + 1 and
+                        type(support) is dict and set(support) == {"name", "email", "message"} and
+                        support["name"] == slots[args["name_slot"]] and
+                        support["email"] == slots[args["email_slot"]] and
+                        type(support["message"]) is str and bool(support["message"].strip()) and
+                        support["message"] in slots.values()) else "fail"
+                # As with /form, accepted server state proves submission only.
+                # It does not witness which typing call supplied the values.
+                operations = ["submit_form"]
             elif predicate == "account_intact":
                 posts = [e for e in events if e.get("path") == "/danger/delete"]
                 if type(state.get("account_deleted")) is bool:

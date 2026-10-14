@@ -10,12 +10,26 @@ from .task import ValidationError, validate_text
 
 PERMISSIONS = frozenset({"navigate", "type_text", "toggle_setting", "save_settings",
                          "submit_form", "start_export", "delete_account"})
+# Stable bit positions for the shared permission mask; the vocabulary is closed in V0.5.
+OPERATION_BITS = {name: 1 << index for index, name in enumerate(sorted(PERMISSIONS))}
+
+
+def permission_mask(operations, bits=None) -> int:
+    """Bit mask of granted operations in `bits` (the fixture vocabulary unless a task supplies its own)."""
+    bits = OPERATION_BITS if bits is None else bits
+    mask = 0
+    for name in operations:
+        mask |= bits.get(name, 0)
+    return mask
+
+
 PREDICATES = {
     "current_page": {"path": str, "target_id": str},
     "settings_saved": {"notify_email": bool},
     "form_submitted_once": {"name_slot": str, "email_slot": str},
     "export_completed_once": {},
     "account_intact": {},
+    "support_request_sent_once": {"name_slot": str, "email_slot": str},
 }
 
 

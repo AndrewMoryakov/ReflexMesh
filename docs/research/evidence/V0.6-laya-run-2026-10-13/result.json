@@ -1,0 +1,378 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "order-note-125",
+  "revision": 1,
+  "chain_id": "b15bf930f26649bd9ca4d4ffbac8d664",
+  "attempt_id": "b15bf930f26649bd9ca4d4ffbac8d664",
+  "parent_attempt_id": null,
+  "attempt_status": "incomplete",
+  "stop_reason": "verification_unknown",
+  "task_outcome": "unknown",
+  "execution_outcome": "unknown",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "note_saved",
+      "kind": "postcondition",
+      "predicate": "revisit_match",
+      "status": "unknown",
+      "reason": "No verifier for this predicate exists in this build (V0.6 M4); the criterion stays unknown.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1791902500.48672,
+      "evidence_refs": [
+        "runtime:b15bf930f26649bd9ca4d4ffbac8d664:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1791902500.4866734,
+      "evidence_refs": [
+        "runtime:b15bf930f26649bd9ca4d4ffbac8d664:immutable-slots:coverage:3",
+        "runtime:b15bf930f26649bd9ca4d4ffbac8d664:immutable-slots:handoff:2"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "Exclusive fixture claim and browser session/owner identity are not evidenced.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1791902500.4867604,
+      "evidence_refs": [
+        "runtime:b15bf930f26649bd9ca4d4ffbac8d664:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "No repeated mutation was observed at the controlled boundary; adapter-internal single-shot execution is not established.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1791902500.4867864,
+      "evidence_refs": [
+        "runtime:b15bf930f26649bd9ca4d4ffbac8d664:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "start_url",
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 0,
+      "producer": "laya",
+      "bootstrap": true,
+      "destination": "http://127.0.0.1:8770/orders",
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 3,
+      "dispatch_seq": 4,
+      "return_seq": 5,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "browser:b15bf930f26649bd9ca4d4ffbac8d664:6"
+      ],
+      "driver_ok": true
+    },
+    {
+      "id": 2,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "1:text_fields:25",
+      "target_id": "textbox:Order number@0ed1383743c5426b",
+      "target": {
+        "role": "textbox",
+        "name": "Order number"
+      },
+      "slot_ref": "order@1",
+      "observation_id": 1,
+      "producer": "laya",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 2,
+      "proposal_seq": 11,
+      "dispatch_seq": 12,
+      "return_seq": 13,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 3,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "2:elements:26",
+      "target_id": "button:Search@db091f878a801318",
+      "target": {
+        "role": "button",
+        "name": "Search"
+      },
+      "slot_ref": null,
+      "observation_id": 2,
+      "producer": "laya",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 3,
+      "proposal_seq": 20,
+      "dispatch_seq": 21,
+      "return_seq": 22,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": true,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    }
+  ],
+  "budget": {
+    "steps": 4,
+    "model_calls": 3,
+    "dispatches": 3,
+    "limits": {
+      "wall_seconds": 120.0,
+      "max_steps": 64,
+      "max_model_calls": 96,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 60,
+    "remaining_model_calls": 93,
+    "remaining_wall_seconds": 113.225,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 6.759
+  },
+  "handoff": {
+    "schema_version": "browser-handoff/0.1-partial",
+    "reason": "verification_unknown",
+    "task_id": "order-note-125",
+    "revision": 1,
+    "attempt_id": "b15bf930f26649bd9ca4d4ffbac8d664",
+    "observation_ref": 4,
+    "page": "http://127.0.0.1:8770/orders",
+    "operations": [
+      {
+        "id": 1,
+        "operation": "navigate",
+        "option_ref": null,
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "applied"
+      },
+      {
+        "id": 2,
+        "operation": "type_text",
+        "option_ref": "1:text_fields:25",
+        "slot_ref": "order@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 3,
+        "operation": "click",
+        "option_ref": "2:elements:26",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      }
+    ],
+    "permissions": [
+      "click",
+      "go_back",
+      "navigate",
+      "scroll",
+      "select_option",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ],
+    "text_slot_refs": [
+      "order@1",
+      "note@1"
+    ],
+    "continuation": {
+      "allowed": false,
+      "reason": "resume_not_implemented"
+    }
+  },
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": true
+    },
+    "chromium": "Google Chrome for Testing 153.0.8010.12",
+    "chromium_sandbox": false,
+    "headless": true,
+    "decision_provider": {
+      "kind": "laya",
+      "config_id": "laya:laya-browser@127.0.0.1:8791",
+      "requested_model": "laya-browser"
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "closed",
+    "profile_removed": true,
+    "browser_processes_left": 0
+  },
+  "watchdog": {
+    "watchdog_kill": false,
+    "worker_stopped": true
+  },
+  "decision": {
+    "kind": "laya",
+    "requested_model": "laya-browser",
+    "served_models": [
+      "laya-browser"
+    ],
+    "config_id": "laya:laya-browser@127.0.0.1:8791"
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:b15bf930f26649bd9ca4d4ffbac8d664:permissions",
+    "runtime:b15bf930f26649bd9ca4d4ffbac8d664:dispatch_ordering",
+    "runtime:b15bf930f26649bd9ca4d4ffbac8d664:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 6.759,
+    "total_seconds": 6.81
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:b15bf930f26649bd9ca4d4ffbac8d664:immutable-slots:commitment:1",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "b15bf930f26649bd9ca4d4ffbac8d664",
+      "run_id": "b15bf930f26649bd9ca4d4ffbac8d664",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:b15bf930f26649bd9ca4d4ffbac8d664:immutable-slots:commitment:2",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "b15bf930f26649bd9ca4d4ffbac8d664",
+      "run_id": "b15bf930f26649bd9ca4d4ffbac8d664",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "text",
+      "slot_ref": "order@1"
+    },
+    {
+      "ref": "runtime:b15bf930f26649bd9ca4d4ffbac8d664:immutable-slots:handoff:2",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "b15bf930f26649bd9ca4d4ffbac8d664",
+      "run_id": "b15bf930f26649bd9ca4d4ffbac8d664",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "text",
+      "slot_ref": "order@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:b15bf930f26649bd9ca4d4ffbac8d664:immutable-slots:commitment:3",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "b15bf930f26649bd9ca4d4ffbac8d664",
+      "run_id": "b15bf930f26649bd9ca4d4ffbac8d664",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 3,
+      "generation": 3,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:b15bf930f26649bd9ca4d4ffbac8d664:immutable-slots:coverage:3",
+      "task_id": "order-note-125",
+      "task_revision": 1,
+      "attempt_id": "b15bf930f26649bd9ca4d4ffbac8d664",
+      "run_id": "b15bf930f26649bd9ca4d4ffbac8d664",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 3,
+      "dispatches": 3,
+      "text_dispatches": 1,
+      "nontext_dispatches": 2,
+      "unknown_dispatches": 0,
+      "sealed_generation": 3,
+      "status": "pass"
+    }
+  ]
+}

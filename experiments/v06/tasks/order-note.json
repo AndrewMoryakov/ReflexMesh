@@ -1,0 +1,20 @@
+{
+  "schema_version": "browser-task/0.1",
+  "task_id": "order-note-125",
+  "revision": 2,
+  "goal": "Find order 125 in the order desk, add the prepared note to it and save the note.",
+  "start_url": "http://127.0.0.1:8770/orders",
+  "allowed_origins": ["http://127.0.0.1:8770"],
+  "permissions": ["navigate", "click", "type_text", "select_option", "scroll", "go_back", "switch_tab", "wait"],
+  "constraints": [],
+  "text_slots": [
+    {"id": "order", "version": 1, "value": "125", "sensitivity": "normal"},
+    {"id": "note", "version": 1, "value": "Перезвонить завтра", "sensitivity": "normal"},
+    {"id": "record", "version": 1, "value": "Заказ №125", "sensitivity": "normal"}
+  ],
+  "criteria": [
+    {"id": "note_saved", "predicate": "revisit_match",
+     "args": {"anchor_slot_ref": "record@1", "field_name": "Notes", "expected_slot_ref": "note@1"}}
+  ],
+  "limits": {"wall_seconds": 120, "max_steps": 64, "max_model_calls": 96, "max_action_retries": 0, "max_handoffs": 3}
+}

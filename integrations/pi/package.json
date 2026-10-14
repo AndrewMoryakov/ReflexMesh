@@ -1,0 +1,15 @@
+{
+  "name": "reflex-mesh-pi",
+  "version": "0.6.0",
+  "description": "Pi client integration for ReflexMesh: registers its MCP Task API and a skill for the submit / status / handoff / continue loop",
+  "private": true,
+  "type": "module",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./extension.ts"],
+    "skills": ["./skills"]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  }
+}

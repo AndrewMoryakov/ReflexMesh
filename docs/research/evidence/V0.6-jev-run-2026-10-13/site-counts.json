@@ -1,0 +1,5 @@
+{
+  "source": "GET /__state of experiments/v06/site/server.py after each run; the site was restarted (empty) before the second run",
+  "before_fix": {"notes_on_order_125": 9, "post_requests": 9},
+  "after_fix": {"notes_on_order_125": 1, "post_requests": 1}
+}

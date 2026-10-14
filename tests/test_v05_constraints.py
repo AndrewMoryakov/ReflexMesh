@@ -1,0 +1,260 @@
+"""Runtime constraints, policy revision, gate failure recovery, cleanup and reconciliation (U)."""
+
+import multiprocessing as mp
+import os
+import subprocess
+import sys
+import threading
+import time
+import unittest
+from pathlib import Path
+from types import SimpleNamespace
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from reflexmesh.contracts.execution import ExecutionTask
+from reflexmesh.runtime.runner import (GRACE_SECONDS, KILL_SECONDS, AttemptSupervisor, ControlledEnvironment,
+                                       WorkerResult)
+from test_v05_runtime import pass_verifier, sample
+
+BOUND = GRACE_SECONDS + KILL_SECONDS + 1.0
+
+
+def task(wall=2.0, permissions=("navigate", "type_text", "submit_form")):
+    data = sample()
+    data["limits"]["wall_seconds"] = wall
+    data["permissions"] = list(permissions)
+    return ExecutionTask.from_dict(data)
+
+
+class Ok:
+    ok = True
+
+
+class SubmitEnvironment:
+    """Fake adapter: one submit target with explicit operation identity and a session."""
+
+    def __init__(self, hang=False):
+        self.hang = hang
+
+    def reset(self, goal):
+        pass
+
+    def session_info(self):
+        return {"session_id": "s-1", "fresh_profile": True, "attached": False}
+
+    def observe(self):
+        return SimpleNamespace(fields={}, candidates={})
+
+    def describe(self, action, params):
+        return {"operation": "submit_form", "target_id": "send-form"}
+
+    def execute(self, action, params):
+        if self.hang:
+            time.sleep(100)
+        return Ok()
+
+    def close(self):
+        pass
+
+
+class EffectsVerifier:
+    """Verifier that also returns the fixture's request record, shaped like FixtureVerifier's
+    retained snapshot (no claim: the synthetic contract used by generic strategies)."""
+
+    def __init__(self, status, requests, pending=0):
+        self.status, self.requests, self.pending = status, requests, pending
+
+    def __call__(self, task, timeout):
+        snapshot = {"kind": "fixture_effect_snapshot", "source": "authenticated_fixture_response",
+                    "ref": "fake://server", "ownership": None, "pending_effect_count": self.pending,
+                    "effects": [{"seq": seq, "method": "POST", "path": "/form", "binding": None}
+                                for seq in range(1, self.requests + 1)]}
+        return [{"id": c.id, "status": self.status, "evidence_refs": ["fake://server"],
+                 "fixture_snapshot": snapshot} for c in task.criteria]
+
+
+def submit_once(gate, events, hang=False):
+    env = ControlledEnvironment(SubmitEnvironment(hang), gate, events, lambda *_: None)
+    env.reset("goal")
+    env.observe()
+    env.execute("click", {"element": "1"})
+    return WorkerResult("finish")
+
+
+def dies_holding_gate(gate, events):
+    gate.reserve_step()
+    gate.commit_dispatch()   # Committed, but the dispatch event never reaches the supervisor.
+    gate.lock.acquire()
+    os._exit(3)
+
+
+def hangs_holding_gate(gate, events):
+    gate.reserve_step()
+    gate.lock.acquire()
+    time.sleep(100)
+
+
+def leaves_descendant(gate, events, pid):
+    child = subprocess.Popen(["sleep", "100"])  # Inherits the worker's process group, like a browser.
+    pid.value = child.pid
+    gate.reserve_step()
+    return WorkerResult("finish")
+
+
+def never_returns(gate, events):
+    gate.reserve_step()
+    time.sleep(100)
+
+
+def bypasses_permission(gate, events):
+    # Fault injection: an executor that commits an operation outside the granted permissions.
+    gate.reserve_step()
+    action_id = gate.commit_dispatch()  # No operation named: the gate cannot check it.
+    events.put(("proposal", {"action": "click"}))
+    events.put(("dispatch", action_id, {"operation": "delete_account", "target_id": "delete-account"}))
+    time.sleep(1)
+    return WorkerResult("finish")
+
+
+def observe_wait_execute(gate, events, ready, release, twice=False):
+    env = ControlledEnvironment(SubmitEnvironment(), gate, events, lambda *_: None)
+    env.reset("goal")
+    env.observe()
+    ready.set()
+    release.wait(2)
+    result = env.execute("click", {"element": "1"})
+    if twice and not result.ok:
+        env.observe()
+        env.execute("click", {"element": "1"})
+    return WorkerResult("finish")
+
+
+def alive(pid):
+    try:
+        with open(f"/proc/{pid}/stat") as stat:
+            return stat.read().split(") ", 1)[1][0] != "Z"
+    except FileNotFoundError:
+        return False
+
+
+class ConstraintRows(unittest.TestCase):
+    def test_controlled_attempt_carries_every_runtime_constraint(self):
+        # main establishes a row only from evidence the supervisor owns. A fake environment
+        # gives permissions, dispatch ordering and budget that evidence; it cannot give slot
+        # boundary, fixture ownership or single-shot execution, so the attempt is not completed.
+        result = AttemptSupervisor(task(), submit_once, EffectsVerifier("pass", 1)).run()
+        rows = {row["id"]: row["status"] for row in result["verification"] if row["kind"] == "execution_constraint"}
+        self.assertEqual(rows, {"runtime.permissions": "pass", "runtime.immutable_slots": "unknown",
+                                "runtime.ownership": "unknown", "runtime.dispatch_ordering": "pass",
+                                "runtime.no_uncertain_repeats": "unknown", "runtime.budget": "pass"})
+        self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
+                         ("incomplete", "verification_unknown", "unknown"))
+
+    def test_an_environment_cannot_install_ownership_evidence_by_describing_its_session(self):
+        # v0.6 accepted a reported fresh, launched session. main's ownership row needs the
+        # supervisor's own fixture claim, so a perfect session_info() claim changes nothing.
+        result = AttemptSupervisor(task(), submit_once, EffectsVerifier("pass", 1)).run()
+        ownership = next(r for r in result["verification"] if r["id"] == "runtime.ownership")
+        self.assertEqual(ownership["status"], "unknown")
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "verification_unknown"))
+
+    def test_permission_violation_is_confirmed_and_sticky(self):
+        result = AttemptSupervisor(task(), bypasses_permission, pass_verifier).run()
+        self.assertEqual((result["attempt_status"], result["stop_reason"], result["task_outcome"]),
+                         ("failed", "constraint_violated", "fail"))
+        permissions = next(r for r in result["verification"] if r["id"] == "runtime.permissions")
+        self.assertEqual(permissions["status"], "fail")
+
+
+class PolicyRevision(unittest.TestCase):
+    def run_with_revocation(self, operation, twice=False):
+        ctx = mp.get_context("fork")
+        ready, release = ctx.Event(), ctx.Event()
+        sup = AttemptSupervisor(task(), lambda g, e: observe_wait_execute(g, e, ready, release, twice),
+                                EffectsVerifier("pass", 1))
+
+        def revoke():
+            self.assertTrue(ready.wait(2))
+            self.assertTrue(sup.revoke(operation))
+            release.set()
+
+        thread = threading.Thread(target=revoke)
+        thread.start()
+        result = sup.run()
+        thread.join(2)
+        return result
+
+    def test_revocation_after_selection_blocks_dispatch(self):
+        result = self.run_with_revocation("submit_form")
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("blocked", "policy_denied"))
+        self.assertEqual(result["budget"]["dispatches"], 0)
+        self.assertEqual(result["policy"]["revision"], 2)
+        self.assertEqual(result["policy"]["revocations"][0]["operation"], "submit_form")
+
+    def test_unrelated_revocation_forces_fresh_observation(self):
+        result = self.run_with_revocation("type_text", twice=True)
+        self.assertIn("stale_policy", [str(row["data"]) and row["data"][0] for row in result["trace"]
+                                       if row["kind"] == "reobserve"])
+        self.assertEqual(result["budget"]["dispatches"], 1)
+        rows = {r["id"]: r["status"] for r in result["verification"] if r["kind"] == "execution_constraint"}
+        self.assertNotIn("fail", rows.values())
+        self.assertEqual(rows["runtime.permissions"], "pass")
+
+
+class GateFailure(unittest.TestCase):
+    def test_worker_dies_holding_gate(self):
+        started = time.monotonic()
+        result = AttemptSupervisor(task(), dies_holding_gate, pass_verifier).run()
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("failed", "executor_error"))
+        self.assertEqual((len(result["actions"]), result["actions"][0]["effect"]), (1, "unknown"))
+        self.assertEqual(result["execution_outcome"], "unknown")
+        self.assertLess(time.monotonic() - started, 4)
+
+    def test_worker_hangs_holding_gate(self):
+        result = AttemptSupervisor(task(wall=0.3), hangs_holding_gate, pass_verifier).run()
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("failed", "executor_error"))
+        # The process group is proven gone, but the gate's counters could not be read under its
+        # lock, so main keeps the aggregate cleanup unknown (it gates releasing the fixture).
+        self.assertEqual((result["worker_cleanup"], result["cleanup"]), ("forced", "unknown"))
+        self.assertLessEqual(result["timing"]["exit_after_terminal_seconds"], BOUND)
+
+
+class Cleanup(unittest.TestCase):
+    def test_surviving_descendant_is_terminated(self):
+        pid = mp.get_context("fork").Value("i", 0)
+        result = AttemptSupervisor(task(), lambda g, e: leaves_descendant(g, e, pid), pass_verifier).run()
+        self.assertEqual(result["cleanup"], "forced")
+        for _ in range(100):
+            if not alive(pid.value):
+                break
+            time.sleep(0.02)
+        self.assertFalse(alive(pid.value))
+
+    def test_deadline_transition_and_exit_bounds(self):
+        started = time.monotonic()
+        result = AttemptSupervisor(task(wall=0.3), never_returns, pass_verifier).run()
+        self.assertEqual((result["stop_reason"], result["cleanup"]), ("deadline", "forced"))
+        self.assertLessEqual(result["timing"]["deadline_delay_seconds"], 0.25)
+        self.assertLessEqual(result["timing"]["exit_after_terminal_seconds"], BOUND)
+        self.assertLessEqual(time.monotonic() - started, 0.3 + 0.25 + BOUND)
+
+
+class Reconciliation(unittest.TestCase):
+    def test_lost_return_reconciled_as_applied_from_server_record(self):
+        result = AttemptSupervisor(task(wall=0.5), lambda g, e: submit_once(g, e, hang=True),
+                                   EffectsVerifier("unknown", 1)).run()
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "deadline"))
+        submit = result["actions"][-1]
+        self.assertEqual((submit["operation"], submit["return_seq"], submit["effect"]),
+                         ("submit_form", None, "applied"))
+
+    def test_absent_request_after_browser_stop_is_not_applied(self):
+        result = AttemptSupervisor(task(wall=0.5), lambda g, e: submit_once(g, e, hang=True),
+                                   EffectsVerifier("unknown", 0)).run()
+        self.assertEqual(result["actions"][-1]["effect"], "not_applied")
+        self.assertNotEqual(result["execution_outcome"], "unknown")
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -50,6 +50,12 @@ class ActionModel:
         return {"input": vars(self.input).copy()}
 
 
+def payload_of(model):
+    """The input payload: a direct attribute on the unit fakes, `root.input` on Browser Use's union model."""
+    direct = getattr(model, "input", None)
+    return direct if direct is not None else model.root.input
+
+
 class Driver:
     def __init__(self, sink):
         self.sink = sink
@@ -62,8 +68,8 @@ class Driver:
         # Argument passing precedes the receipt; the receipt precedes this
         # coroutine body, which starts only when the returned coroutine is awaited.
         self.calls.append((model, session, sensitive_data,
-                           len(getattr(self.sink, "records", ())), model.input.text))
-        return SimpleNamespace(error=self.error, extracted_content=model.input.text)
+                           len(getattr(self.sink, "records", ())), payload_of(model).text))
+        return SimpleNamespace(error=self.error, extracted_content=payload_of(model).text)
 
 
 class Backend:
@@ -409,7 +415,7 @@ class ImmutableSlotBoundary(unittest.TestCase):
             execute(adapter, prepared)
             model = adapter.backend._tools.calls[0][0]
             inspect.signature(tools.act).bind(model, object(), sensitive_data=None)
-            self.assertEqual(model.input.text, value)
+            self.assertEqual(payload_of(model).text, value)
             self.assertEqual(model.model_dump(exclude_unset=True)["input"]["text"], value)
 
     @unittest.skipUnless(importlib.util.find_spec("systemone_harness") and

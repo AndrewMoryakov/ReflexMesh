@@ -62,8 +62,9 @@ class PreflightLifecycle(unittest.TestCase):
         return ExecutionTask.from_dict(data)
 
     def args(self):
+        # An explicit missing executable keeps the result independent of locally installed browsers.
         return SimpleNamespace(routing_provider="jevrouter", jev_url="http://127.0.0.1:8787",
-                               timeout=30, chrome=None)
+                               timeout=30, chrome="/nonexistent/reflexmesh-test-chrome")
 
     def test_opaque_macro_allowed_with_finite_local_budget_and_routing_retained(self):
         task = self.task()

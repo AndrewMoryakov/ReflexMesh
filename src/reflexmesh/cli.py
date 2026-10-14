@@ -67,11 +67,85 @@ def main(argv: list[str] | None = None) -> int:
                      help="router socket I/O timeout; total task time is limits.wall_seconds")
     run.add_argument("--no-limits", action="store_true",
                      help="explicitly disable task time, step and model-call budgets; cancellation remains active")
+    run.add_argument("--faults", metavar="FILE", help="acceptance fault injection (JSON); not supported by this runtime")
+    run.add_argument("--attempt-id", metavar="HEX32", help="attempt ID chosen by a Task API caller")
+    run.add_argument("--chain", metavar="FILE", help="link to a parent attempt (JSON); set by the Task API")
+    run.add_argument("--control-dir", metavar="DIR", help="cancellation handshake directory; set by the Task API")
+    browser = sub.add_parser("browser", help="V0.6 browser core: a bounded task on any DOM site")
+    browser_sub = browser.add_subparsers(dest="browser_command", required=True)
+    brun = browser_sub.add_parser("run", help="execute one browser-task/0.1 attempt")
+    brun.add_argument("--input", default="-", metavar="FILE")
+    brun.add_argument("--output-dir", required=True, metavar="DIR")
+    brun.add_argument("--action-provider", choices=("script", "jev", "laya"), required=True,
+                      help="script plays fixed steps against the offered options (mechanics only); jev calls the real "
+                           "provider; laya asks a local laya-browser server (--decisions-url) in its training format")
+    brun.add_argument("--script", metavar="FILE", help="JSON list of steps for the script provider")
+    brun.add_argument("--model", metavar="NAME", help="Jev model name; the provider key comes from the environment")
+    brun.add_argument("--decisions-url", metavar="URL",
+                      help="base URL of the decisions endpoint instead of the provider's own (https, or http on loopback); "
+                           "for stand-ins and proxies, recorded in the result")
+    brun.add_argument("--chrome", metavar="FILE", help="Chromium executable (or REFLEXMESH_CHROME)")
+    brun.add_argument("--no-sandbox", action="store_true",
+                      help="start Chromium without its sandbox (or REFLEXMESH_CHROME_NO_SANDBOX=1); recorded in the result")
+    brun.add_argument("--headed", action="store_true",
+                      help="show the browser window (default: headless); recorded in the result")
+    brun.add_argument("--attempt-id", metavar="HEX32")
+    brun.add_argument("--checks", metavar="FILE",
+                      help="the service's registered checks (JSON); a task's registered_check can name only these")
+    bserve = browser_sub.add_parser("serve", help="session service: keeps browser sessions open across a handoff so "
+                                                  "an attempt can be resumed (Unix socket; a named pipe on Windows)")
+    bserve.add_argument("--socket", required=True, metavar="PATH", help="Unix socket to listen on (created 0600); on Windows, the address file "
+                                                                    "of a named pipe")
+    bserve.add_argument("--state-dir", required=True, metavar="DIR", help="where each chain's attempts are written")
+    bserve.add_argument("--action-provider", choices=("script", "jev", "laya"), required=True)
+    bserve.add_argument("--script", metavar="FILE", help="script provider: a list of steps, or one list per attempt")
+    bserve.add_argument("--model", metavar="NAME")
+    bserve.add_argument("--decisions-url", metavar="URL")
+    bserve.add_argument("--checks", metavar="FILE", help="the service's registered checks (JSON)")
+    bserve.add_argument("--chrome", metavar="FILE", help="Chromium executable (or REFLEXMESH_CHROME)")
+    bserve.add_argument("--no-sandbox", action="store_true")
+    bserve.add_argument("--headed", action="store_true", help="show the browser windows (default: headless)")
+    bserve.add_argument("--lease-seconds", type=float, default=60.0,
+                        help="how long a handed-over session waits for resume (capped by the task deadline)")
+    for name, text in (("submit", "send a browser-task/0.1 to a running service"),
+                       ("resume", "send a continuation (token, parent_attempt_id, operation, mode, ...)"),
+                       ("cancel", "cancel a chain"), ("status", "list the service's chains"),
+                       ("shutdown", "close every session and stop the service")):
+        client = browser_sub.add_parser(name, help=text)
+        client.add_argument("--socket", required=True, metavar="PATH")
+        if name in ("submit", "resume"):
+            client.add_argument("--input", default="-", metavar="FILE")
+        if name == "cancel":
+            client.add_argument("--chain-id", required=True)
+    bview = browser_sub.add_parser("view", help="read-only local page: who decided each step, what, and how long it took")
+    bview.add_argument("--run-dir", required=True, metavar="DIR", help="a run's output directory (may be still running)")
+    bview.add_argument("--port", type=int, default=8780, help="loopback port; 0 picks a free one")
+    mcp = sub.add_parser("mcp", help="serve the Task API over MCP (stdio)")
+    mcp.add_argument("--state-dir", required=True, metavar="DIR")
+    mcp.add_argument("--chrome", metavar="FILE", help="Chromium executable for browser attempts")
+    mcp.add_argument("--jev-url", default="http://127.0.0.1:8787")
+    mcp.add_argument("--max-concurrent", type=int, default=1)
+    mcp.add_argument("--allow-faults", action="store_true", help="accept acceptance fault barriers (test use only)")
     try:
         args = parser.parse_args(argv)
         if args.command == "run":
             from reflexmesh.runtime.cli import run_execution
             return run_execution(args)
+        if args.command == "browser" and args.browser_command == "view":
+            from reflexmesh.runtime.browser_view import serve as serve_view
+            return serve_view(args)
+        if args.command == "browser" and args.browser_command == "serve":
+            from reflexmesh.runtime.browser_cli import serve_browser
+            return serve_browser(args)
+        if args.command == "browser" and args.browser_command in ("submit", "resume", "cancel", "status", "shutdown"):
+            from reflexmesh.runtime.browser_cli import call_service
+            return call_service(args)
+        if args.command == "browser":
+            from reflexmesh.runtime.browser_cli import run_browser
+            return run_browser(args)
+        if args.command == "mcp":
+            from reflexmesh.api.mcp_server import serve
+            return serve(args)
         if args.provider == "stub" and (args.allow_demo or args.no_none_candidate
                                         or args.jev_url != "http://127.0.0.1:8787" or args.timeout != 30.0):
             raise ValidationError("JevRouter options require --provider jevrouter")
