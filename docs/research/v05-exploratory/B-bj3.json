@@ -1,0 +1,2048 @@
+{
+ "schema_version": "v05-bj-results/0.1",
+ "level": "B",
+ "manifest_sha256": "0f76d317bd0c60f84b72ecae92047f29a93f51c696990205e870125d2da10310",
+ "exploratory": true,
+ "repetitions": 1,
+ "environment": {
+  "git_head": "3c761b0d482ac130e2d15bda0e000ce6baf56af0",
+  "git_dirty": false,
+  "python": "3.13.7",
+  "platform": "Linux-6.17.0-14-generic-x86_64-with-glibc2.42",
+  "harness_commit": null,
+  "systemone_harness_version": "0.4.0",
+  "browser_use_version": "0.13.10",
+  "chromium": "Google Chrome for Testing 153.0.8010.12",
+  "user": "hopt"
+ },
+ "command": [
+  "run_bj.py",
+  "--level",
+  "B",
+  "--chrome",
+  "/tmp/rmprobe/chrome",
+  "--output",
+  "/tmp/rmb/bj3.json",
+  "--repetitions",
+  "1",
+  "--only",
+  "C01.submitted_form",
+  "--only",
+  "C02.false_finish",
+  "--only",
+  "C02.protocol_error_with_pass",
+  "--only",
+  "C02.already_satisfied",
+  "--only",
+  "C03.substituted_slot",
+  "--only",
+  "C03.unknown_candidate",
+  "--only",
+  "C05.expire_pending_decision",
+  "--only",
+  "C06.cancel_after_revalidation",
+  "--only",
+  "C07.cancel_in_flight_late_return",
+  "--only",
+  "C07.cancel_in_flight_lost_return",
+  "--only",
+  "C07.deadline_in_flight_late_return",
+  "--only",
+  "C07.deadline_in_flight_lost_return",
+  "--only",
+  "C08.hung_provider",
+  "--only",
+  "C08.hung_driver",
+  "--only",
+  "C08.hung_close",
+  "--only",
+  "C11.visit_then_navigate_away",
+  "--only",
+  "C11.old_delayed_export",
+  "--only",
+  "C11.wrong_run_evidence",
+  "--only",
+  "C12.cancel_late_constraint_violation"
+ ],
+ "started_at_unix": 1791025069.794596,
+ "finished_at_unix": 1791025521.4312668,
+ "counts": {
+  "passed": 19,
+  "failed": 0,
+  "pending": 0
+ },
+ "attempts": [
+  {
+   "case": "C01.submitted_form",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C01.submitted_form/rep-1",
+   "run_id": "b-c01-submitted_form-1-25069795",
+   "exit_code": 0,
+   "process_seconds": 12.362,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C01.submitted_form/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C01.submitted_form/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C01.submitted_form/rep-1/script.json"
+   ],
+   "result": {
+    "attempt_id": "08d146e0452341d3b5b69d7772950df6",
+    "attempt_status": "completed",
+    "stop_reason": "verified",
+    "task_outcome": "pass",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 11.814,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.355
+    },
+    "faults": null,
+    "budget": {
+     "steps": 5,
+     "model_calls": 0,
+     "dispatches": 4,
+     "remaining_steps": 11,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 77.831,
+     "elapsed_seconds": 12.169,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "type_text",
+      "target_id": "name",
+      "slot_ref": "name@1",
+      "effect": "applied",
+      "return_seq": 9
+     },
+     {
+      "id": 3,
+      "operation": "type_text",
+      "target_id": "email",
+      "slot_ref": "email@1",
+      "effect": "applied",
+      "return_seq": 15
+     },
+     {
+      "id": 4,
+      "operation": "submit_form",
+      "target_id": "send-form",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 21
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C02.false_finish",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C02.false_finish/rep-1",
+   "run_id": "b-c02-false_finish-1-25082285",
+   "exit_code": 5,
+   "process_seconds": 10.927,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C02.false_finish/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C02.false_finish/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C02.false_finish/rep-1/script.json"
+   ],
+   "result": {
+    "attempt_id": "58982306e3744418b83fd91aaf2f3ff4",
+    "attempt_status": "failed",
+    "stop_reason": "postcondition_failed",
+    "task_outcome": "fail",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 10.324,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.406
+    },
+    "faults": null,
+    "budget": {
+     "steps": 2,
+     "model_calls": 0,
+     "dispatches": 1,
+     "remaining_steps": 14,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 79.27,
+     "elapsed_seconds": 10.73,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C02.protocol_error_with_pass",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C02.protocol_error_with_pass/rep-1",
+   "run_id": "b-c02-protocol_error_with_pass-1-25093322",
+   "exit_code": 5,
+   "process_seconds": 11.043,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C02.protocol_error_with_pass/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C02.protocol_error_with_pass/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C02.protocol_error_with_pass/rep-1/script.json",
+    "--faults",
+    "/tmp/rmb/bj3/B/C02.protocol_error_with_pass/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "08e9c1c98cca4e4bb0d0e6c7618bc83a",
+    "attempt_status": "failed",
+    "stop_reason": "protocol_error",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 10.469,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.392
+    },
+    "faults": [
+     "provider_error_at"
+    ],
+    "budget": {
+     "steps": 3,
+     "model_calls": 0,
+     "dispatches": 2,
+     "remaining_steps": 9,
+     "remaining_model_calls": 16,
+     "remaining_wall_seconds": 79.139,
+     "elapsed_seconds": 10.861,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "on_settings": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "navigate",
+      "target_id": "settings",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 9
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C02.already_satisfied",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C02.already_satisfied/rep-1",
+   "run_id": "b-c02-already_satisfied-1-25104483",
+   "exit_code": 0,
+   "process_seconds": 9.811,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C02.already_satisfied/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C02.already_satisfied/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C02.already_satisfied/rep-1/script.json"
+   ],
+   "result": {
+    "attempt_id": "576a9b78efad4f94bbee2d2a04488291",
+    "attempt_status": "completed",
+    "stop_reason": "already_satisfied",
+    "task_outcome": "pass",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 9.266,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.353
+    },
+    "faults": null,
+    "budget": {
+     "steps": 2,
+     "model_calls": 0,
+     "dispatches": 1,
+     "remaining_steps": 14,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 80.381,
+     "elapsed_seconds": 9.619,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "on_form": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C03.substituted_slot",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C03.substituted_slot/rep-1",
+   "run_id": "b-c03-substituted_slot-1-25114453",
+   "exit_code": 3,
+   "process_seconds": 9.929,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C03.substituted_slot/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C03.substituted_slot/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C03.substituted_slot/rep-1/script.json"
+   ],
+   "result": {
+    "attempt_id": "114ad5db2b5f4dc09516870efbc02416",
+    "attempt_status": "blocked",
+    "stop_reason": "invalid_action",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 9.23,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.513
+    },
+    "faults": null,
+    "budget": {
+     "steps": 2,
+     "model_calls": 0,
+     "dispatches": 1,
+     "remaining_steps": 14,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 80.257,
+     "elapsed_seconds": 9.743,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C03.unknown_candidate",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C03.unknown_candidate/rep-1",
+   "run_id": "b-c03-unknown_candidate-1-25124492",
+   "exit_code": 3,
+   "process_seconds": 9.712,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C03.unknown_candidate/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C03.unknown_candidate/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C03.unknown_candidate/rep-1/script.json"
+   ],
+   "result": {
+    "attempt_id": "9430db0de43a451590207f419a1cfa77",
+    "attempt_status": "blocked",
+    "stop_reason": "invalid_action",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 9.113,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.421
+    },
+    "faults": null,
+    "budget": {
+     "steps": 2,
+     "model_calls": 0,
+     "dispatches": 1,
+     "remaining_steps": 14,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 80.467,
+     "elapsed_seconds": 9.533,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C05.expire_pending_decision",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C05.expire_pending_decision/rep-1",
+   "run_id": "b-c05-expire_pending_decision-1-25134315",
+   "exit_code": 4,
+   "process_seconds": 50.319,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C05.expire_pending_decision/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C05.expire_pending_decision/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C05.expire_pending_decision/rep-1/script.json",
+    "--faults",
+    "/tmp/rmb/bj3/B/C05.expire_pending_decision/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "20826971772545bda8fc65330a651dcd",
+    "attempt_status": "incomplete",
+    "stop_reason": "deadline",
+    "task_outcome": "unknown",
+    "execution_outcome": "unknown",
+    "cleanup": "forced",
+    "timing": {
+     "terminal_after_seconds": 45.001,
+     "deadline_delay_seconds": 0.001,
+     "cleanup_seconds": 0.086,
+     "exit_after_terminal_seconds": 5.121
+    },
+    "faults": [
+     "hold_decision"
+    ],
+    "budget": {
+     "steps": 3,
+     "model_calls": 0,
+     "dispatches": 2,
+     "remaining_steps": 13,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 0,
+     "elapsed_seconds": 50.122,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "type_text",
+      "target_id": "name",
+      "slot_ref": "name@1",
+      "effect": "unknown",
+      "return_seq": 9
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C06.cancel_after_revalidation",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C06.cancel_after_revalidation/rep-1",
+   "run_id": "b-c06-cancel_after_revalidation-1-25184745",
+   "exit_code": 130,
+   "process_seconds": 11.643,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C06.cancel_after_revalidation/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C06.cancel_after_revalidation/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C06.cancel_after_revalidation/rep-1/script.json",
+    "--faults",
+    "/tmp/rmb/bj3/B/C06.cancel_after_revalidation/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "d81f26a5af414ec4a7c6080018c5a3ff",
+    "attempt_status": "cancelled",
+    "stop_reason": "cancel_requested",
+    "task_outcome": "unknown",
+    "execution_outcome": "unknown",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 11.237,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.222
+    },
+    "faults": [
+     "cancel_before_commit"
+    ],
+    "budget": {
+     "steps": 4,
+     "model_calls": 0,
+     "dispatches": 3,
+     "remaining_steps": 12,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 78.542,
+     "elapsed_seconds": 11.458,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "type_text",
+      "target_id": "name",
+      "slot_ref": "name@1",
+      "effect": "unknown",
+      "return_seq": 9
+     },
+     {
+      "id": 3,
+      "operation": "type_text",
+      "target_id": "email",
+      "slot_ref": "email@1",
+      "effect": "unknown",
+      "return_seq": 15
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C07.cancel_in_flight_late_return",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C07.cancel_in_flight_late_return/rep-1",
+   "run_id": "b-c07-cancel_in_flight_late_return-1-25196503",
+   "exit_code": 130,
+   "process_seconds": 13.933,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C07.cancel_in_flight_late_return/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C07.cancel_in_flight_late_return/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C07.cancel_in_flight_late_return/rep-1/script.json",
+    "--faults",
+    "/tmp/rmb/bj3/B/C07.cancel_in_flight_late_return/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "e9f50a1df8e542a5adf4189c5a51306e",
+    "attempt_status": "cancelled",
+    "stop_reason": "cancel_requested",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 10.388,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 3.373
+    },
+    "faults": [
+     "cancel_after_commit",
+     "hold_driver"
+    ],
+    "budget": {
+     "steps": 4,
+     "model_calls": 0,
+     "dispatches": 4,
+     "remaining_steps": 12,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 76.239,
+     "elapsed_seconds": 13.761,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "type_text",
+      "target_id": "name",
+      "slot_ref": "name@1",
+      "effect": "applied",
+      "return_seq": 9
+     },
+     {
+      "id": 3,
+      "operation": "type_text",
+      "target_id": "email",
+      "slot_ref": "email@1",
+      "effect": "applied",
+      "return_seq": 15
+     },
+     {
+      "id": 4,
+      "operation": "submit_form",
+      "target_id": "send-form",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 22
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C07.cancel_in_flight_lost_return",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C07.cancel_in_flight_lost_return/rep-1",
+   "run_id": "b-c07-cancel_in_flight_lost_return-1-25210547",
+   "exit_code": 130,
+   "process_seconds": 15.646,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C07.cancel_in_flight_lost_return/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C07.cancel_in_flight_lost_return/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C07.cancel_in_flight_lost_return/rep-1/script.json",
+    "--faults",
+    "/tmp/rmb/bj3/B/C07.cancel_in_flight_lost_return/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "64ca16192aba4deb9e59129b2af459cb",
+    "attempt_status": "cancelled",
+    "stop_reason": "cancel_requested",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "forced",
+    "timing": {
+     "terminal_after_seconds": 10.246,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.167,
+     "exit_after_terminal_seconds": 5.21
+    },
+    "faults": [
+     "cancel_after_commit",
+     "hang_driver_on"
+    ],
+    "budget": {
+     "steps": 4,
+     "model_calls": 0,
+     "dispatches": 4,
+     "remaining_steps": 12,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 74.544,
+     "elapsed_seconds": 15.456,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "type_text",
+      "target_id": "name",
+      "slot_ref": "name@1",
+      "effect": "applied",
+      "return_seq": 9
+     },
+     {
+      "id": 3,
+      "operation": "type_text",
+      "target_id": "email",
+      "slot_ref": "email@1",
+      "effect": "applied",
+      "return_seq": 15
+     },
+     {
+      "id": 4,
+      "operation": "submit_form",
+      "target_id": "send-form",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": null
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C07.deadline_in_flight_late_return",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C07.deadline_in_flight_late_return/rep-1",
+   "run_id": "b-c07-deadline_in_flight_late_return-1-25226309",
+   "exit_code": 4,
+   "process_seconds": 46.409,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C07.deadline_in_flight_late_return/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C07.deadline_in_flight_late_return/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C07.deadline_in_flight_late_return/rep-1/script.json",
+    "--faults",
+    "/tmp/rmb/bj3/B/C07.deadline_in_flight_late_return/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "da41cbdbe4f04a879daf6d987d997801",
+    "attempt_status": "incomplete",
+    "stop_reason": "deadline",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 45.001,
+     "deadline_delay_seconds": 0.001,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 1.227
+    },
+    "faults": [
+     "hold_driver"
+    ],
+    "budget": {
+     "steps": 4,
+     "model_calls": 0,
+     "dispatches": 4,
+     "remaining_steps": 12,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 0,
+     "elapsed_seconds": 46.228,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "type_text",
+      "target_id": "name",
+      "slot_ref": "name@1",
+      "effect": "applied",
+      "return_seq": 9
+     },
+     {
+      "id": 3,
+      "operation": "type_text",
+      "target_id": "email",
+      "slot_ref": "email@1",
+      "effect": "applied",
+      "return_seq": 15
+     },
+     {
+      "id": 4,
+      "operation": "submit_form",
+      "target_id": "send-form",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 22
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C07.deadline_in_flight_lost_return",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C07.deadline_in_flight_lost_return/rep-1",
+   "run_id": "b-c07-deadline_in_flight_lost_return-1-25272828",
+   "exit_code": 4,
+   "process_seconds": 50.354,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C07.deadline_in_flight_lost_return/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C07.deadline_in_flight_lost_return/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C07.deadline_in_flight_lost_return/rep-1/script.json",
+    "--faults",
+    "/tmp/rmb/bj3/B/C07.deadline_in_flight_lost_return/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "061eb338712e4da2a23c8c0d071ba312",
+    "attempt_status": "incomplete",
+    "stop_reason": "deadline",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "forced",
+    "timing": {
+     "terminal_after_seconds": 45.002,
+     "deadline_delay_seconds": 0.002,
+     "cleanup_seconds": 0.096,
+     "exit_after_terminal_seconds": 5.13
+    },
+    "faults": [
+     "hang_driver_on"
+    ],
+    "budget": {
+     "steps": 4,
+     "model_calls": 0,
+     "dispatches": 4,
+     "remaining_steps": 12,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 0,
+     "elapsed_seconds": 50.132,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "type_text",
+      "target_id": "name",
+      "slot_ref": "name@1",
+      "effect": "applied",
+      "return_seq": 9
+     },
+     {
+      "id": 3,
+      "operation": "type_text",
+      "target_id": "email",
+      "slot_ref": "email@1",
+      "effect": "applied",
+      "return_seq": 15
+     },
+     {
+      "id": 4,
+      "operation": "submit_form",
+      "target_id": "send-form",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": null
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C08.hung_provider",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C08.hung_provider/rep-1",
+   "run_id": "b-c08-hung_provider-1-25323293",
+   "exit_code": 4,
+   "process_seconds": 50.376,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C08.hung_provider/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C08.hung_provider/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C08.hung_provider/rep-1/script.json",
+    "--faults",
+    "/tmp/rmb/bj3/B/C08.hung_provider/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "bd1f80a6d84c4522870148da2024724c",
+    "attempt_status": "incomplete",
+    "stop_reason": "deadline",
+    "task_outcome": "unknown",
+    "execution_outcome": "unknown",
+    "cleanup": "forced",
+    "timing": {
+     "terminal_after_seconds": 45.002,
+     "deadline_delay_seconds": 0.002,
+     "cleanup_seconds": 0.123,
+     "exit_after_terminal_seconds": 5.16
+    },
+    "faults": [
+     "hang_provider_at"
+    ],
+    "budget": {
+     "steps": 3,
+     "model_calls": 0,
+     "dispatches": 2,
+     "remaining_steps": 13,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 0,
+     "elapsed_seconds": 50.161,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "type_text",
+      "target_id": "name",
+      "slot_ref": "name@1",
+      "effect": "unknown",
+      "return_seq": 9
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C08.hung_driver",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C08.hung_driver/rep-1",
+   "run_id": "b-c08-hung_driver-1-25373788",
+   "exit_code": 4,
+   "process_seconds": 50.355,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C08.hung_driver/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C08.hung_driver/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C08.hung_driver/rep-1/script.json",
+    "--faults",
+    "/tmp/rmb/bj3/B/C08.hung_driver/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "2b0fce5a20c64930842c534f2424675d",
+    "attempt_status": "incomplete",
+    "stop_reason": "deadline",
+    "task_outcome": "unknown",
+    "execution_outcome": "unknown",
+    "cleanup": "forced",
+    "timing": {
+     "terminal_after_seconds": 45.001,
+     "deadline_delay_seconds": 0.001,
+     "cleanup_seconds": 0.102,
+     "exit_after_terminal_seconds": 5.139
+    },
+    "faults": [
+     "hang_driver_on"
+    ],
+    "budget": {
+     "steps": 2,
+     "model_calls": 0,
+     "dispatches": 2,
+     "remaining_steps": 14,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 0,
+     "elapsed_seconds": 50.14,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "type_text",
+      "target_id": "name",
+      "slot_ref": "name@1",
+      "effect": "unknown",
+      "return_seq": null
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C08.hung_close",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C08.hung_close/rep-1",
+   "run_id": "b-c08-hung_close-1-25424259",
+   "exit_code": 4,
+   "process_seconds": 50.351,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C08.hung_close/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C08.hung_close/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C08.hung_close/rep-1/script.json",
+    "--faults",
+    "/tmp/rmb/bj3/B/C08.hung_close/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "771d934f37874cbd88841a9a90aee51f",
+    "attempt_status": "incomplete",
+    "stop_reason": "deadline",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "forced",
+    "timing": {
+     "terminal_after_seconds": 45.001,
+     "deadline_delay_seconds": 0.001,
+     "cleanup_seconds": 0.106,
+     "exit_after_terminal_seconds": 5.143
+    },
+    "faults": [
+     "hang_close"
+    ],
+    "budget": {
+     "steps": 5,
+     "model_calls": 0,
+     "dispatches": 4,
+     "remaining_steps": 11,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 0,
+     "elapsed_seconds": 50.144,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "type_text",
+      "target_id": "name",
+      "slot_ref": "name@1",
+      "effect": "applied",
+      "return_seq": 9
+     },
+     {
+      "id": 3,
+      "operation": "type_text",
+      "target_id": "email",
+      "slot_ref": "email@1",
+      "effect": "applied",
+      "return_seq": 15
+     },
+     {
+      "id": 4,
+      "operation": "submit_form",
+      "target_id": "send-form",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 21
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C11.visit_then_navigate_away",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C11.visit_then_navigate_away/rep-1",
+   "run_id": "b-c11-visit_then_navigate_away-1-25474727",
+   "exit_code": 5,
+   "process_seconds": 12.249,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C11.visit_then_navigate_away/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C11.visit_then_navigate_away/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C11.visit_then_navigate_away/rep-1/script.json"
+   ],
+   "result": {
+    "attempt_id": "1289d31afe8a4a29922587d173410867",
+    "attempt_status": "failed",
+    "stop_reason": "postcondition_failed",
+    "task_outcome": "fail",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 11.987,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.051
+    },
+    "faults": null,
+    "budget": {
+     "steps": 4,
+     "model_calls": 0,
+     "dispatches": 3,
+     "remaining_steps": 8,
+     "remaining_model_calls": 16,
+     "remaining_wall_seconds": 77.962,
+     "elapsed_seconds": 12.038,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "on_settings": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "navigate",
+      "target_id": "settings",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 9
+     },
+     {
+      "id": 3,
+      "operation": "navigate",
+      "target_id": "form",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 15
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C11.old_delayed_export",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C11.old_delayed_export/rep-1",
+   "run_id": "b-c11-old_delayed_export-1-25487092",
+   "exit_code": 5,
+   "process_seconds": 8.695,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C11.old_delayed_export/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C11.old_delayed_export/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C11.old_delayed_export/rep-1/script.json"
+   ],
+   "result": {
+    "attempt_id": "02817735622a44bc8eac4380a63ac6d3",
+    "attempt_status": "failed",
+    "stop_reason": "postcondition_failed",
+    "task_outcome": "fail",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 8.345,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.151
+    },
+    "faults": null,
+    "budget": {
+     "steps": 2,
+     "model_calls": 0,
+     "dispatches": 1,
+     "remaining_steps": 14,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 81.503,
+     "elapsed_seconds": 8.497,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "exported": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   },
+   "old_run": {
+    "attempt_id": "0a5657b1a33e4997ab4d0b4d1a0565aa",
+    "attempt_status": "cancelled",
+    "stop_reason": "cancel_requested",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "forced",
+    "timing": {
+     "terminal_after_seconds": 7.605,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.016,
+     "exit_after_terminal_seconds": 5.052
+    },
+    "faults": [
+     "cancel_after_commit"
+    ],
+    "budget": {
+     "steps": 2,
+     "model_calls": 0,
+     "dispatches": 2,
+     "remaining_steps": 14,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 77.344,
+     "elapsed_seconds": 12.656,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "exported": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "start_export",
+      "target_id": "start-export",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 10
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   },
+   "old_exports": 1
+  },
+  {
+   "case": "C11.wrong_run_evidence",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C11.wrong_run_evidence/rep-1",
+   "run_id": "b-c11-wrong_run_evidence-1-25508918",
+   "exit_code": 3,
+   "process_seconds": 0.27,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C11.wrong_run_evidence/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C11.wrong_run_evidence/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C11.wrong_run_evidence/rep-1/script.json"
+   ],
+   "result": {
+    "attempt_id": "d196ad6d96ab4de4a1fff7ec0da128d2",
+    "attempt_status": "blocked",
+    "stop_reason": "fixture_mismatch",
+    "task_outcome": "unknown",
+    "execution_outcome": "not_started",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 0.044,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.051
+    },
+    "faults": null,
+    "budget": {
+     "steps": 0,
+     "model_calls": 0,
+     "dispatches": 0,
+     "remaining_steps": 16,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 89.906,
+     "elapsed_seconds": 0.094,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "unknown",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [],
+    "routing": {
+     "status": null,
+     "route": null,
+     "provider": null,
+     "is_stub": null
+    }
+   }
+  },
+  {
+   "case": "C12.cancel_late_constraint_violation",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C12.cancel_late_constraint_violation/rep-1",
+   "run_id": "b-c12-cancel_late_constraint_violation-1-25509307",
+   "exit_code": 130,
+   "process_seconds": 12.008,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj3/B/C12.cancel_late_constraint_violation/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj3/B/C12.cancel_late_constraint_violation/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj3/B/C12.cancel_late_constraint_violation/rep-1/script.json",
+    "--faults",
+    "/tmp/rmb/bj3/B/C12.cancel_late_constraint_violation/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "d80aece8eff44dd19aeede8d392558af",
+    "attempt_status": "cancelled",
+    "stop_reason": "cancel_requested",
+    "task_outcome": "fail",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 10.368,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 1.445
+    },
+    "faults": [
+     "cancel_after_commit",
+     "corrupt_budget_after_cancel"
+    ],
+    "budget": {
+     "steps": 17,
+     "model_calls": 0,
+     "dispatches": 4,
+     "remaining_steps": 0,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 78.187,
+     "elapsed_seconds": 11.813,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "fail"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "type_text",
+      "target_id": "name",
+      "slot_ref": "name@1",
+      "effect": "applied",
+      "return_seq": 9
+     },
+     {
+      "id": 3,
+      "operation": "type_text",
+      "target_id": "email",
+      "slot_ref": "email@1",
+      "effect": "applied",
+      "return_seq": 15
+     },
+     {
+      "id": 4,
+      "operation": "submit_form",
+      "target_id": "send-form",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 22
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  }
+ ]
+}

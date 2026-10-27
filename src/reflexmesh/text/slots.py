@@ -47,7 +47,9 @@ class SlotRegistry(_Immutable):
 
     __slots__ = ("task_id", "revision", "run_id", "references", "_slots")
 
-    def __init__(self, task: ExecutionTask):
+    def __init__(self, task: ExecutionTask, run_id: str | None = None):
+        # A browser task has no fixture run ID: the attempt supplies the binding identity.
+        run_id = task.run_id if run_id is None else run_id
         values = {}
         for slot in task.slots:
             if slot.reference in values:
@@ -55,13 +57,13 @@ class SlotRegistry(_Immutable):
             values[slot.reference] = ResolvedSlot(slot.reference, slot.value)
         object.__setattr__(self, "task_id", task.task_id)
         object.__setattr__(self, "revision", task.revision)
-        object.__setattr__(self, "run_id", task.run_id)
+        object.__setattr__(self, "run_id", run_id)
         object.__setattr__(self, "references", tuple(values))
         object.__setattr__(self, "_slots", MappingProxyType(values))
 
     @classmethod
-    def from_task(cls, task: ExecutionTask) -> "SlotRegistry":
-        return cls(task)
+    def from_task(cls, task: ExecutionTask, run_id: str | None = None) -> "SlotRegistry":
+        return cls(task, run_id)
 
     def resolve(self, reference: str) -> ResolvedSlot:
         # Exact lookup also rejects old/new versions, raw text and string subclasses.

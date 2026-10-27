@@ -1,0 +1,1816 @@
+{
+ "schema_version": "v05-bj-results/0.1",
+ "level": "J",
+ "manifest_sha256": "0f76d317bd0c60f84b72ecae92047f29a93f51c696990205e870125d2da10310",
+ "exploratory": false,
+ "repetitions": 3,
+ "environment": {
+  "git_head": "530f6b510b2ddb97bbb0f52d089a9794ec9b7f79",
+  "git_dirty": false,
+  "python": "3.12.3",
+  "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "harness_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+  "systemone_harness_version": "0.4.0",
+  "browser_use_version": "0.13.10",
+  "chromium": "Google Chrome for Testing 153.0.8010.12",
+  "user": "rm",
+  "jev_url": "http://127.0.0.1:8797",
+  "micro_model": "~typesafe/jev-latest",
+  "micro_provider": "openrouter",
+  "https_proxy_configured": true,
+  "jevrouter_health": {
+   "ok": true,
+   "provider": "openrouter:~typesafe/jev-latest"
+  },
+  "jevrouter_commit": "f944acb6530621bced023352e2358a63218bf4d9"
+ },
+ "command": [
+  "run_bj.py",
+  "--level",
+  "J",
+  "--chrome",
+  "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+  "--jev-url",
+  "http://127.0.0.1:8797",
+  "--jevrouter-commit",
+  "f944acb6530621bced023352e2358a63218bf4d9",
+  "--output",
+  "/opt/rm/results/v05-j-530f6b5.json"
+ ],
+ "started_at_unix": 1791030175.2005837,
+ "artifacts": "/opt/rm/results/v05-j-530f6b5",
+ "attempts": [
+  {
+   "case": "C01.current_page",
+   "level": "J",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C01.current_page/rep-1",
+   "run_id": "j-c01-current_page-1-30175201",
+   "exit_code": 0,
+   "process_seconds": 8.839,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.current_page/rep-1/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.current_page/rep-1/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev"
+   ],
+   "result": {
+    "attempt_id": "58e290e33fc94f9babdc3deb64ac83b7",
+    "attempt_status": "completed",
+    "stop_reason": "verified",
+    "task_outcome": "pass",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 8.743,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.0
+    },
+    "faults": null,
+    "budget": {
+     "steps": 3,
+     "model_calls": 3,
+     "dispatches": 2,
+     "remaining_steps": 9,
+     "remaining_model_calls": 13,
+     "remaining_wall_seconds": 81.257,
+     "elapsed_seconds": 8.743,
+     "model_usage": {
+      "micro_decisions": 2,
+      "input_tokens": 2146,
+      "output_tokens": 264,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "on_settings": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "navigate",
+      "target_id": "settings",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 10
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C01.current_page",
+   "level": "J",
+   "repetition": 2,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C01.current_page/rep-2",
+   "run_id": "j-c01-current_page-2-30184095",
+   "exit_code": 0,
+   "process_seconds": 8.239,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.current_page/rep-2/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.current_page/rep-2/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev"
+   ],
+   "result": {
+    "attempt_id": "151d20b2ae4d498caf4d444931d78ba6",
+    "attempt_status": "completed",
+    "stop_reason": "verified",
+    "task_outcome": "pass",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 8.141,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.0
+    },
+    "faults": null,
+    "budget": {
+     "steps": 3,
+     "model_calls": 3,
+     "dispatches": 2,
+     "remaining_steps": 9,
+     "remaining_model_calls": 13,
+     "remaining_wall_seconds": 81.859,
+     "elapsed_seconds": 8.141,
+     "model_usage": {
+      "micro_decisions": 2,
+      "input_tokens": 2147,
+      "output_tokens": 264,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "on_settings": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "navigate",
+      "target_id": "settings",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 10
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C01.current_page",
+   "level": "J",
+   "repetition": 3,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C01.current_page/rep-3",
+   "run_id": "j-c01-current_page-3-30192389",
+   "exit_code": 0,
+   "process_seconds": 8.192,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.current_page/rep-3/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.current_page/rep-3/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev"
+   ],
+   "result": {
+    "attempt_id": "c314045234384430a33c87fea6a7ccf3",
+    "attempt_status": "completed",
+    "stop_reason": "verified",
+    "task_outcome": "pass",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 8.075,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.0
+    },
+    "faults": null,
+    "budget": {
+     "steps": 3,
+     "model_calls": 3,
+     "dispatches": 2,
+     "remaining_steps": 9,
+     "remaining_model_calls": 13,
+     "remaining_wall_seconds": 81.925,
+     "elapsed_seconds": 8.075,
+     "model_usage": {
+      "micro_decisions": 2,
+      "input_tokens": 2145,
+      "output_tokens": 264,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "on_settings": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "navigate",
+      "target_id": "settings",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 10
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C01.saved_setting",
+   "level": "J",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C01.saved_setting/rep-1",
+   "run_id": "j-c01-saved_setting-1-30202860",
+   "exit_code": 0,
+   "process_seconds": 8.887,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.saved_setting/rep-1/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.saved_setting/rep-1/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev"
+   ],
+   "result": {
+    "attempt_id": "891a05f6979c477eadbb3b6736035937",
+    "attempt_status": "completed",
+    "stop_reason": "verified",
+    "task_outcome": "pass",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 8.82,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.0
+    },
+    "faults": null,
+    "budget": {
+     "steps": 4,
+     "model_calls": 4,
+     "dispatches": 3,
+     "remaining_steps": 8,
+     "remaining_model_calls": 12,
+     "remaining_wall_seconds": 81.18,
+     "elapsed_seconds": 8.82,
+     "model_usage": {
+      "micro_decisions": 3,
+      "input_tokens": 3536,
+      "output_tokens": 444,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "saved": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "toggle_setting",
+      "target_id": "notify-email",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 10
+     },
+     {
+      "id": 3,
+      "operation": "save_settings",
+      "target_id": "save-settings",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 17
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C01.saved_setting",
+   "level": "J",
+   "repetition": 2,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C01.saved_setting/rep-2",
+   "run_id": "j-c01-saved_setting-2-30211801",
+   "exit_code": 0,
+   "process_seconds": 8.938,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.saved_setting/rep-2/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.saved_setting/rep-2/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev"
+   ],
+   "result": {
+    "attempt_id": "d05237d312e344ab9f02118ffd613c0c",
+    "attempt_status": "completed",
+    "stop_reason": "verified",
+    "task_outcome": "pass",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 8.855,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.0
+    },
+    "faults": null,
+    "budget": {
+     "steps": 4,
+     "model_calls": 4,
+     "dispatches": 3,
+     "remaining_steps": 8,
+     "remaining_model_calls": 12,
+     "remaining_wall_seconds": 81.145,
+     "elapsed_seconds": 8.855,
+     "model_usage": {
+      "micro_decisions": 3,
+      "input_tokens": 3528,
+      "output_tokens": 444,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "saved": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "toggle_setting",
+      "target_id": "notify-email",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 10
+     },
+     {
+      "id": 3,
+      "operation": "save_settings",
+      "target_id": "save-settings",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 17
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C01.saved_setting",
+   "level": "J",
+   "repetition": 3,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C01.saved_setting/rep-3",
+   "run_id": "j-c01-saved_setting-3-30220793",
+   "exit_code": 0,
+   "process_seconds": 10.746,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.saved_setting/rep-3/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.saved_setting/rep-3/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev"
+   ],
+   "result": {
+    "attempt_id": "b3898bc2b8104986acd5a91110cdf2cb",
+    "attempt_status": "completed",
+    "stop_reason": "verified",
+    "task_outcome": "pass",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 10.659,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.0
+    },
+    "faults": null,
+    "budget": {
+     "steps": 4,
+     "model_calls": 4,
+     "dispatches": 3,
+     "remaining_steps": 8,
+     "remaining_model_calls": 12,
+     "remaining_wall_seconds": 79.341,
+     "elapsed_seconds": 10.659,
+     "model_usage": {
+      "micro_decisions": 3,
+      "input_tokens": 3530,
+      "output_tokens": 444,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "saved": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "toggle_setting",
+      "target_id": "notify-email",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 10
+     },
+     {
+      "id": 3,
+      "operation": "save_settings",
+      "target_id": "save-settings",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 17
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C01.submitted_form",
+   "level": "J",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C01.submitted_form/rep-1",
+   "run_id": "j-c01-submitted_form-1-30231595",
+   "exit_code": 0,
+   "process_seconds": 11.965,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.submitted_form/rep-1/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.submitted_form/rep-1/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev"
+   ],
+   "result": {
+    "attempt_id": "b4455122d83f41e59bfedca5242d5a72",
+    "attempt_status": "completed",
+    "stop_reason": "verified",
+    "task_outcome": "pass",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 11.857,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.0
+    },
+    "faults": null,
+    "budget": {
+     "steps": 8,
+     "model_calls": 8,
+     "dispatches": 4,
+     "remaining_steps": 8,
+     "remaining_model_calls": 16,
+     "remaining_wall_seconds": 78.143,
+     "elapsed_seconds": 11.857,
+     "model_usage": {
+      "micro_decisions": 7,
+      "input_tokens": 9805,
+      "output_tokens": 1526,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "sent": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "type_text",
+      "target_id": "name",
+      "slot_ref": "name@1",
+      "effect": "applied",
+      "return_seq": 14
+     },
+     {
+      "id": 3,
+      "operation": "type_text",
+      "target_id": "email",
+      "slot_ref": "email@1",
+      "effect": "applied",
+      "return_seq": 25
+     },
+     {
+      "id": 4,
+      "operation": "submit_form",
+      "target_id": "send-form",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 32
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C01.submitted_form",
+   "level": "J",
+   "repetition": 2,
+   "status": "failed",
+   "failures": [
+    "attempt_status='failed' expected 'completed'",
+    "stop_reason='postcondition_failed' expected 'verified'",
+    "task_outcome='fail' expected 'pass'",
+    "POST /form count 0 != 1",
+    "server form does not equal the declared slot values"
+   ],
+   "directory": "J/C01.submitted_form/rep-2",
+   "run_id": "j-c01-submitted_form-2-30246193",
+   "exit_code": 5,
+   "process_seconds": 8.442,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.submitted_form/rep-2/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.submitted_form/rep-2/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev"
+   ],
+   "result": {
+    "attempt_id": "9fc6d85aefd3445eb2f4c2f917b4c050",
+    "attempt_status": "failed",
+    "stop_reason": "postcondition_failed",
+    "task_outcome": "fail",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 8.321,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.0
+    },
+    "faults": null,
+    "budget": {
+     "steps": 4,
+     "model_calls": 4,
+     "dispatches": 1,
+     "remaining_steps": 12,
+     "remaining_model_calls": 20,
+     "remaining_wall_seconds": 81.679,
+     "elapsed_seconds": 8.321,
+     "model_usage": {
+      "micro_decisions": 3,
+      "input_tokens": 4035,
+      "output_tokens": 651,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C01.submitted_form",
+   "level": "J",
+   "repetition": 3,
+   "status": "failed",
+   "failures": [
+    "attempt_status='failed' expected 'completed'",
+    "stop_reason='postcondition_failed' expected 'verified'",
+    "task_outcome='fail' expected 'pass'",
+    "POST /form count 0 != 1",
+    "server form does not equal the declared slot values"
+   ],
+   "directory": "J/C01.submitted_form/rep-3",
+   "run_id": "j-c01-submitted_form-3-30254693",
+   "exit_code": 5,
+   "process_seconds": 7.587,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.submitted_form/rep-3/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C01.submitted_form/rep-3/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev"
+   ],
+   "result": {
+    "attempt_id": "96f35a2a31354ba9b2d4a8be02a4798d",
+    "attempt_status": "failed",
+    "stop_reason": "postcondition_failed",
+    "task_outcome": "fail",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 7.469,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.0
+    },
+    "faults": null,
+    "budget": {
+     "steps": 4,
+     "model_calls": 4,
+     "dispatches": 1,
+     "remaining_steps": 12,
+     "remaining_model_calls": 20,
+     "remaining_wall_seconds": 82.531,
+     "elapsed_seconds": 7.469,
+     "model_usage": {
+      "micro_decisions": 3,
+      "input_tokens": 4029,
+      "output_tokens": 651,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C05.cancel_pending_decision",
+   "level": "J",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C05.cancel_pending_decision/rep-1",
+   "run_id": "j-c05-cancel_pending_decision-1-30262341",
+   "exit_code": 130,
+   "process_seconds": 7.493,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.cancel_pending_decision/rep-1/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.cancel_pending_decision/rep-1/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev",
+    "--faults",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.cancel_pending_decision/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "f2e30a4563bb4b94988c36584fcbeb86",
+    "attempt_status": "cancelled",
+    "stop_reason": "cancel_requested",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 6.541,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.855
+    },
+    "faults": [
+     "cancel_on_decision"
+    ],
+    "budget": {
+     "steps": 3,
+     "model_calls": 3,
+     "dispatches": 1,
+     "remaining_steps": 13,
+     "remaining_model_calls": 21,
+     "remaining_wall_seconds": 82.604,
+     "elapsed_seconds": 7.396,
+     "model_usage": {
+      "micro_decisions": 2,
+      "input_tokens": 2664,
+      "output_tokens": 434,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C05.cancel_pending_decision",
+   "level": "J",
+   "repetition": 2,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C05.cancel_pending_decision/rep-2",
+   "run_id": "j-c05-cancel_pending_decision-2-30272314",
+   "exit_code": 130,
+   "process_seconds": 9.287,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.cancel_pending_decision/rep-2/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.cancel_pending_decision/rep-2/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev",
+    "--faults",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.cancel_pending_decision/rep-2/faults.json"
+   ],
+   "result": {
+    "attempt_id": "a095917e68de4e798e56eb638ba1b04a",
+    "attempt_status": "cancelled",
+    "stop_reason": "cancel_requested",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 8.126,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 1.086
+    },
+    "faults": [
+     "cancel_on_decision"
+    ],
+    "budget": {
+     "steps": 3,
+     "model_calls": 3,
+     "dispatches": 1,
+     "remaining_steps": 13,
+     "remaining_model_calls": 21,
+     "remaining_wall_seconds": 80.787,
+     "elapsed_seconds": 9.213,
+     "model_usage": {
+      "micro_decisions": 2,
+      "input_tokens": 2650,
+      "output_tokens": 434,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C05.cancel_pending_decision",
+   "level": "J",
+   "repetition": 3,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C05.cancel_pending_decision/rep-3",
+   "run_id": "j-c05-cancel_pending_decision-3-30281656",
+   "exit_code": 130,
+   "process_seconds": 7.435,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.cancel_pending_decision/rep-3/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.cancel_pending_decision/rep-3/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev",
+    "--faults",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.cancel_pending_decision/rep-3/faults.json"
+   ],
+   "result": {
+    "attempt_id": "e5d7ee1036a14e758f9ba9e04ca190da",
+    "attempt_status": "cancelled",
+    "stop_reason": "cancel_requested",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 6.509,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.845
+    },
+    "faults": [
+     "cancel_on_decision"
+    ],
+    "budget": {
+     "steps": 3,
+     "model_calls": 3,
+     "dispatches": 1,
+     "remaining_steps": 13,
+     "remaining_model_calls": 21,
+     "remaining_wall_seconds": 82.646,
+     "elapsed_seconds": 7.354,
+     "model_usage": {
+      "micro_decisions": 2,
+      "input_tokens": 2654,
+      "output_tokens": 434,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C05.expire_pending_decision",
+   "level": "J",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C05.expire_pending_decision/rep-1",
+   "run_id": "j-c05-expire_pending_decision-1-30289149",
+   "exit_code": 4,
+   "process_seconds": 50.189,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.expire_pending_decision/rep-1/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.expire_pending_decision/rep-1/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev",
+    "--faults",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.expire_pending_decision/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "31c8f5bb470640a98286c4a8fa9c155a",
+    "attempt_status": "incomplete",
+    "stop_reason": "deadline",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "forced",
+    "timing": {
+     "terminal_after_seconds": 45.001,
+     "deadline_delay_seconds": 0.001,
+     "cleanup_seconds": 0.039,
+     "exit_after_terminal_seconds": 5.062
+    },
+    "faults": [
+     "hold_decision"
+    ],
+    "budget": {
+     "steps": 3,
+     "model_calls": 3,
+     "dispatches": 1,
+     "remaining_steps": 13,
+     "remaining_model_calls": 21,
+     "remaining_wall_seconds": 0,
+     "elapsed_seconds": 50.063,
+     "model_usage": {
+      "micro_decisions": 1,
+      "input_tokens": 1313,
+      "output_tokens": 217,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C05.expire_pending_decision",
+   "level": "J",
+   "repetition": 2,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C05.expire_pending_decision/rep-2",
+   "run_id": "j-c05-expire_pending_decision-2-30344312",
+   "exit_code": 4,
+   "process_seconds": 50.173,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.expire_pending_decision/rep-2/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.expire_pending_decision/rep-2/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev",
+    "--faults",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.expire_pending_decision/rep-2/faults.json"
+   ],
+   "result": {
+    "attempt_id": "4f56838d99604c419840155d43740efc",
+    "attempt_status": "incomplete",
+    "stop_reason": "deadline",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "forced",
+    "timing": {
+     "terminal_after_seconds": 45.001,
+     "deadline_delay_seconds": 0.001,
+     "cleanup_seconds": 0.034,
+     "exit_after_terminal_seconds": 5.057
+    },
+    "faults": [
+     "hold_decision"
+    ],
+    "budget": {
+     "steps": 3,
+     "model_calls": 3,
+     "dispatches": 1,
+     "remaining_steps": 13,
+     "remaining_model_calls": 21,
+     "remaining_wall_seconds": 0,
+     "elapsed_seconds": 50.058,
+     "model_usage": {
+      "micro_decisions": 1,
+      "input_tokens": 1313,
+      "output_tokens": 217,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C05.expire_pending_decision",
+   "level": "J",
+   "repetition": 3,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C05.expire_pending_decision/rep-3",
+   "run_id": "j-c05-expire_pending_decision-3-30397080",
+   "exit_code": 4,
+   "process_seconds": 50.144,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.expire_pending_decision/rep-3/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.expire_pending_decision/rep-3/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev",
+    "--faults",
+    "/opt/rm/results/v05-j-530f6b5/J/C05.expire_pending_decision/rep-3/faults.json"
+   ],
+   "result": {
+    "attempt_id": "7f735c6f9edc4fdb9b5d04ef740242e9",
+    "attempt_status": "incomplete",
+    "stop_reason": "deadline",
+    "task_outcome": "unknown",
+    "execution_outcome": "returned",
+    "cleanup": "forced",
+    "timing": {
+     "terminal_after_seconds": 45.001,
+     "deadline_delay_seconds": 0.001,
+     "cleanup_seconds": 0.021,
+     "exit_after_terminal_seconds": 5.046
+    },
+    "faults": [
+     "hold_decision"
+    ],
+    "budget": {
+     "steps": 3,
+     "model_calls": 3,
+     "dispatches": 1,
+     "remaining_steps": 13,
+     "remaining_model_calls": 21,
+     "remaining_wall_seconds": 0,
+     "elapsed_seconds": 50.048,
+     "model_usage": {
+      "micro_decisions": 1,
+      "input_tokens": 1310,
+      "output_tokens": 216,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C13.revocation_after_selection",
+   "level": "J",
+   "repetition": 1,
+   "status": "failed",
+   "failures": [
+    "attempt_status='failed' expected 'blocked'",
+    "stop_reason='postcondition_failed' expected 'policy_denied'",
+    "task_outcome='fail' expected 'unknown'",
+    "no recorded revocation of submit_form",
+    "send-form was never proposed"
+   ],
+   "directory": "J/C13.revocation_after_selection/rep-1",
+   "run_id": "j-c13-revocation_after_selection-1-30452163",
+   "exit_code": 5,
+   "process_seconds": 13.252,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C13.revocation_after_selection/rep-1/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C13.revocation_after_selection/rep-1/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev",
+    "--faults",
+    "/opt/rm/results/v05-j-530f6b5/J/C13.revocation_after_selection/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "f471faa6b02944e99ab9e06a98b173c4",
+    "attempt_status": "failed",
+    "stop_reason": "postcondition_failed",
+    "task_outcome": "fail",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 13.133,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.0
+    },
+    "faults": [
+     "revoke_on_commit"
+    ],
+    "budget": {
+     "steps": 4,
+     "model_calls": 4,
+     "dispatches": 1,
+     "remaining_steps": 12,
+     "remaining_model_calls": 20,
+     "remaining_wall_seconds": 76.867,
+     "elapsed_seconds": 13.133,
+     "model_usage": {
+      "micro_decisions": 3,
+      "input_tokens": 4023,
+      "output_tokens": 651,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C13.revocation_after_selection",
+   "level": "J",
+   "repetition": 2,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C13.revocation_after_selection/rep-2",
+   "run_id": "j-c13-revocation_after_selection-2-30465470",
+   "exit_code": 3,
+   "process_seconds": 9.44,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C13.revocation_after_selection/rep-2/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C13.revocation_after_selection/rep-2/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev",
+    "--faults",
+    "/opt/rm/results/v05-j-530f6b5/J/C13.revocation_after_selection/rep-2/faults.json"
+   ],
+   "result": {
+    "attempt_id": "ba9ba42d9dd340c4ad73198ed6675eee",
+    "attempt_status": "blocked",
+    "stop_reason": "policy_denied",
+    "task_outcome": "unknown",
+    "execution_outcome": "unknown",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 9.156,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.187
+    },
+    "faults": [
+     "revoke_on_commit"
+    ],
+    "budget": {
+     "steps": 6,
+     "model_calls": 6,
+     "dispatches": 3,
+     "remaining_steps": 10,
+     "remaining_model_calls": 18,
+     "remaining_wall_seconds": 80.657,
+     "elapsed_seconds": 9.343,
+     "model_usage": {
+      "micro_decisions": 5,
+      "input_tokens": 6874,
+      "output_tokens": 1084,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "type_text",
+      "target_id": "name",
+      "slot_ref": "name@1",
+      "effect": "unknown",
+      "return_seq": 14
+     },
+     {
+      "id": 3,
+      "operation": "type_text",
+      "target_id": "email",
+      "slot_ref": "email@1",
+      "effect": "unknown",
+      "return_seq": 25
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  },
+  {
+   "case": "C13.revocation_after_selection",
+   "level": "J",
+   "repetition": 3,
+   "status": "passed",
+   "failures": [],
+   "directory": "J/C13.revocation_after_selection/rep-3",
+   "run_id": "j-c13-revocation_after_selection-3-30477451",
+   "exit_code": 3,
+   "process_seconds": 10.754,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/opt/rm/results/v05-j-530f6b5/J/C13.revocation_after_selection/rep-3/task.json",
+    "--output-dir",
+    "/opt/rm/results/v05-j-530f6b5/J/C13.revocation_after_selection/rep-3/out",
+    "--chrome",
+    "/opt/rm/ms-playwright/chromium-1243/chrome-linux64/chrome",
+    "--routing-provider",
+    "jevrouter",
+    "--jev-url",
+    "http://127.0.0.1:8797",
+    "--action-provider",
+    "jev",
+    "--faults",
+    "/opt/rm/results/v05-j-530f6b5/J/C13.revocation_after_selection/rep-3/faults.json"
+   ],
+   "result": {
+    "attempt_id": "9468ce5020ad4a758b16ed24ff5a3f98",
+    "attempt_status": "blocked",
+    "stop_reason": "policy_denied",
+    "task_outcome": "unknown",
+    "execution_outcome": "unknown",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 10.468,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.186
+    },
+    "faults": [
+     "revoke_on_commit"
+    ],
+    "budget": {
+     "steps": 6,
+     "model_calls": 6,
+     "dispatches": 3,
+     "remaining_steps": 10,
+     "remaining_model_calls": 18,
+     "remaining_wall_seconds": 79.346,
+     "elapsed_seconds": 10.654,
+     "model_usage": {
+      "micro_decisions": 5,
+      "input_tokens": 6889,
+      "output_tokens": 1084,
+      "served_models": [
+       "typesafe/jev-1.13-20260917"
+      ]
+     },
+     "cost": null,
+     "cost_reason": "not_reported_for_every_model_call"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     },
+     {
+      "id": 2,
+      "operation": "type_text",
+      "target_id": "name",
+      "slot_ref": "name@1",
+      "effect": "unknown",
+      "return_seq": 14
+     },
+     {
+      "id": 3,
+      "operation": "type_text",
+      "target_id": "email",
+      "slot_ref": "email@1",
+      "effect": "unknown",
+      "return_seq": 25
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "jevrouter",
+     "is_stub": false
+    }
+   }
+  }
+ ],
+ "counts": {
+  "passed": 15,
+  "failed": 3,
+  "pending": 0
+ },
+ "finished_at_unix": 1791030488.2622309
+}

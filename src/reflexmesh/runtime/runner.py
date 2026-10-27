@@ -10,13 +10,15 @@ import uuid
 from dataclasses import dataclass
 from typing import Callable
 
-from reflexmesh.contracts.execution import ExecutionTask
+from reflexmesh.contracts.execution import ExecutionTask, OPERATION_BITS, permission_mask
+from reflexmesh.runtime.handoff import standalone_chain
 from reflexmesh.runtime.process_group import OwnedWorker
 from reflexmesh.runtime.ownership import FixtureOwnership, OwnershipError
 from reflexmesh.runtime.profile_owner import AttemptProfiles
 from reflexmesh.text.slots import SlotRegistry
 from reflexmesh.tracing.slot_evidence import SlotEvidence
 from reflexmesh.verification.constraints import ConstraintAssessments, assess_constraints
+from reflexmesh.verification.effects import resolve_effects, snapshot_of
 
 GRACE_SECONDS = 5.0
 KILL_SECONDS = 2.0
@@ -71,6 +73,18 @@ class AttemptGate:
         self.text_dispatches = ctx.Value("q", 0, lock=False)
         self.nontext_dispatches = ctx.Value("q", 0, lock=False)
         self.unknown_dispatches = ctx.Value("q", 0, lock=False)
+        # One gate sequence numbers every dispatch commit, revocation and the first terminal
+        # transition, so their local order can be checked against the supervisor's trace.
+        self.seq = ctx.Value("q", 0, lock=False)
+        self.terminal_seq = ctx.Value("q", 0, lock=False)
+        self.policy_revision = ctx.Value("q", 1, lock=False)
+        # The operation vocabulary belongs to the task kind; fixture tasks use the V0.5 table.
+        self.bits = getattr(task, "operation_bits", OPERATION_BITS)
+        self.permission_mask = ctx.Value("q", permission_mask(task.permissions, self.bits), lock=False)
+        # Evidence that commits passed the live permission check: operations that were
+        # checked at commit, and commits that named no operation of the closed vocabulary.
+        self.committed_operations = ctx.Value("q", 0, lock=False)
+        self.unchecked_commits = ctx.Value("q", 0, lock=False)
         self.slot_registry = slot_registry if slot_registry is not None else SlotRegistry.from_task(task)
         self.slot_sink = slot_sink
         self.fixture_owner = fixture_owner
@@ -85,21 +99,27 @@ class AttemptGate:
         if not self.lock.acquire(timeout=0.25):
             raise RuntimeStop("gate_unavailable")
 
+    def _terminate(self, code: int) -> None:
+        """Caller holds the lock; the first terminal transition is immutable."""
+        if not self.terminal.value:
+            self.terminal.value = code
+            self.seq.value += 1
+            self.terminal_seq.value = self.seq.value
+
     def _check(self):
         if self.terminal.value:
             raise RuntimeStop({1: "cancel_requested", 2: "deadline", 3: "terminal"}[self.terminal.value])
         if self.deadline_expired():
-            self.terminal.value = 2
+            self._terminate(2)
             raise RuntimeStop("deadline")
 
     def stop(self, reason: str) -> bool:
         self._acquire()
         try:
             if self.terminal.value or self.deadline_expired():
-                if not self.terminal.value:
-                    self.terminal.value = 2
+                self._terminate(2)
                 return False
-            self.terminal.value = {"cancel_requested": 1, "deadline": 2}.get(reason, 3)
+            self._terminate({"cancel_requested": 1, "deadline": 2}.get(reason, 3))
             return True
         finally:
             self.lock.release()
@@ -110,13 +130,13 @@ class AttemptGate:
         try:
             if not self.terminal.value:
                 if self.deadline_expired():
-                    self.terminal.value = 2
+                    self._terminate(2)
                 elif expected_generation is not None and (
                         self.generation.value != expected_generation or
                         self.sealed_generation.value != expected_generation or self.in_flight.value):
                     raise RuntimeStop("evidence_changed")
                 else:
-                    self.terminal.value = 3
+                    self._terminate(3)
             return self.terminal.value
         finally:
             self.lock.release()
@@ -176,7 +196,44 @@ class AttemptGate:
         remaining = self.remaining()
         return maximum if remaining is None else min(maximum, remaining)
 
-    def commit_dispatch(self, classification: str = "unknown") -> int:
+    def revision(self) -> int:
+        self._acquire()
+        try:
+            return self.policy_revision.value
+        finally:
+            self.lock.release()
+
+    def permitted(self, operation: str) -> bool:
+        self._acquire()
+        try:
+            return bool(self.permission_mask.value & self.bits.get(operation, 0))
+        finally:
+            self.lock.release()
+
+    def revoke(self, operation: str) -> int:
+        """Withdraw one permission; returns the gate sequence of the revocation, 0 if refused."""
+        self._acquire()
+        try:
+            if self.terminal.value or operation not in self.bits:
+                return 0
+            self.permission_mask.value &= ~self.bits[operation]
+            self.policy_revision.value += 1
+            self.seq.value += 1
+            return self.seq.value
+        finally:
+            self.lock.release()
+
+    def commit_dispatch(self, classification: str = "unknown", *,
+                        operation: str | None = None, revision: int | None = None) -> int:
+        return self.commit_dispatch_seq(classification, operation=operation, revision=revision)[0]
+
+    def commit_dispatch_seq(self, classification: str = "unknown", *,
+                            operation: str | None = None,
+                            revision: int | None = None) -> tuple[int, int]:
+        """Dispatch boundary: returns (action_id, gate_seq).
+
+        `revision` is the policy revision the candidate was observed under.
+        """
         self._acquire()
         try:
             self._check()
@@ -186,13 +243,22 @@ class AttemptGate:
                 raise RuntimeStop("step_limit")
             if self.in_flight.value:
                 raise RuntimeStop("effect_unknown")
+            if operation in self.bits and not self.permission_mask.value & self.bits[operation]:
+                raise RuntimeStop("policy_denied")
+            if revision is not None and revision != self.policy_revision.value:
+                raise RuntimeStop("stale_policy")
+            if operation in self.bits:
+                self.committed_operations.value |= self.bits[operation]
+            else:
+                self.unchecked_commits.value += 1
             self.dispatches.value += 1
             self.generation.value += 1
             counter = {"text": self.text_dispatches, "nontext": self.nontext_dispatches}.get(
                 classification, self.unknown_dispatches)
             counter.value += 1
             self.in_flight.value = self.dispatches.value
-            return self.dispatches.value
+            self.seq.value += 1
+            return self.dispatches.value, self.seq.value
         finally:
             self.lock.release()
 
@@ -238,7 +304,10 @@ class AttemptGate:
                     "opaque_model_usage": bool(self.opaque_model_usage.value),
                     "router_invocations": self.router_invocations.value,
                     "dispatches": self.dispatches.value, "in_flight": self.in_flight.value,
-                    "terminal": self.terminal.value}
+                    "terminal": self.terminal.value, "policy_revision": self.policy_revision.value,
+                    "committed_operations": self.committed_operations.value,
+                    "unchecked_commits": self.unchecked_commits.value,
+                    "seq": self.seq.value, "terminal_seq": self.terminal_seq.value}
         finally:
             self.lock.release()
 
@@ -247,12 +316,13 @@ class ControlledEnvironment:
     """Compatible with SystemOneHarness Environment; policy and target checks are injected."""
 
     def __init__(self, inner, gate: AttemptGate, events,
-                 admit: Callable[[str, dict], str | None], *, bootstrap: bool = False):
+                 admit: Callable[[str, dict], str | None], *, bootstrap: bool = False, faults=None):
         # This enrollment is deliberately narrow. A duck-typed/fake environment
         # cannot turn its own assertions into trusted boundary coverage.
         from reflexmesh.adapters.system_one.fixture_browser import FixtureBrowser
 
         self.inner, self.gate, self.events, self.admit = inner, gate, events, admit
+        self.faults = faults
         self._prepared_protocol = type(inner) is FixtureBrowser
         if self._prepared_protocol:
             inner.bind_profile_owner(gate.profile_client)
@@ -262,6 +332,8 @@ class ControlledEnvironment:
         self.last_stop: str | None = None
         self.seen_mutations: set[tuple] = set()
         self.uncertain_mutation = False
+        # Policy revision under which the current candidate set was observed.
+        self.observed_revision: int | None = None
 
     def reset(self, goal):
         if not self.bootstrap:
@@ -273,22 +345,42 @@ class ControlledEnvironment:
         if reason:
             self.last_stop = reason
             raise RuntimeStop(reason)
-        action_id = self._commit("nontext" if self._prepared_protocol else "unknown")
-        self.events.put(("dispatch", action_id, {"operation": "navigate", "bootstrap": True,
-                                                **self._ownership_descriptor()}))
+        self.observed_revision = self.gate.revision()
+        descriptor = (self.inner.describe("navigate", {"bootstrap": True})
+                      if hasattr(self.inner, "describe") else {"operation": "navigate"})
+        if self.faults is not None:
+            self.faults.before_commit(descriptor)
         try:
+            action_id, gate_seq = self._commit("nontext" if self._prepared_protocol else "unknown",
+                                               operation="navigate")
+        except RuntimeStop as exc:
+            # There is no candidate to re-observe before the first navigation.
+            self.last_stop = "policy_denied" if exc.reason == "stale_policy" else exc.reason
+            raise RuntimeStop(self.last_stop) from None
+        self.events.put(("dispatch", action_id, {"operation": "navigate", "bootstrap": True,
+                                                "gate_seq": gate_seq, **self._ownership_descriptor()}))
+        try:
+            if self.faults is not None:
+                self.faults.before_driver(descriptor)
             self.inner.reset(goal)
+            if self.faults is not None:
+                # Bootstrap has no driver result, but still has the same
+                # committed-action delay/hang boundary.
+                bootstrap_return = self.faults.after_driver(descriptor, None)
+            else:
+                bootstrap_return = None
         except Exception:
             self.events.put(("effect_unknown", action_id))
             raise
         else:
-            self.events.put(("driver_return", action_id, True))
+            self.events.put(("driver_return", action_id, bootstrap_return is None))
         finally:
             self.gate.settle(action_id)
 
     def observe(self):
         try:
             self.gate.reserve_step()
+            self.observed_revision = self.gate.revision()
         except RuntimeStop as exc:
             self.last_stop = exc.reason
             raise
@@ -310,6 +402,21 @@ class ControlledEnvironment:
     def _record_observation(self, obs):
         safe = {k: obs.fields[k] for k in ("url", "run_id", "target_ids", "ownership")
                 if hasattr(obs, "fields") and k in obs.fields}
+        # Only target identifiers cross into the trace, never observed field values.
+        for key in ("filled_targets", "empty_targets", "content_gaps"):
+            values = obs.fields.get(key) if hasattr(obs, "fields") else None
+            if type(values) is list and all(type(value) is str for value in values):
+                safe[key] = list(values)
+        nodes = obs.fields.get("target_nodes") if hasattr(obs, "fields") else None
+        if type(nodes) is dict:
+            safe["target_nodes"] = {
+                target: dict(node) for target, node in nodes.items()
+                if type(target) is str and type(node) is dict and
+                set(node) == {"backend_node_id", "frame_id", "target_id"} and
+                type(node["backend_node_id"]) is int and node["backend_node_id"] > 0 and
+                all(type(node[key]) is str and 0 < len(node[key]) <= 128 and
+                    all(c.isascii() and (c.isalnum() or c in "_.-") for c in node[key])
+                    for key in ("frame_id", "target_id"))}
         if safe:
             safe["captured_at"] = time.time()
             self.events.put(("observation", safe))
@@ -320,6 +427,8 @@ class ControlledEnvironment:
         prepared = None
         if self._prepared_protocol:
             try:
+                if self.faults is not None:
+                    self.faults.before_admit(self.inner, action, params)
                 prepared = self.inner.prepare(action, params)
                 # Preserve an explicitly injected additional policy. It sees a
                 # fresh copy of the admitted parameters and cannot mutate the
@@ -340,6 +449,12 @@ class ControlledEnvironment:
         descriptor = (prepared.descriptor() if prepared is not None else
                       self.inner.describe(action, params) if hasattr(self.inner, "describe") else
                       {"operation": action})
+        operation = descriptor.get("operation")
+        if operation in OPERATION_BITS and not self.gate.permitted(operation):
+            # Revoked after the candidate was selected; nothing has been dispatched.
+            self.last_stop = "policy_denied"
+            self.events.put(("rejected", "policy_denied"))
+            raise RuntimeStop("policy_denied")
         operation_key = (descriptor.get("operation"), descriptor.get("target_id"), descriptor.get("slot_ref"))
         mutating = descriptor.get("operation") != "navigate"
         if mutating and self.uncertain_mutation:
@@ -351,17 +466,31 @@ class ControlledEnvironment:
             self.events.put(("rejected", "invalid_action"))
             raise RuntimeStop("invalid_action")
         try:
+            if self.faults is not None:
+                self.faults.before_commit(descriptor)
             classification = ("text" if prepared.action == "type_text" else "nontext") if prepared else "unknown"
-            action_id = self._commit(classification, descriptor.get("slot_ref"))
+            action_id, gate_seq = self._commit(classification, descriptor.get("slot_ref"),
+                                               operation=operation)
         except RuntimeStop as exc:
+            if exc.reason == "stale_policy":
+                # The policy changed after this candidate was observed but still permits it.
+                self.events.put(("reobserve", "stale_policy"))
+                return SkippedAction()
+            if exc.reason == "policy_denied":
+                self.events.put(("rejected", "policy_denied"))
             self.last_stop = exc.reason
             raise
         if mutating:
             self.seen_mutations.add(operation_key)
-        self.events.put(("dispatch", action_id, {**descriptor, **self._ownership_descriptor()}))
+        self.events.put(("dispatch", action_id, {**descriptor, "gate_seq": gate_seq,
+                                                **self._ownership_descriptor()}))
         try:
+            if self.faults is not None:
+                self.faults.before_driver(descriptor)
             result = (self.inner.execute_prepared(prepared, action_id) if prepared is not None else
                       self.inner.execute(action, params))
+            if self.faults is not None:
+                result = self.faults.after_driver(descriptor, result)
         except Exception:
             # Driver exceptions do not prove the external effect did not happen.
             if mutating:
@@ -376,19 +505,23 @@ class ControlledEnvironment:
         finally:
             self.gate.settle(action_id)
 
-    def _commit(self, classification: str, slot_ref: str | None = None) -> int:
+    def _commit(self, classification: str, slot_ref: str | None = None, *,
+                operation: str | None = None) -> tuple[int, int]:
         # Shared obligation counts change at commit, before any fallible IPC.
         # A killed worker cannot erase a committed action by losing its event.
-        action_id = self.gate.commit_dispatch(classification)
+        action_id, gate_seq = self.gate.commit_dispatch_seq(classification, operation=operation,
+                                                            revision=self.observed_revision)
         if self.gate.slot_sink is not None:
             self.gate.slot_sink.commit(action_id, classification, slot_ref)
-        return action_id
+        return action_id, gate_seq
 
     def _ownership_descriptor(self) -> dict:
         owner = self.gate.fixture_owner
         return {"ownership": owner.binding} if self._prepared_protocol and type(owner) is FixtureOwnership else {}
 
     def close(self):
+        if self.faults is not None:
+            self.faults.before_close()
         self.inner.close()
 
 
@@ -421,12 +554,14 @@ def _verification_work(verifier, task, timeout, observation, result_queue):
 class AttemptSupervisor:
     """Supervisor process retains ownership after a worker is stopped or terminated."""
 
-    def __init__(self, task: ExecutionTask, strategy, verifier=None, *, verifier_factory=None):
+    def __init__(self, task: ExecutionTask, strategy, verifier=None, *, verifier_factory=None,
+                 attempt_id: str | None = None):
         self.task, self.strategy, self.verifier = task, strategy, verifier
         self.verifier_factory = verifier_factory
         self.context = mp.get_context("fork")
         self.started = time.monotonic()
-        self.attempt_id = uuid.uuid4().hex
+        # A Task API caller may name the attempt so its directory and the result agree.
+        self.attempt_id = attempt_id if attempt_id is not None else uuid.uuid4().hex
         self.fixture_owner = FixtureOwnership(self.context, task, self.attempt_id)
         self.profiles = AttemptProfiles(self.context)
         registry = SlotRegistry.from_task(task)
@@ -451,6 +586,13 @@ class AttemptSupervisor:
         self._constraints = ConstraintAssessments()
         self._assessment_generation = None
         self._fixture_fence_attempted = False
+        self.revocations: list[dict] = []
+        self._actions: list[dict] = []
+        # Driver outcome per action id, kept out of the exported action rows.
+        self._driver_outcomes: dict[int, str] = {}
+        self._typing_observations: dict[int, dict] = {}
+        # Authenticated fixture record bound to this attempt's claim; None without a real claim.
+        self._effect_snapshot: dict | None = None
 
     def _assess_constraints(self, snapshot=None, *, retain_passes=False, read_budget=True):
         if snapshot is None and read_budget:
@@ -467,7 +609,10 @@ class AttemptSupervisor:
                                        coverage["sealed_generation"] == coverage["generation"] else None)
         self._constraints.update(assess_constraints(self.task, snapshot, self.attempt_id,
                                                    slot_evidence=self.slot_evidence, coverage=coverage,
-                                                   ownership=self.fixture_owner),
+                                                   ownership=self.fixture_owner,
+                                                   dispatches=self._actions, revocations=self.revocations,
+                                                   driver_outcomes=self._driver_outcomes,
+                                                   effect_snapshot=self._effect_snapshot),
                                  retain_passes=retain_passes)
 
     def cancel(self):
@@ -477,6 +622,16 @@ class AttemptSupervisor:
             return False
         self._cancel_requested = accepted or self.gate.terminal.value == 1
         return accepted
+
+    def revoke(self, operation: str) -> bool:
+        """Withdraw a permission for the rest of the attempt (policy revision)."""
+        try:
+            seq = self.gate.revoke(operation)
+        except RuntimeStop:
+            return False
+        if seq:
+            self.revocations.append({"operation": operation, "gate_seq": seq})
+        return bool(seq)
 
     def _unknown_verification(self) -> list[dict]:
         return [{"id": c.id, "kind": "postcondition", "status": "unknown",
@@ -544,9 +699,12 @@ class AttemptSupervisor:
 
     def _record(self, event, actions):
         if event[0] in ("dispatch", "driver_return", "effect_unknown", "rejected", "reobserve",
-                        "decision_request", "step", "stopped", "done", "observation", "proposal"):
+                        "decision_request", "step", "stopped", "done", "observation", "proposal",
+                        "fault", "revocation"):
             self.trace.append({"seq": len(self.trace) + 1, "kind": event[0], "data": list(event[1:])})
         seq = len(self.trace)
+        if event[0] == "revocation":
+            self.revocations.append({"operation": event[1], "gate_seq": event[2]})
         if event[0] == "fixture_claim":
             try:
                 self.fixture_owner.adopt(event[1])
@@ -573,10 +731,15 @@ class AttemptSupervisor:
         elif event[0] == "proposal":
             self._last_proposal_seq = seq
         elif event[0] == "dispatch":
+            if event[2].get("operation") == "type_text" and self.observation is not None:
+                self._typing_observations[event[1]] = self.observation
             actions.append({"id": event[1], **event[2], "effect": "unknown",
                             "proposal_seq": getattr(self, "_last_proposal_seq", None),
                             "dispatch_seq": seq, "return_seq": None, "evidence_refs": []})
+        elif event[0] == "effect_unknown":
+            self._driver_outcomes[event[1]] = "error"
         elif event[0] == "driver_return":
+            self._driver_outcomes[event[1]] = "ok" if len(event) > 2 and event[2] is True else "not_ok"
             for row in actions:
                 if row["id"] == event[1]:
                     row["driver_returned"] = True
@@ -585,6 +748,47 @@ class AttemptSupervisor:
             self.observation = event[1]
             self._observation_seq = seq
             self._reconcile_navigation(actions)
+            self._reconcile_typing(actions)
+
+    def _reconcile_typing(self, actions):
+        """A fresh empty-to-filled observation can settle a successful session-local input.
+
+        This is not evidence of submission or exact-slot verification. Pre-filled fields,
+        failed/lost driver returns, another page/owner, or intervening dispatches remain
+        unknown; the field state could have another cause.
+        """
+        observation = self.observation
+        if observation is None or type(observation.get("filled_targets")) is not list:
+            return
+        for row in actions:
+            before = self._typing_observations.get(row.get("id"))
+            target = row.get("target_id")
+            if (row.get("operation") == "type_text" and row.get("effect") == "unknown" and
+                    self._driver_outcomes.get(row.get("id")) == "ok" and
+                    before is not None and type(before.get("filled_targets")) is list and
+                    type(target) is str and target not in before["filled_targets"] and
+                    target in observation["filled_targets"] and
+                    self._same_typed_node(target, before, observation) and
+                    type(before.get("url")) is str and before["url"] == observation.get("url") and
+                    type(row.get("return_seq")) is int and
+                    self._observation_seq > row["return_seq"] > row.get("dispatch_seq", -1) and
+                    not any(other.get("dispatch_seq", -1) > row["dispatch_seq"] for other in actions) and
+                    self._same_owner(row.get("ownership"), before.get("ownership")) and
+                    self._same_owner(row.get("ownership"), observation.get("ownership"))):
+                row["effect"] = "applied"
+                row["evidence_refs"] = [f"browser:{self.attempt_id}:{self._observation_seq}"]
+
+    def _same_typed_node(self, target, before, after):
+        # Synthetic strategies have no fixture claim or DOM identity contract. In
+        # production, missing live value/identity cannot be mistaken for an empty field.
+        if not self.fixture_owner.acquisition_attempted.value:
+            return True
+        empty = before.get("empty_targets")
+        old, new = before.get("target_nodes"), after.get("target_nodes")
+        return (type(empty) is list and target in empty and
+                type(old) is dict and type(new) is dict and
+                type(old.get(target)) is dict and bool(old[target]) and
+                old[target] == new.get(target))
 
     def _reconcile_navigation(self, actions):
         observation = self.observation
@@ -603,6 +807,7 @@ class AttemptSupervisor:
 
     def _reconcile(self, actions, verification):
         covered = {"form_submitted_once": {"submit_form", "type_text"},
+                   "support_request_sent_once": {"submit_form"},
                    "settings_saved": {"save_settings", "toggle_setting"},
                    "export_completed_once": {"start_export"}}
         validated = set()
@@ -610,6 +815,7 @@ class AttemptSupervisor:
             matches = [assessment for criterion, assessment in zip(self.task.criteria, verification)
                        if assessment["status"] == "pass" and
                        row.get("operation") in assessment.get("verified_operations", covered.get(criterion.predicate, set())) and
+                       self._criterion_target_matches(criterion.predicate, row) and
                        self._same_owner(row.get("ownership"), assessment.get("ownership"))]
             if matches:
                 row["effect"] = "applied"
@@ -617,6 +823,29 @@ class AttemptSupervisor:
                                                          for ref in assessment.get("evidence_refs", [])))
                 validated.add(row.get("operation"))
         return validated
+
+    def _criterion_target_matches(self, predicate, row):
+        # The two form routes share an operation but have independent effects.
+        # A pass for one route must never settle a submission to the other.
+        targets = {"form_submitted_once": "send-form", "support_request_sent_once": "send-support"}
+        if row.get("operation") != "submit_form" or predicate not in targets:
+            return True
+        target = row.get("target_id")
+        if target is None and not self.fixture_owner.acquisition_attempted.value:
+            return True  # Legacy synthetic strategies do not have fixture targets.
+        return target == targets[predicate]
+
+    def _reconcile_effects(self, actions, verification, *, browser_stopped: bool) -> None:
+        """Settle unknown mutation effects from the fixture's own record of requests."""
+        resolve_effects(actions, snapshot_of(verification), self._same_owner, browser_stopped=browser_stopped)
+
+    def _note_effects(self, verification) -> None:
+        """Keep the fixture record as constraint evidence only when it is bound to our claim."""
+        snapshot = snapshot_of(verification)
+        binding = snapshot.get("ownership") if snapshot is not None else None
+        claimed = (snapshot is not None and self.fixture_owner.acquisition_attempted.value and
+                   self._same_owner(binding, binding))
+        self._effect_snapshot = snapshot if claimed else None
 
     def _same_owner(self, action_binding, evidence_binding, *, bootstrap=False):
         # Generic strategies without a fixture claim retain their synthetic test
@@ -646,7 +875,7 @@ class AttemptSupervisor:
 
     def run(self) -> dict:
         status = reason = None
-        actions: list[dict] = []
+        actions: list[dict] = self._actions
         terminal_at = None
         self.process.start()
         while status is None:
@@ -721,6 +950,7 @@ class AttemptSupervisor:
             # decision against cancellation and the original wall deadline.
             verified_actions = [dict(row) for row in actions]
             validated = self._reconcile(verified_actions, verification)
+            self._note_effects(verification)
             unknown_mutations = any(row.get("operation") not in validated and
                                     row.get("operation") != "navigate" for row in verified_actions)
             self._assess_constraints()
@@ -774,10 +1004,15 @@ class AttemptSupervisor:
                 pass
         # The owned group can outlive its leader. Keep its PID reserved until
         # TERM/KILL and live-member verification finish, independent of is_alive.
+        cleanup_started = time.monotonic()
         cleanup = self.process.cleanup(KILL_SECONDS)
+        cleanup_seconds = round(time.monotonic() - cleanup_started, 3)
         worker_cleanup = cleanup
         if verification is None:
-            verification = self._verify(max(0, grace_end - time.monotonic()))
+            # Late, read-only evidence. A worker that hung through the grace period has used
+            # that allowance up, so the read gets the cleanup allowance too; the total stays
+            # inside the exit bound (GRACE_SECONDS + KILL_SECONDS after the terminal transition).
+            verification = self._verify(max(0, grace_end + KILL_SECONDS - time.monotonic()))
         while True:
             try:
                 self._record(self.events.get_nowait(), actions)
@@ -785,7 +1020,10 @@ class AttemptSupervisor:
                 break
         # Late evidence can refine an effect, but the accepted terminal status never changes.
         self._reconcile_navigation(actions)
+        self._reconcile_typing(actions)
         self._reconcile(actions, verification)
+        self._reconcile_effects(actions, verification, browser_stopped=cleanup in ("closed", "forced"))
+        self._note_effects(verification)
         synchronized_snapshot = True
         try:
             snapshots = self.gate.snapshot()
@@ -834,18 +1072,29 @@ class AttemptSupervisor:
         elapsed = round(time.monotonic() - self.started, 3)
         slot_records = self.slot_evidence.export()
         self.slot_evidence.close()
-        return {"schema_version": "execution-result/0.1", "task_id": self.task.task_id,
+        return {"schema_version": "execution-result/0.2", "task_id": self.task.task_id,
                 "revision": self.task.revision, "attempt_id": self.attempt_id,
                 "executor_id": self.executor_id, "routing": self.routing,
                 "router_capabilities": self.router_capabilities, "router_usage": self.router_usage,
                 "attempt_status": status, "stop_reason": reason, "task_outcome": outcome,
-                "execution_outcome": "unknown" if snapshots["in_flight"] or any(
-                    a["effect"] == "unknown" for a in actions) else
+                "chain": standalone_chain(self.attempt_id), "handoff": None,
+                # An in-flight action stays unknown unless the fixture record settled its effect.
+                "execution_outcome": "unknown" if any(a["effect"] == "unknown" for a in actions) or (
+                    snapshots["in_flight"] and not any(
+                        a["id"] == snapshots["in_flight"] and a["effect"] in ("applied", "not_applied")
+                        for a in actions)) else
                     "returned" if snapshots["dispatches"] else
                     "error" if status == "failed" else "not_started",
                 "verification": verification, "actions": actions, "cleanup": cleanup,
                 "worker_cleanup": worker_cleanup, "profile_cleanup": profile_cleanup,
                 "trace": self.trace,
+                "policy": {"revision": snapshots.get("policy_revision"), "revocations": self.revocations},
+                "timing": {"terminal_after_seconds": round(terminal_at - self.started, 3),
+                           "deadline_delay_seconds": (round(terminal_at - self.gate.deadline, 3)
+                                                      if reason == "deadline" and self.gate.deadline is not None
+                                                      else None),
+                           "cleanup_seconds": cleanup_seconds,
+                           "exit_after_terminal_seconds": round(time.monotonic() - terminal_at, 3)},
                 "slot_evidence": slot_records,
                 "ownership_evidence": self.fixture_owner.export(),
                 "budget": {"steps": snapshots["steps"],

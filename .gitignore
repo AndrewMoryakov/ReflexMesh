@@ -5,3 +5,6 @@ __pycache__/
 build/
 dist/
 .env
+
+# local demo runs (experiments/v06/windows/run-demo.ps1)
+/runs/

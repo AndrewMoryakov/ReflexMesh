@@ -20,7 +20,9 @@ import hmac
 import json
 import secrets
 import socket
+import threading
 import time
+from collections import deque
 from dataclasses import dataclass
 
 from reflexmesh.contracts.execution import ExecutionTask
@@ -160,6 +162,46 @@ class _RuntimeSlotSink:
         self._sender.close()
 
 
+class _InProcessDatagram:
+    """One end of a bounded in-process datagram pair, with the socket calls the ledger uses. Windows has no
+    AF_UNIX datagram socketpair; there only the browser path runs, whose sink and ledger share one process."""
+
+    CAPACITY = 4096
+
+    def __init__(self, queue: deque, lock: threading.Lock, state: dict):
+        self._queue, self._lock, self._state = queue, lock, state
+
+    def setblocking(self, _flag: bool) -> None:
+        pass
+
+    def send(self, packet: bytes) -> int:
+        with self._lock:
+            if self._state["closed"]:
+                raise OSError("datagram pair closed")
+            if len(self._queue) >= self.CAPACITY:
+                raise BlockingIOError("datagram pair full")
+            self._queue.append(bytes(packet))
+        return len(packet)
+
+    def recvmsg(self, size: int):
+        with self._lock:
+            if not self._queue:
+                raise BlockingIOError("no datagram")
+            packet = self._queue.popleft()
+        return packet[:size], [], socket.MSG_TRUNC if len(packet) > size else 0, None
+
+    def close(self) -> None:
+        with self._lock:
+            self._state["closed"] = True
+
+
+def _datagram_pair():
+    if hasattr(socket, "AF_UNIX"):
+        return socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
+    queue, lock, state = deque(), threading.Lock(), {"closed": False}
+    return _InProcessDatagram(queue, lock, state), _InProcessDatagram(queue, lock, state)
+
+
 class SlotEvidence:
     """Supervisor-owned authenticated ledger, independent of budget evidence."""
 
@@ -185,7 +227,7 @@ class SlotEvidence:
         self._failure_slot = ctx.Value("q", 0, lock=False)
         self._failure_time = ctx.Value("d", 0.0, lock=False)
         self._unavailable = ctx.Value("i", 0, lock=False)
-        self._receiver, sender = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
+        self._receiver, sender = _datagram_pair()
         self._receiver.setblocking(False)
         sender.setblocking(False)
         self.sink = _RuntimeSlotSink(sender, self._identity, self._key, self._expected,

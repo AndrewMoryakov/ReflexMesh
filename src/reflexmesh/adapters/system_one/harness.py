@@ -8,16 +8,22 @@ from reflexmesh.runtime.runner import ControlledEnvironment, RuntimeStop, Worker
 
 
 class CountingProvider:
-    def __init__(self, inner, gate, events, *, model: bool):
+    def __init__(self, inner, gate, events, *, model: bool, faults=None):
         self.inner, self.gate, self.events, self.model = inner, gate, events, model
+        self.faults = faults
 
     def decide(self, state, questions):
+        self.gate.remaining()
         if self.model:
             self.gate.reserve_call()
-            if hasattr(self.inner, "_client"):
-                self.inner._client.timeout = max(0.01, self.gate.operation_timeout(30.0))
         self.events.put(("decision_request", "model" if self.model else "script"))
-        return self.inner.decide(state, questions)
+        if self.faults is not None:
+            self.faults.before_decision()
+        if self.model and hasattr(self.inner, "_client"):
+            self.inner._client.timeout = max(0.01, self.gate.operation_timeout(30.0))
+        result = self.inner.decide(state, questions)
+        self.gate.remaining()
+        return result
 
     def close(self):
         if hasattr(self.inner, "close"):
@@ -28,7 +34,7 @@ class HarnessStrategy:
     """Inject an environment, provider, action space, and adapter admission check."""
 
     def __init__(self, goal, environment_factory, space_factory, provider_factory, admit,
-                 *, model=False, bootstrap=False):
+                 *, model=False, bootstrap=False, faults=None):
         self.goal = goal
         self.environment_factory = environment_factory
         self.space_factory = space_factory
@@ -36,6 +42,7 @@ class HarnessStrategy:
         self.admit = admit
         self.model = model
         self.bootstrap = bootstrap
+        self.faults = faults
 
     def __call__(self, gate, events):
         from systemone_harness.controller import Controller
@@ -48,8 +55,9 @@ class HarnessStrategy:
                 inner.bind_ownership(gate.fixture_owner)
                 inner.bind_runtime(gate.slot_registry, gate.slot_sink)
             controlled = ControlledEnvironment(inner, gate, events, self.admit or inner.admit,
-                                               bootstrap=self.bootstrap)
-            provider = CountingProvider(self.provider_factory(), gate, events, model=self.model)
+                                               bootstrap=self.bootstrap, faults=self.faults)
+            provider = CountingProvider(self.provider_factory(), gate, events, model=self.model,
+                                        faults=self.faults)
             run = Controller(self.space_factory(), controlled, provider,
                              # The pinned controller compares against max_steps and
                              # does not accept None. Infinity is confined to this

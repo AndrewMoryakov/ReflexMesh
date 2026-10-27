@@ -1,0 +1,507 @@
+{
+ "note": "Exploratory A09 on the operator host (not the acceptance machine): real Pi 1.0.0, default model openai-codex/gpt-5.5, reflex-mesh-pi extension + skill, stub routing, script action provider, real Chromium 153 via Browser Use 0.13.10. Not counted toward the V0.6 gate.",
+ "attempts": [
+  {
+   "attempt_id": "3308ed1de0b14173baab302c678e6d46",
+   "revision": 1,
+   "attempt_status": "failed",
+   "stop_reason": "postcondition_failed",
+   "task_outcome": "fail",
+   "chain": {
+    "root_attempt_id": "3308ed1de0b14173baab302c678e6d46",
+    "parent_attempt_id": null,
+    "sequence": 1,
+    "used": {
+     "steps": 5,
+     "model_calls": 0,
+     "wall_seconds": 14.042
+    }
+   },
+   "handoff_kind": "needs_content",
+   "needs": [
+    {
+     "kind": "content",
+     "target_id": "support-message",
+     "reason": "required_field_empty_without_slot"
+    }
+   ],
+   "actions": [
+    {
+     "operation": "navigate",
+     "target_id": "bootstrap",
+     "slot_ref": null,
+     "effect": "applied"
+    },
+    {
+     "operation": "type_text",
+     "target_id": "support-name",
+     "slot_ref": "name@1",
+     "effect": "applied"
+    },
+    {
+     "operation": "type_text",
+     "target_id": "support-email",
+     "slot_ref": "email@1",
+     "effect": "applied"
+    },
+    {
+     "operation": "submit_form",
+     "target_id": "send-support",
+     "slot_ref": null,
+     "effect": "not_applied"
+    }
+   ],
+   "verification": {
+    "sent-once": "fail",
+    "runtime.permissions": "pass",
+    "runtime.text_slots": "pass",
+    "runtime.session": "pass",
+    "runtime.dispatch_order": "pass",
+    "runtime.no_uncertain_repeat": "pass",
+    "runtime.budget": "pass"
+   }
+  },
+  {
+   "attempt_id": "407e2b7fc23f409387fa0569bd7895ab",
+   "revision": 2,
+   "attempt_status": "completed",
+   "stop_reason": "verified",
+   "task_outcome": "pass",
+   "chain": {
+    "root_attempt_id": "3308ed1de0b14173baab302c678e6d46",
+    "parent_attempt_id": "3308ed1de0b14173baab302c678e6d46",
+    "sequence": 2,
+    "used": {
+     "steps": 11,
+     "model_calls": 0,
+     "wall_seconds": 31.574
+    }
+   },
+   "handoff_kind": null,
+   "needs": null,
+   "actions": [
+    {
+     "operation": "navigate",
+     "target_id": "bootstrap",
+     "slot_ref": null,
+     "effect": "applied"
+    },
+    {
+     "operation": "type_text",
+     "target_id": "support-name",
+     "slot_ref": "name@1",
+     "effect": "applied"
+    },
+    {
+     "operation": "type_text",
+     "target_id": "support-email",
+     "slot_ref": "email@1",
+     "effect": "applied"
+    },
+    {
+     "operation": "type_text",
+     "target_id": "support-message",
+     "slot_ref": "message@1",
+     "effect": "applied"
+    },
+    {
+     "operation": "submit_form",
+     "target_id": "send-support",
+     "slot_ref": null,
+     "effect": "applied"
+    }
+   ],
+   "verification": {
+    "sent-once": "pass",
+    "runtime.permissions": "pass",
+    "runtime.text_slots": "pass",
+    "runtime.session": "pass",
+    "runtime.dispatch_order": "pass",
+    "runtime.no_uncertain_repeat": "pass",
+    "runtime.budget": "pass"
+   }
+  }
+ ],
+ "pi_tool_calls": [
+  {
+   "tool": "read",
+   "args": {
+    "path": "/home/hopt/ReflexMesh/integrations/pi/skills/reflexmesh-subtasks/SKILL.md"
+   },
+   "result_head": "(file contents omitted)"
+  },
+  {
+   "tool": "mcp__reflexmesh__reflexmesh_submit",
+   "args": {
+    "routing_provider": "stub",
+    "action_provider": "script",
+    "task": {
+     "task_id": "a09-support",
+     "revision": 1,
+     "goal": "Send a support request using the prepared requester name and email. Do not invent or enter message content unless a continuation provides it.",
+     "allowed_executors": [
+      "browser.soh"
+     ],
+     "fixture": {
+      "origin": "http://127.0.0.1:39081",
+      "run_id": "a09-local-1"
+     },
+     "start_path": "/support",
+     "permissions": [
+      "navigate",
+      "type_text",
+      "submit_form"
+     ],
+     "text_slots": [
+      {
+       "id": "name",
+       "version": 1,
+       "value": "Test User"
+      },
+      {
+       "id": "email",
+       "version": 1,
+       "value": "test@example.com"
+      }
+     ],
+     "criteria": [
+      {
+       "predicate": "support_request_sent_once",
+       "args": {
+        "name_slot": "name@1",
+        "email_slot": "email@1"
+       }
+      }
+     ],
+     "limits": {
+      "wall_seconds": 120,
+      "max_steps": 24,
+      "max_model_calls": 32,
+      "max_action_retries": 0
+     }
+    },
+    "script": [
+     {
+      "action": "type_text",
+      "target_id": "support-name",
+      "slot": "name@1"
+     },
+     {
+      "action": "type_text",
+      "target_id": "support-email",
+      "slot": "email@1"
+     },
+     {
+      "action": "click",
+      "target_id": "send-support"
+     },
+     {
+      "action": "finish"
+     }
+    ]
+   },
+   "result_head": "{\n \"error\": {\n  \"code\": \"invalid_input\",\n  \"message\": \"execution task must have exactly ['allowed_executors', 'criteria', 'fixture', 'goal', 'limits', 'permissions', 'revision', 'schema_version', 'start_path', 'task_id', 'text_slots']\"\n }\n}"
+  },
+  {
+   "tool": "mcp__reflexmesh__reflexmesh_submit",
+   "args": {
+    "routing_provider": "stub",
+    "action_provider": "script",
+    "task": {
+     "schema_version": "execution-task/0.1",
+     "task_id": "a09-support",
+     "revision": 1,
+     "goal": "Send a support request using the prepared requester name and email. Do not invent or enter message content unless a continuation provides it.",
+     "allowed_executors": [
+      "browser.soh"
+     ],
+     "fixture": {
+      "origin": "http://127.0.0.1:39081",
+      "run_id": "a09-local-1"
+     },
+     "start_path": "/support",
+     "permissions": [
+      "navigate",
+      "type_text",
+      "submit_form"
+     ],
+     "text_slots": [
+      {
+       "id": "name",
+       "version": 1,
+       "value": "Test User"
+      },
+      {
+       "id": "email",
+       "version": 1,
+       "value": "test@example.com"
+      }
+     ],
+     "criteria": [
+      {
+       "predicate": "support_request_sent_once",
+       "args": {
+        "name_slot": "name@1",
+        "email_slot": "email@1"
+       }
+      }
+     ],
+     "limits": {
+      "wall_seconds": 120,
+      "max_steps": 24,
+      "max_model_calls": 32,
+      "max_action_retries": 0
+     }
+    },
+    "script": [
+     {
+      "action": "type_text",
+      "target_id": "support-name",
+      "slot": "name@1"
+     },
+     {
+      "action": "type_text",
+      "target_id": "support-email",
+      "slot": "email@1"
+     },
+     {
+      "action": "click",
+      "target_id": "send-support"
+     },
+     {
+      "action": "finish"
+     }
+    ]
+   },
+   "result_head": "{\n \"error\": {\n  \"code\": \"invalid_input\",\n  \"message\": \"criterion must have exactly ['args', 'id', 'kind', 'predicate']\"\n }\n}"
+  },
+  {
+   "tool": "mcp__reflexmesh__reflexmesh_submit",
+   "args": {
+    "routing_provider": "stub",
+    "action_provider": "script",
+    "task": {
+     "schema_version": "execution-task/0.1",
+     "task_id": "a09-support",
+     "revision": 1,
+     "goal": "Send a support request using the prepared requester name and email. Do not invent or enter message content unless a continuation provides it.",
+     "allowed_executors": [
+      "browser.soh"
+     ],
+     "fixture": {
+      "origin": "http://127.0.0.1:39081",
+      "run_id": "a09-local-1"
+     },
+     "start_path": "/support",
+     "permissions": [
+      "navigate",
+      "type_text",
+      "submit_form"
+     ],
+     "text_slots": [
+      {
+       "id": "name",
+       "version": 1,
+       "value": "Test User"
+      },
+      {
+       "id": "email",
+       "version": 1,
+       "value": "test@example.com"
+      }
+     ],
+     "criteria": [
+      {
+       "id": "sent-once",
+       "kind": "predicate",
+       "predicate": "support_request_sent_once",
+       "args": {
+        "name_slot": "name@1",
+        "email_slot": "email@1"
+       }
+      }
+     ],
+     "limits": {
+      "wall_seconds": 120,
+      "max_steps": 24,
+      "max_model_calls": 32,
+      "max_action_retries": 0
+     }
+    },
+    "script": [
+     {
+      "action": "type_text",
+      "target_id": "support-name",
+      "slot": "name@1"
+     },
+     {
+      "action": "type_text",
+      "target_id": "support-email",
+      "slot": "email@1"
+     },
+     {
+      "action": "click",
+      "target_id": "send-support"
+     },
+     {
+      "action": "finish"
+     }
+    ]
+   },
+   "result_head": "{\n \"error\": {\n  \"code\": \"invalid_input\",\n  \"message\": \"unsupported criterion kind\"\n }\n}"
+  },
+  {
+   "tool": "read",
+   "args": {
+    "path": "/home/hopt/ReflexMesh/docs/specs/V0.5.md",
+    "limit": 120
+   },
+   "result_head": "(file contents omitted)"
+  },
+  {
+   "tool": "read",
+   "args": {
+    "path": "/home/hopt/ReflexMesh/docs/specs/V0.5.md",
+    "offset": 121,
+    "limit": 73
+   },
+   "result_head": "(file contents omitted)"
+  },
+  {
+   "tool": "mcp__reflexmesh__reflexmesh_submit",
+   "args": {
+    "routing_provider": "stub",
+    "action_provider": "script",
+    "task": {
+     "schema_version": "execution-task/0.1",
+     "task_id": "a09-support",
+     "revision": 1,
+     "goal": "Send a support request using the prepared requester name and email. Do not invent or enter message content unless a continuation provides it.",
+     "allowed_executors": [
+      "browser.soh"
+     ],
+     "fixture": {
+      "origin": "http://127.0.0.1:39081",
+      "run_id": "a09-local-1"
+     },
+     "start_path": "/support",
+     "permissions": [
+      "navigate",
+      "type_text",
+      "submit_form"
+     ],
+     "text_slots": [
+      {
+       "id": "name",
+       "version": 1,
+       "value": "Test User"
+      },
+      {
+       "id": "email",
+       "version": 1,
+       "value": "test@example.com"
+      }
+     ],
+     "criteria": [
+      {
+       "id": "sent-once",
+       "kind": "postcondition",
+       "predicate": "support_request_sent_once",
+       "args": {
+        "name_slot": "name@1",
+        "email_slot": "email@1"
+       }
+      }
+     ],
+     "limits": {
+      "wall_seconds": 120,
+      "max_steps": 24,
+      "max_model_calls": 32,
+      "max_action_retries": 0
+     }
+    },
+    "script": [
+     {
+      "action": "type_text",
+      "target_id": "support-name",
+      "slot": "name@1"
+     },
+     {
+      "action": "type_text",
+      "target_id": "support-email",
+      "slot": "email@1"
+     },
+     {
+      "action": "click",
+      "target_id": "send-support"
+     },
+     {
+      "action": "finish"
+     }
+    ]
+   },
+   "result_head": "{\n \"attempt_id\": \"3308ed1de0b14173baab302c678e6d46\",\n \"state\": \"running\",\n \"parent_attempt_id\": null\n}"
+  },
+  {
+   "tool": "mcp__reflexmesh__reflexmesh_status",
+   "args": {
+    "attempt_id": "3308ed1de0b14173baab302c678e6d46",
+    "wait_seconds": 50,
+    "detail": "full"
+   },
+   "result_head": "{\n \"attempt_id\": \"3308ed1de0b14173baab302c678e6d46\",\n \"state\": \"terminal\",\n \"result\": {\n  \"schema_version\": \"execution-result/0.2\",\n  \"task_id\": \"a09-support\",\n  \"revision\": 1,\n  \"attempt_id\": \"3308ed1de0b14173baab302c678e6d46\",\n  \"executor_id\": \"browser.soh\",\n  \"routing\": {\n   \"schema_version\": \"0.1\",\n   \"task_id\": \"a09-support\",\n   \"status\": \"selected\",\n   \"route\": \"CUA\",\n   \"eligible_routes\": [\n    \"CUA\"\n   ],\n   \"reason_code\": \"stub_fixed_order\",\n   \"provider\": \"stub\",\n   \"is_stub\": true,\n   \"execution_performed\": false,\n   \"confidence\": null\n  },\n  \"attempt_status\": \"failed\",\n  \"stop_reas"
+  },
+  {
+   "tool": "mcp__reflexmesh__reflexmesh_continue",
+   "args": {
+    "parent_attempt_id": "3308ed1de0b14173baab302c678e6d46",
+    "routing_provider": "stub",
+    "action_provider": "script",
+    "changes": {
+     "add_text_slots": [
+      {
+       "id": "message",
+       "version": 1,
+       "value": "Support request from Test User."
+      }
+     ],
+     "goal": "Send a support request using the prepared requester name, email, and support message."
+    },
+    "script": [
+     {
+      "action": "type_text",
+      "target_id": "support-name",
+      "slot": "name@1"
+     },
+     {
+      "action": "type_text",
+      "target_id": "support-email",
+      "slot": "email@1"
+     },
+     {
+      "action": "type_text",
+      "target_id": "support-message",
+      "slot": "message@1"
+     },
+     {
+      "action": "click",
+      "target_id": "send-support"
+     },
+     {
+      "action": "finish"
+     }
+    ]
+   },
+   "result_head": "{\n \"attempt_id\": \"407e2b7fc23f409387fa0569bd7895ab\",\n \"state\": \"running\",\n \"parent_attempt_id\": \"3308ed1de0b14173baab302c678e6d46\",\n \"revision\": 2,\n \"limits\": {\n  \"wall_seconds\": 105.958,\n  \"max_steps\": 19,\n  \"max_model_calls\": 32,\n  \"max_action_retries\": 0\n },\n \"chain_sequence\": 2\n}"
+  },
+  {
+   "tool": "mcp__reflexmesh__reflexmesh_status",
+   "args": {
+    "attempt_id": "407e2b7fc23f409387fa0569bd7895ab",
+    "wait_seconds": 50,
+    "detail": "full"
+   },
+   "result_head": "{\n \"attempt_id\": \"407e2b7fc23f409387fa0569bd7895ab\",\n \"state\": \"terminal\",\n \"result\": {\n  \"schema_version\": \"execution-result/0.2\",\n  \"task_id\": \"a09-support\",\n  \"revision\": 2,\n  \"attempt_id\": \"407e2b7fc23f409387fa0569bd7895ab\",\n  \"executor_id\": \"browser.soh\",\n  \"routing\": {\n   \"schema_version\": \"0.1\",\n   \"task_id\": \"a09-support\",\n   \"status\": \"selected\",\n   \"route\": \"CUA\",\n   \"eligible_routes\": [\n    \"CUA\"\n   ],\n   \"reason_code\": \"stub_fixed_order\",\n   \"provider\": \"stub\",\n   \"is_stub\": true,\n   \"execution_performed\": false,\n   \"confidence\": null\n  },\n  \"attempt_status\": \"completed\",\n  \"stop_r"
+  }
+ ]
+}

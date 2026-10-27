@@ -1,0 +1,504 @@
+{
+ "schema_version": "v05-bj-results/0.1",
+ "level": "B",
+ "manifest_sha256": "0f76d317bd0c60f84b72ecae92047f29a93f51c696990205e870125d2da10310",
+ "exploratory": true,
+ "repetitions": 1,
+ "environment": {
+  "git_head": "82b56ba5d33ba7e9612d537c833003738b4b0df5",
+  "git_dirty": true,
+  "python": "3.13.7",
+  "platform": "Linux-6.17.0-14-generic-x86_64-with-glibc2.42",
+  "harness_commit": null,
+  "systemone_harness_version": "0.4.0",
+  "browser_use_version": "0.13.10",
+  "chromium": "Google Chrome for Testing 153.0.8010.12",
+  "user": "hopt"
+ },
+ "command": [
+  "run_bj.py",
+  "--level",
+  "B",
+  "--chrome",
+  "/tmp/rmprobe/chrome",
+  "--output",
+  "/tmp/rmb/bj2.json",
+  "--repetitions",
+  "1",
+  "--only",
+  "C01.submitted_form",
+  "--only",
+  "C02.false_finish",
+  "--only",
+  "C02.protocol_error_with_pass",
+  "--only",
+  "C02.already_satisfied",
+  "--only",
+  "C03.substituted_slot",
+  "--only",
+  "C03.unknown_candidate",
+  "--only",
+  "C05.expire_pending_decision",
+  "--only",
+  "C06.cancel_after_revalidation",
+  "--only",
+  "C07.cancel_in_flight_late_return",
+  "--only",
+  "C07.cancel_in_flight_lost_return",
+  "--only",
+  "C07.deadline_in_flight_late_return",
+  "--only",
+  "C07.deadline_in_flight_lost_return",
+  "--only",
+  "C08.hung_provider",
+  "--only",
+  "C08.hung_driver",
+  "--only",
+  "C08.hung_close",
+  "--only",
+  "C11.visit_then_navigate_away",
+  "--only",
+  "C11.old_delayed_export",
+  "--only",
+  "C11.wrong_run_evidence",
+  "--only",
+  "C12.cancel_late_constraint_violation"
+ ],
+ "started_at_unix": 1791023116.5461993,
+ "finished_at_unix": null,
+ "counts": null,
+ "attempts": [
+  {
+   "case": "C01.submitted_form",
+   "level": "B",
+   "repetition": 1,
+   "status": "failed",
+   "failures": [
+    "attempt_status='failed' expected 'completed'",
+    "stop_reason='executor_error' expected 'verified'",
+    "task_outcome='unknown' expected 'pass'",
+    "POST /form count 0 != 1",
+    "server form does not equal the declared slot values"
+   ],
+   "directory": "B/C01.submitted_form/rep-1",
+   "run_id": "b-c01-submitted_form-1-23116547",
+   "exit_code": 5,
+   "process_seconds": 33.852,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj2/B/C01.submitted_form/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj2/B/C01.submitted_form/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj2/B/C01.submitted_form/rep-1/script.json"
+   ],
+   "result": {
+    "attempt_id": "8100cd84470b4e8bbded494bb03e1e04",
+    "attempt_status": "failed",
+    "stop_reason": "executor_error",
+    "task_outcome": "unknown",
+    "execution_outcome": "unknown",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 33.037,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.415
+    },
+    "faults": null,
+    "budget": {
+     "steps": 1,
+     "model_calls": 0,
+     "dispatches": 1,
+     "remaining_steps": 15,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 56.548,
+     "elapsed_seconds": 33.452,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "unknown",
+      "return_seq": null
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C02.false_finish",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C02.false_finish/rep-1",
+   "run_id": "b-c02-false_finish-1-23150609",
+   "exit_code": 5,
+   "process_seconds": 42.907,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj2/B/C02.false_finish/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj2/B/C02.false_finish/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj2/B/C02.false_finish/rep-1/script.json"
+   ],
+   "result": {
+    "attempt_id": "aa017a7a5a31491baaffc3d5b11011bd",
+    "attempt_status": "failed",
+    "stop_reason": "postcondition_failed",
+    "task_outcome": "fail",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 41.502,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.0,
+     "exit_after_terminal_seconds": 0.0
+    },
+    "faults": null,
+    "budget": {
+     "steps": 2,
+     "model_calls": 0,
+     "dispatches": 1,
+     "remaining_steps": 14,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 48.498,
+     "elapsed_seconds": 41.502,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "sent": "fail",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C02.protocol_error_with_pass",
+   "level": "B",
+   "repetition": 1,
+   "status": "failed",
+   "failures": [
+    "stop_reason='executor_error' expected 'protocol_error'",
+    "verification on_settings='unknown'"
+   ],
+   "directory": "B/C02.protocol_error_with_pass/rep-1",
+   "run_id": "b-c02-protocol_error_with_pass-1-23197113",
+   "exit_code": 5,
+   "process_seconds": 36.951,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj2/B/C02.protocol_error_with_pass/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj2/B/C02.protocol_error_with_pass/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj2/B/C02.protocol_error_with_pass/rep-1/script.json",
+    "--faults",
+    "/tmp/rmb/bj2/B/C02.protocol_error_with_pass/rep-1/faults.json"
+   ],
+   "result": {
+    "attempt_id": "682443ab18634f43b4521a6c16242118",
+    "attempt_status": "failed",
+    "stop_reason": "executor_error",
+    "task_outcome": "unknown",
+    "execution_outcome": "unknown",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 32.827,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.001,
+     "exit_after_terminal_seconds": 1.108
+    },
+    "faults": [
+     "provider_error_at"
+    ],
+    "budget": {
+     "steps": 1,
+     "model_calls": 0,
+     "dispatches": 1,
+     "remaining_steps": 11,
+     "remaining_model_calls": 16,
+     "remaining_wall_seconds": 56.065,
+     "elapsed_seconds": 33.935,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "on_settings": "unknown",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "unknown",
+      "return_seq": null
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C02.already_satisfied",
+   "level": "B",
+   "repetition": 1,
+   "status": "passed",
+   "failures": [],
+   "directory": "B/C02.already_satisfied/rep-1",
+   "run_id": "b-c02-already_satisfied-1-23237602",
+   "exit_code": 0,
+   "process_seconds": 41.125,
+   "command": [
+    "python",
+    "-m",
+    "reflexmesh",
+    "run",
+    "--input",
+    "/tmp/rmb/bj2/B/C02.already_satisfied/rep-1/task.json",
+    "--output-dir",
+    "/tmp/rmb/bj2/B/C02.already_satisfied/rep-1/out",
+    "--chrome",
+    "/tmp/rmprobe/chrome",
+    "--routing-provider",
+    "stub",
+    "--action-provider",
+    "script",
+    "--script",
+    "/tmp/rmb/bj2/B/C02.already_satisfied/rep-1/script.json"
+   ],
+   "result": {
+    "attempt_id": "446d3cf81c7c4e75a587e65716902bf9",
+    "attempt_status": "completed",
+    "stop_reason": "already_satisfied",
+    "task_outcome": "pass",
+    "execution_outcome": "returned",
+    "cleanup": "closed",
+    "timing": {
+     "terminal_after_seconds": 38.595,
+     "deadline_delay_seconds": null,
+     "cleanup_seconds": 0.05,
+     "exit_after_terminal_seconds": 0.051
+    },
+    "faults": null,
+    "budget": {
+     "steps": 2,
+     "model_calls": 0,
+     "dispatches": 1,
+     "remaining_steps": 14,
+     "remaining_model_calls": 24,
+     "remaining_wall_seconds": 51.354,
+     "elapsed_seconds": 38.645,
+     "model_usage": {
+      "micro_decisions": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "served_models": []
+     },
+     "cost": 0.0,
+     "cost_reason": "no_model_calls"
+    },
+    "verification": {
+     "on_form": "pass",
+     "runtime.permissions": "pass",
+     "runtime.text_slots": "pass",
+     "runtime.session": "pass",
+     "runtime.dispatch_order": "pass",
+     "runtime.no_uncertain_repeat": "pass",
+     "runtime.budget": "pass"
+    },
+    "actions": [
+     {
+      "id": 1,
+      "operation": "navigate",
+      "target_id": "bootstrap",
+      "slot_ref": null,
+      "effect": "applied",
+      "return_seq": 3
+     }
+    ],
+    "routing": {
+     "status": "selected",
+     "route": "CUA",
+     "provider": "stub",
+     "is_stub": true
+    }
+   }
+  },
+  {
+   "case": "C03.substituted_slot",
+   "repetition": 1,
+   "status": "pending"
+  },
+  {
+   "case": "C03.unknown_candidate",
+   "repetition": 1,
+   "status": "pending"
+  },
+  {
+   "case": "C05.expire_pending_decision",
+   "repetition": 1,
+   "status": "pending"
+  },
+  {
+   "case": "C06.cancel_after_revalidation",
+   "repetition": 1,
+   "status": "pending"
+  },
+  {
+   "case": "C07.cancel_in_flight_late_return",
+   "repetition": 1,
+   "status": "pending"
+  },
+  {
+   "case": "C07.cancel_in_flight_lost_return",
+   "repetition": 1,
+   "status": "pending"
+  },
+  {
+   "case": "C07.deadline_in_flight_late_return",
+   "repetition": 1,
+   "status": "pending"
+  },
+  {
+   "case": "C07.deadline_in_flight_lost_return",
+   "repetition": 1,
+   "status": "pending"
+  },
+  {
+   "case": "C08.hung_provider",
+   "repetition": 1,
+   "status": "pending"
+  },
+  {
+   "case": "C08.hung_driver",
+   "repetition": 1,
+   "status": "pending"
+  },
+  {
+   "case": "C08.hung_close",
+   "repetition": 1,
+   "status": "pending"
+  },
+  {
+   "case": "C11.visit_then_navigate_away",
+   "repetition": 1,
+   "status": "pending"
+  },
+  {
+   "case": "C11.old_delayed_export",
+   "repetition": 1,
+   "status": "pending"
+  },
+  {
+   "case": "C11.wrong_run_evidence",
+   "repetition": 1,
+   "status": "pending"
+  },
+  {
+   "case": "C12.cancel_late_constraint_violation",
+   "repetition": 1,
+   "status": "pending"
+  }
+ ]
+}

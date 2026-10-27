@@ -5,7 +5,8 @@ from __future__ import annotations
 import math
 import time
 
-from reflexmesh.contracts.execution import ExecutionTask
+from reflexmesh.contracts.execution import ExecutionTask, OPERATION_BITS
+from reflexmesh.verification.effects import repeat_verdict
 from reflexmesh.tracing.slot_evidence import SlotEvidence
 from reflexmesh.runtime.ownership import FixtureOwnership
 
@@ -21,10 +22,10 @@ REQUIRED_CONSTRAINTS = (
 )
 
 MISSING_EVIDENCE = {
-    "runtime.permissions": "Full target attributes and dispatch-time policy revision are not evidenced.",
+    "runtime.permissions": "Not every dispatch commit was checked against the live permission mask.",
     "runtime.immutable_slots": "Resolved slot values are not evidenced across the adapter dispatch boundary.",
     "runtime.ownership": "Exclusive fixture claim and browser session/owner identity are not evidenced.",
-    "runtime.dispatch_ordering": "Shared gate ordering and observation/policy identity are not persisted.",
+    "runtime.dispatch_ordering": "Gate sequence numbers do not account for every commit, revocation and terminal transition.",
     "runtime.no_uncertain_repeats": "Adapter-internal single-shot execution is not established.",
     "runtime.budget": "A synchronized local counter snapshot is unavailable.",
 }
@@ -40,7 +41,11 @@ def unknown_assessment(constraint_id: str) -> dict:
 def assess_constraints(task: ExecutionTask, snapshot: dict | None, attempt_id: str,
                        slot_evidence: SlotEvidence | None = None,
                        coverage: dict | None = None,
-                       ownership: FixtureOwnership | None = None) -> list[dict]:
+                       ownership: FixtureOwnership | None = None,
+                       dispatches: list | None = None,
+                       revocations: list | None = None,
+                       driver_outcomes: dict | None = None,
+                       effect_snapshot: dict | None = None) -> list[dict]:
     """Assess only evidence currently available to the supervisor.
 
     Admission guards and settled effects do not establish full adapter contracts.
@@ -60,6 +65,9 @@ def assess_constraints(task: ExecutionTask, snapshot: dict | None, attempt_id: s
         if view.identity == (task.task_id, task.revision, attempt_id, task.run_id):
             rows[1].update(status=view.status, reason=view.reason,
                            observed_at=view.observed_at, evidence_refs=list(view.evidence_refs))
+    rows[0].update(_assess_permissions(task, snapshot, attempt_id, dispatches))
+    rows[3].update(_assess_ordering(snapshot, attempt_id, dispatches, revocations))
+    rows[4].update(_assess_repeats(attempt_id, snapshot, dispatches, driver_outcomes, effect_snapshot))
     # Slot failures are independent of accounting availability. In particular,
     # a dead worker holding the budget lock must not erase a proven mismatch.
     if type(snapshot) is not dict or any(type(snapshot.get(key)) is not int or snapshot[key] < 0
@@ -73,6 +81,134 @@ def assess_constraints(task: ExecutionTask, snapshot: dict | None, attempt_id: s
                            "Observed local counters respect enabled limits; null limits are disabled.",
                     evidence_refs=[f"runtime:{attempt_id}:budget"])
     return rows
+
+
+def _is_int(value) -> bool:
+    return type(value) is int
+
+
+def _assess_permissions(task: ExecutionTask, snapshot: dict | None, attempt_id: str,
+                        dispatches: list | None) -> dict:
+    """Permission enforcement for committed dispatches.
+
+    A dispatch that names a known operation the task did not grant is a confirmed
+    failure whatever else is available. A pass needs the gate's own record: every
+    commit was checked against the live mask, and every operation the worker
+    reported was among those the gate checked. Worker events alone never pass.
+    """
+    ref = [f"runtime:{attempt_id}:permissions"]
+    if type(dispatches) is not list or any(type(row) is not dict for row in dispatches):
+        return {}
+    operations = [row.get("operation") for row in dispatches]
+    granted = task.permissions
+    bits = getattr(task, "operation_bits", OPERATION_BITS)
+    if any(op in bits and op not in granted for op in operations):
+        return {"status": "fail", "observed_at": time.time(), "evidence_refs": ref,
+                "reason": "A dispatch named an operation the task did not grant."}
+    if type(snapshot) is not dict or any(type(snapshot.get(key)) is not int or snapshot[key] < 0
+                                         for key in ("dispatches", "committed_operations",
+                                                     "unchecked_commits")):
+        return {}
+    if snapshot["unchecked_commits"]:
+        return {"reason": "A dispatch was committed without a checked operation."}
+    if len(operations) != snapshot["dispatches"] or any(op not in bits for op in operations):
+        return {"reason": "Reported dispatch operations do not match the gate's committed dispatches."}
+    if any(not snapshot["committed_operations"] & bits[op] for op in operations):
+        return {"reason": "A reported operation was not among those the gate checked at commit."}
+    return {"status": "pass", "observed_at": time.time(), "evidence_refs": ref,
+            "reason": "Every committed dispatch was checked against the live permission mask."}
+
+
+def _assess_ordering(snapshot: dict | None, attempt_id: str, dispatches: list | None,
+                     revocations: list | None) -> dict:
+    """Local order of proposals, commits, returns, revocations and the terminal transition.
+
+    The supervisor assigns proposal/dispatch/return positions from the order in which it
+    received events. Gate sequence numbers are issued under the gate lock to every commit,
+    revocation and the first terminal transition. A pass needs the numbers reported by the
+    worker, the supervisor's own revocation record and the terminal number to cover the
+    gate's sequence exactly once each, so a reported number cannot be invented or moved.
+    """
+    ref = [f"runtime:{attempt_id}:dispatch_ordering"]
+    if (type(dispatches) is not list or any(type(row) is not dict for row in dispatches) or
+            type(revocations) is not list or any(type(row) is not dict for row in revocations)):
+        return {}
+    ordered = sorted(dispatches, key=lambda row: row["id"] if _is_int(row.get("id")) else -1)
+    reported = [row.get("gate_seq") for row in ordered]
+    valid_snapshot = (type(snapshot) is dict and
+                      all(_is_int(snapshot.get(key)) and snapshot[key] >= 0
+                          for key in ("dispatches", "seq", "terminal_seq")))
+    if valid_snapshot:
+        issued, terminal_seq = snapshot["seq"], snapshot["terminal_seq"]
+        if any(_is_int(value) and (value > issued or (terminal_seq and value > terminal_seq))
+               for value in reported):
+            return {"status": "fail", "observed_at": time.time(), "evidence_refs": ref,
+                    "reason": "A dispatch carries a gate number the gate did not issue before its terminal transition."}
+    if not valid_snapshot:
+        return {"reason": "A synchronized gate sequence snapshot is unavailable."}
+    if (snapshot["dispatches"] != len(ordered) or
+            any(not _is_int(row.get("id")) or not _is_int(row.get("gate_seq")) or
+                not _is_int(row.get("dispatch_seq")) for row in ordered)):
+        return {"reason": "Not every committed dispatch was reported with its gate and trace position."}
+    if ([row["id"] for row in ordered] != list(range(1, len(ordered) + 1)) or
+            any(b <= a for a, b in zip(reported, reported[1:])) or
+            any(not _is_int(row.get("proposal_seq")) or row["proposal_seq"] >= row["dispatch_seq"] or
+                (row.get("return_seq") is not None and
+                 (not _is_int(row["return_seq"]) or row["return_seq"] <= row["dispatch_seq"]))
+                for row in ordered)):
+        return {"status": "fail", "observed_at": time.time(), "evidence_refs": ref,
+                "reason": "Dispatches were not committed in sequence after their proposals."}
+    revoked = [row.get("gate_seq") for row in revocations]
+    unexplained = {"reason": "Gate sequence numbers are not each accounted for exactly once."}
+    if any(not _is_int(value) for value in revoked):
+        return unexplained
+    accounted = sorted(reported + revoked + ([terminal_seq] if terminal_seq else []))
+    if accounted != list(range(1, snapshot["seq"] + 1)):
+        return unexplained
+    return {"status": "pass", "observed_at": time.time(), "evidence_refs": ref,
+            "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order."}
+
+
+def _assess_repeats(attempt_id: str, snapshot: dict | None, dispatches: list | None,
+                    outcomes: dict | None, effects: dict | None) -> dict:
+    """Repeated or post-uncertainty mutations.
+
+    At the controlled boundary a second commit of one mutation, or any mutation committed
+    after an earlier mutation returned an error or a failure, is a confirmed violation.
+    Absence of such a sequence does not establish the row: the adapter's internal calls are
+    not attested there. A pass, or a repeat made inside the driver, needs the authenticated
+    record from the fixture itself, and only when the supervisor holds a row for every
+    dispatch the gate committed (a lost event must not turn into a false failure).
+    """
+    ref = [f"runtime:{attempt_id}:no_uncertain_repeats"]
+    if (type(dispatches) is not list or any(type(row) is not dict for row in dispatches) or
+            type(outcomes) is not dict):
+        return {}
+    ordered = sorted(dispatches, key=lambda row: row["id"] if _is_int(row.get("id")) else -1)
+    seen, uncertain = set(), False
+    for row in ordered:
+        # Navigation is session-local, and a row marked read-only (scroll, wait, switch_tab) cannot
+        # reach a server: repeating it, or running it after a failed call, is not a repeated mutation.
+        # Fixture rows carry no `risk` and keep the strict rule.
+        if row.get("operation") == "navigate" or row.get("risk") == "read":
+            continue
+        # Browser rows name the change by document, not by page state (a write moves the state on).
+        key = row.get("mutation_key") or (row.get("operation"), row.get("target_id"), row.get("slot_ref"))
+        if uncertain or key in seen:
+            return {"status": "fail", "observed_at": time.time(), "evidence_refs": ref,
+                    "reason": "A mutation was committed again, or after an earlier mutation had an uncertain effect."}
+        seen.add(key)
+        if outcomes.get(row.get("id")) in ("error", "not_ok"):
+            uncertain = True
+    complete = (type(snapshot) is dict and _is_int(snapshot.get("dispatches")) and
+                snapshot["dispatches"] == len(dispatches))
+    verdict = repeat_verdict(dispatches, effects) if complete else None
+    if verdict is not None:
+        status, reason = verdict
+        return {"status": status, "observed_at": time.time(), "evidence_refs": ref + [effects["ref"]],
+                "reason": reason}
+    return {"reason": "No repeated mutation was observed at the controlled boundary; "
+                      "adapter-internal single-shot execution is not established."}
 
 
 class ConstraintAssessments:
