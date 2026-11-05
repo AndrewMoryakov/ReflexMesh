@@ -1,6 +1,6 @@
 {
- "kind": "draft_not_frozen",
- "note": "Thirty tasks on ten real sites for the section 17 comparison. Not frozen and not run: the answers were checked with plain Playwright, not with the ReflexMesh adapter, which has never seen these sites. Every task needs an action: a page that already shows the answer would pass without one.",
+ "kind": "frozen",
+ "note": "Thirty tasks on ten real sites for the section 17 comparison. Frozen before any run through ReflexMesh: the adapter had not seen these sites. Goals, thresholds, models and budgets are not changed after this; a change is a new experiment. Every task needs an action, and experiments/v06/m5/reference_solutions.py shows the oracle says no on each start page and yes at each end.",
  "checked_on": "2026-11-05",
  "repeats": 3,
  "jev_model": "~typesafe/jev-latest",
@@ -664,5 +664,6 @@
  "initial_state": "A fresh browser profile and the task's start_url for every run: every attempt is cold, there is no warm condition. The state of the third-party site itself is not under our control.",
  "claim": "claimed_finish: the last decision of the run was `finish`. false_claim: claimed_finish and the oracle says no. `completed` needs a registered source for effects and repeats, which these sites do not have, so here it stays unreachable and false_completion stays 0: that column says nothing on these sites.",
  "runtime_verifier": "Deliberately inert on these sites: the criterion is a registered check that answers unknown. Success is the runner's oracle, read from the live browser after the attempt ended, and it never reaches the control loop.",
- "model_note": "The requested Qwen3.8 Next Flash does not exist on OpenRouter; qwen/qwen3.8-flash is the closest."
+ "model_note": "The requested Qwen3.8 Next Flash does not exist on OpenRouter; qwen/qwen3.8-flash is the closest.",
+ "frozen_on": "2026-11-05"
 }

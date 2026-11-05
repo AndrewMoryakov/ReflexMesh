@@ -414,6 +414,9 @@ def main() -> int:
     if frozen.exists() and json.loads(frozen.read_text("utf-8")) != manifest:
         raise SystemExit("this output directory holds a different manifest: a frozen set is not changed mid-way")
     frozen.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), "utf-8")
+    commit = subprocess.run(["git", "-c", "safe.directory=*", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    with (out / "run_info.jsonl").open("a", encoding="utf-8") as info:     # one line per start: a resume on other code shows here
+        info.write(json.dumps({"commit": commit, "started": time.strftime("%Y-%m-%dT%H:%M:%S")}) + "\n")
     chrome = os.environ["REFLEXMESH_CHROME"]
     sandbox = os.environ.get("REFLEXMESH_CHROME_NO_SANDBOX") != "1"
     results = out / "results.jsonl"
