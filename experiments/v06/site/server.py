@@ -15,6 +15,7 @@ Routes:
   /orders/<id>         one order: details, saved notes, a note form with priority and notify
   /orders/<id>/tracking    a small page, opened by the order page in a new tab
   POST /orders/<id>/note   saves a note (303 back to the order)
+  /orders/<id>/wizard/<1|2|3>   the same note in three steps; each step's POST stores a server-side draft
   /__state             JSON: recorded requests and notes
   POST /__claim        claim the site for one attempt: {"attempt_id"} -> {"claim_id", "token"}; 409 while claimed
   GET /__evidence      with `Authorization: Bearer <token>`: what happened under the claim (requests, notes
@@ -45,6 +46,7 @@ ORDERS = {
 NOTES: dict[str, list[str]] = {}
 META: dict[str, dict] = {}
 REQUESTS: list[dict] = []
+DRAFTS: dict[str, dict] = {}   # the wizard's progress per order: it lives on the server, not on the page
 CLAIM: dict = {}          # claim_id, attempt_id, token_hash, notes_at
 IN_FLIGHT = [0]           # page requests being handled right now
 
@@ -105,6 +107,25 @@ def order(oid: str) -> bytes | None:
             '<label><input type="checkbox" name="notify"> Notify customer by email</label>'
             '<button type="submit">Save note</button></form>')
     return page(f"Заказ №{oid}", body)
+
+
+def wizard(oid: str, step: str) -> bytes | None:
+    """A form split over three pages. A step needs the one before it; there is no link that skips ahead."""
+    if oid not in ORDERS or step not in ("1", "2", "3"):
+        return None
+    with LOCK:
+        draft = dict(DRAFTS.get(oid, {}))
+    action = f"/orders/{oid}/wizard/{step}"
+    if step == "1":
+        form = (f'<label for="team">Team</label><input id="team" name="team" type="text" '
+                f'value="{escape(draft.get("team", ""))}"><button type="submit">Next</button>')
+    elif step == "2":
+        form = ('<label for="note">Note</label><textarea id="note" name="note">'
+                f'{escape(draft.get("note", ""))}</textarea><button type="submit">Next</button>')
+    else:
+        form = (f'<p>Team: {escape(draft.get("team", ""))}.</p><p>Note: {escape(draft.get("note", ""))}.</p>'
+                '<button type="submit">Save note</button>')
+    return page(f"New note for order {oid}, step {step} of 3", f'<form method="post" action="{action}">{form}</form>')
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -184,6 +205,15 @@ class Handler(BaseHTTPRequestHandler):
             pieces = parts.path.split("/")
             if len(pieces) == 4 and pieces[3] == "tracking" and pieces[2] in ORDERS:
                 return self._send(200, page("Tracking", f"<p>Parcel for order {pieces[2]} is on its way.</p>"))
+            if len(pieces) == 5 and pieces[3] == "wizard":
+                with LOCK:
+                    draft = dict(DRAFTS.get(pieces[2], {}))
+                needed = {"2": "team", "3": "note"}.get(pieces[4])
+                if needed and needed not in draft:
+                    return self._send(303, b"", location=f"/orders/{pieces[2]}/wizard/1")
+                body = wizard(pieces[2], pieces[4])
+                if body is not None:
+                    return self._send(200, body)
             body = order(pieces[2])
             if body is not None and len(pieces) == 3:
                 return self._send(200, body)
@@ -232,6 +262,21 @@ class Handler(BaseHTTPRequestHandler):
                     META[pieces[1]] = {"priority": fields.get("priority", [""])[0],
                                        "notify": "notify" in fields}
             return self._send(303, b"", location=f"/orders/{pieces[1]}")
+        if len(pieces) == 4 and pieces[0] == "orders" and pieces[2] == "wizard" and pieces[1] in ORDERS:
+            oid, step = pieces[1], pieces[3]
+            location = f"/orders/{oid}/wizard/{int(step) + 1}" if step in ("1", "2") else f"/orders/{oid}/wizard/1"
+            with LOCK:   # _send takes this lock too: answer only after leaving it
+                draft = DRAFTS.setdefault(oid, {})
+                if step == "1":
+                    draft["team"] = fields.get("team", [""])[0].strip()
+                elif step == "2":
+                    draft["note"] = fields.get("note", [""])[0].strip()
+                elif step == "3" and draft.get("note"):
+                    NOTES.setdefault(oid, []).append(draft["note"])
+                    META[oid] = {"priority": "Normal", "notify": False, "team": draft.get("team", "")}
+                    DRAFTS.pop(oid)
+                    location = f"/orders/{oid}"
+            return self._send(303, b"", location=location)
         self._send(404, page("Not found", "<p>No such page.</p>"))
 
 

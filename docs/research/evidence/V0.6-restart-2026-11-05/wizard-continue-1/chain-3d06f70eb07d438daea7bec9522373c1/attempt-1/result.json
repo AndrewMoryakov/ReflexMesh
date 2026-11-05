@@ -1,0 +1,833 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "order-note-125-wizard",
+  "revision": 1,
+  "chain_id": "3d06f70eb07d438daea7bec9522373c1",
+  "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+  "parent_attempt_id": null,
+  "attempt_status": "incomplete",
+  "stop_reason": "needs_handoff",
+  "task_outcome": "unknown",
+  "execution_outcome": "unknown",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "note_saved_once",
+      "kind": "postcondition",
+      "predicate": "registered_check",
+      "status": "fail",
+      "reason": "saved_otherwise",
+      "scope": "registered_source_while_running",
+      "observed_at": 1793886806.5084567,
+      "evidence_refs": [
+        "browser:63a0f457814f4943bedee4fb30082be7:59"
+      ]
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1793886811.8749628,
+      "evidence_refs": [
+        "runtime:63a0f457814f4943bedee4fb30082be7:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1793886811.8749225,
+      "evidence_refs": [
+        "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:coverage:8",
+        "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:handoff:2",
+        "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:handoff:4",
+        "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:handoff:7"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "Browser session ownership is not established: the browser is not closed.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1793886811.8750212,
+      "evidence_refs": [
+        "runtime:63a0f457814f4943bedee4fb30082be7:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "No repeated mutation was observed at the controlled boundary; adapter-internal single-shot execution is not established.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1793886811.8750534,
+      "evidence_refs": [
+        "runtime:63a0f457814f4943bedee4fb30082be7:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "start_url",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 0,
+      "producer": "jev",
+      "bootstrap": true,
+      "destination": "http://127.0.0.1:8770/orders/125/wizard/1",
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 3,
+      "dispatch_seq": 4,
+      "return_seq": 5,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "browser:63a0f457814f4943bedee4fb30082be7:6"
+      ],
+      "driver_ok": true
+    },
+    {
+      "id": 2,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "1:text_fields:3",
+      "target_id": "[\"type_text\", \"textbox\", \"Team\", \"\", \"\", \"team@1\"]@39b0a00058f8afe0",
+      "mutation_key": "[\"type_text\", \"textbox\", \"Team\", \"\", \"\", \"team@1\"]@http://127.0.0.1:8770/orders/125/wizard/1?",
+      "request": null,
+      "target": {
+        "role": "textbox",
+        "name": "Team"
+      },
+      "slot_ref": "team@1",
+      "observation_id": 1,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 2,
+      "proposal_seq": 12,
+      "dispatch_seq": 13,
+      "return_seq": 14,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 3,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "2:elements:26",
+      "target_id": "[\"click\", \"button\", \"Next\", \"\", \"\", \"\"]@d239076c9848f0f8",
+      "mutation_key": "[\"click\", \"button\", \"Next\", \"\", \"\", \"\"]@http://127.0.0.1:8770/orders/125/wizard/1?",
+      "request": {
+        "method": "POST",
+        "path": "/orders/125/wizard/1"
+      },
+      "target": {
+        "role": "button",
+        "name": "Next"
+      },
+      "slot_ref": null,
+      "observation_id": 2,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 3,
+      "proposal_seq": 21,
+      "dispatch_seq": 22,
+      "return_seq": 23,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": true,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 4,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "4:text_fields:32",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"team@1\"]@1e700ebd9d1b0883",
+      "mutation_key": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"team@1\"]@http://127.0.0.1:8770/orders/125/wizard/2?",
+      "request": null,
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "team@1",
+      "observation_id": 4,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 4,
+      "proposal_seq": 35,
+      "dispatch_seq": 36,
+      "return_seq": 37,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 5,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "5:elements:55",
+      "target_id": "[\"click\", \"button\", \"Next\", \"\", \"\", \"\"]@bd55e0ce42ee99d8",
+      "mutation_key": "[\"click\", \"button\", \"Next\", \"\", \"\", \"\"]@http://127.0.0.1:8770/orders/125/wizard/2?",
+      "request": {
+        "method": "POST",
+        "path": "/orders/125/wizard/2"
+      },
+      "target": {
+        "role": "button",
+        "name": "Next"
+      },
+      "slot_ref": null,
+      "observation_id": 5,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 5,
+      "proposal_seq": 44,
+      "dispatch_seq": 45,
+      "return_seq": 46,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": true,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 6,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "6:elements:85",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@b8ec2c4bea9d6ee4",
+      "mutation_key": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@http://127.0.0.1:8770/orders/125/wizard/3?",
+      "request": {
+        "method": "POST",
+        "path": "/orders/125/wizard/3"
+      },
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 6,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 6,
+      "proposal_seq": 53,
+      "dispatch_seq": 54,
+      "return_seq": 55,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": true,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 7,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "7:text_fields:88",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"team@1\"]@b2119094e2d37856",
+      "mutation_key": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"team@1\"]@http://127.0.0.1:8770/orders/125?",
+      "request": null,
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "team@1",
+      "observation_id": 7,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 7,
+      "proposal_seq": 63,
+      "dispatch_seq": 64,
+      "return_seq": 65,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 8,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "8:elements:134",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@9b6b3dae23ea2db6",
+      "mutation_key": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@http://127.0.0.1:8770/orders/125?",
+      "request": {
+        "method": "POST",
+        "path": "/orders/125/note"
+      },
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 8,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 8,
+      "proposal_seq": 72,
+      "dispatch_seq": 73,
+      "return_seq": 74,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    }
+  ],
+  "budget": {
+    "steps": 13,
+    "model_calls": 11,
+    "dispatches": 8,
+    "limits": {
+      "wall_seconds": 120.0,
+      "max_steps": 64,
+      "max_model_calls": 96,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 51,
+    "remaining_model_calls": 85,
+    "remaining_wall_seconds": 100.107,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 19.891
+  },
+  "handoff": {
+    "schema_version": "browser-handoff/0.1",
+    "reason": "no_progress",
+    "task_id": "order-note-125-wizard",
+    "revision": 1,
+    "chain_id": "3d06f70eb07d438daea7bec9522373c1",
+    "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+    "parent_attempt_id": null,
+    "observation_ref": 12,
+    "page": "http://127.0.0.1:8770/orders/125",
+    "available_actions": [
+      {
+        "ref": "12:elements:177",
+        "operation": "click",
+        "role": "link",
+        "name": "Dashboard"
+      },
+      {
+        "ref": "12:elements:179",
+        "operation": "click",
+        "role": "link",
+        "name": "Orders"
+      },
+      {
+        "ref": "12:elements:196",
+        "operation": "click",
+        "role": "link",
+        "name": "Open tracking"
+      },
+      {
+        "ref": "12:elements:163",
+        "operation": "click",
+        "role": "checkbox",
+        "name": "Notify customer by email"
+      },
+      {
+        "ref": "12:elements:210",
+        "operation": "click",
+        "role": "button",
+        "name": "Save note"
+      },
+      {
+        "ref": "12:text_fields:161",
+        "operation": "type_text",
+        "role": "textbox",
+        "name": "Note"
+      },
+      {
+        "ref": "12:options:162:Normal",
+        "operation": "select_option",
+        "role": "combobox",
+        "name": "Priority"
+      },
+      {
+        "ref": "12:options:162:High",
+        "operation": "select_option",
+        "role": "combobox",
+        "name": "Priority"
+      },
+      {
+        "ref": "12:options:162:Low",
+        "operation": "select_option",
+        "role": "combobox",
+        "name": "Priority"
+      },
+      {
+        "ref": "12:history:back",
+        "operation": "go_back",
+        "role": "",
+        "name": "/orders/125"
+      }
+    ],
+    "operations": [
+      {
+        "id": 1,
+        "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+        "operation": "navigate",
+        "producer": "jev",
+        "option_ref": null,
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "applied"
+      },
+      {
+        "id": 2,
+        "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+        "operation": "type_text",
+        "producer": "jev",
+        "option_ref": "1:text_fields:3",
+        "slot_ref": "team@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 3,
+        "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+        "operation": "click",
+        "producer": "jev",
+        "option_ref": "2:elements:26",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 4,
+        "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+        "operation": "type_text",
+        "producer": "jev",
+        "option_ref": "4:text_fields:32",
+        "slot_ref": "team@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 5,
+        "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+        "operation": "click",
+        "producer": "jev",
+        "option_ref": "5:elements:55",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 6,
+        "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+        "operation": "click",
+        "producer": "jev",
+        "option_ref": "6:elements:85",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 7,
+        "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+        "operation": "type_text",
+        "producer": "jev",
+        "option_ref": "7:text_fields:88",
+        "slot_ref": "team@1",
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 8,
+        "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+        "operation": "click",
+        "producer": "jev",
+        "option_ref": "8:elements:134",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      }
+    ],
+    "unresolved_effects": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "criteria": [
+      {
+        "id": "note_saved_once",
+        "status": "fail",
+        "reason": "saved_otherwise"
+      }
+    ],
+    "permissions": [
+      "click",
+      "go_back",
+      "navigate",
+      "scroll",
+      "select_option",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ],
+    "text_slot_refs": [
+      "team@1",
+      "record@1"
+    ],
+    "owner": {
+      "session_id": "21e72bdfe76646f4a7c91ca044b66003",
+      "owner_epoch": 0,
+      "session_open": true
+    },
+    "remaining": {
+      "steps": 51,
+      "model_calls": 85,
+      "wall_seconds": 100.107,
+      "handoffs": 3
+    },
+    "continuation": {
+      "allowed": true,
+      "token": "[withheld]",
+      "expires_in_seconds": 60.0,
+      "parent_attempt_id": "63a0f457814f4943bedee4fb30082be7",
+      "modes": [
+        "jev",
+        "llm"
+      ],
+      "session_id": "21e72bdfe76646f4a7c91ca044b66003"
+    }
+  },
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": null,
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": false
+    },
+    "chromium": "chrome 142.0.7444.176 (install directory)",
+    "chromium_sandbox": true,
+    "headless": false,
+    "decision_provider": {
+      "kind": "jev",
+      "config_id": "openrouter:~typesafe/jev-latest",
+      "requested_model": "~typesafe/jev-latest"
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "retained",
+    "session_id": "21e72bdfe76646f4a7c91ca044b66003",
+    "profile_removed": false
+  },
+  "watchdog": {
+    "watchdog_kill": false,
+    "worker_stopped": true
+  },
+  "decision": {
+    "kind": "jev",
+    "requested_model": "~typesafe/jev-latest",
+    "served_models": [
+      "typesafe/jev-1.14-20261014"
+    ],
+    "config_id": "openrouter:~typesafe/jev-latest"
+  },
+  "session_id": "21e72bdfe76646f4a7c91ca044b66003",
+  "owner_epoch": 0,
+  "chain_budget": {
+    "used": {
+      "steps": 13,
+      "model_calls": 11
+    },
+    "remaining": {
+      "steps": 51,
+      "model_calls": 85,
+      "wall_seconds": 100.034,
+      "handoffs": 3
+    }
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:63a0f457814f4943bedee4fb30082be7:permissions",
+    "runtime:63a0f457814f4943bedee4fb30082be7:dispatch_ordering",
+    "runtime:63a0f457814f4943bedee4fb30082be7:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 19.891,
+    "total_seconds": 19.966
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:commitment:1",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 1,
+      "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+      "run_id": "63a0f457814f4943bedee4fb30082be7",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:commitment:2",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 1,
+      "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+      "run_id": "63a0f457814f4943bedee4fb30082be7",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "text",
+      "slot_ref": "team@1"
+    },
+    {
+      "ref": "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:handoff:2",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 1,
+      "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+      "run_id": "63a0f457814f4943bedee4fb30082be7",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "text",
+      "slot_ref": "team@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:commitment:3",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 1,
+      "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+      "run_id": "63a0f457814f4943bedee4fb30082be7",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 3,
+      "generation": 3,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:commitment:4",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 1,
+      "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+      "run_id": "63a0f457814f4943bedee4fb30082be7",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 4,
+      "generation": 4,
+      "classification": "text",
+      "slot_ref": "team@1"
+    },
+    {
+      "ref": "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:handoff:4",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 1,
+      "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+      "run_id": "63a0f457814f4943bedee4fb30082be7",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 4,
+      "generation": 4,
+      "classification": "text",
+      "slot_ref": "team@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:commitment:5",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 1,
+      "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+      "run_id": "63a0f457814f4943bedee4fb30082be7",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 5,
+      "generation": 5,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:commitment:6",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 1,
+      "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+      "run_id": "63a0f457814f4943bedee4fb30082be7",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 6,
+      "generation": 6,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:commitment:7",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 1,
+      "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+      "run_id": "63a0f457814f4943bedee4fb30082be7",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 7,
+      "generation": 7,
+      "classification": "text",
+      "slot_ref": "team@1"
+    },
+    {
+      "ref": "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:handoff:7",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 1,
+      "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+      "run_id": "63a0f457814f4943bedee4fb30082be7",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 7,
+      "generation": 7,
+      "classification": "text",
+      "slot_ref": "team@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:commitment:8",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 1,
+      "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+      "run_id": "63a0f457814f4943bedee4fb30082be7",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 8,
+      "generation": 8,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:63a0f457814f4943bedee4fb30082be7:immutable-slots:coverage:8",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 1,
+      "attempt_id": "63a0f457814f4943bedee4fb30082be7",
+      "run_id": "63a0f457814f4943bedee4fb30082be7",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 8,
+      "dispatches": 8,
+      "text_dispatches": 3,
+      "nontext_dispatches": 5,
+      "unknown_dispatches": 0,
+      "sealed_generation": 8,
+      "status": "pass"
+    }
+  ]
+}

@@ -291,17 +291,30 @@ class BrowserControlledEnvironment:
         self._unchanged = 0
         self._done_in_state: set[str] = set()
         self._mutations: set[str] = set()
+        self._typed: set[str] = set()   # the part of _mutations that only filled a field on the page
         self.verifier: CriteriaVerifier | None = None
         self.continued = False   # an attempt that continues a chain: same session, no first navigation
 
     def carry(self) -> dict:
         """What the repeat guard remembers; it belongs to the chain, not to one attempt (V0.6 section 9)."""
-        return {"mutations": set(self._mutations), "done_in_state": set(self._done_in_state)}
+        return {"mutations": set(self._mutations), "done_in_state": set(self._done_in_state), "typed": set(self._typed)}
 
     def restore(self, carry: dict | None) -> None:
         if carry:
             self._mutations |= carry["mutations"]
             self._done_in_state |= carry["done_in_state"]
+            self._typed |= carry["typed"]
+
+    def forget_page_state(self) -> None:
+        """`restart`: the navigation drops what was typed and the page state the repeat guard knew, so typing the
+        same value or pressing the same button on the fresh page is not a repeat. A submitted form stays
+        remembered: its effect is on the server, and a restart never makes it a new operation (section 9)."""
+        forgot = len(self._typed)
+        self._mutations -= self._typed
+        self._typed.clear()
+        self._done_in_state.clear()
+        self.journal.emit("session_restarted", forgotten_typed=forgot, kept_mutations=len(self._mutations),
+                          browser_pid=(self.inner.session or {}).get("pid"))
 
     def _stop(self, reason: str) -> RuntimeStop:
         self.last_stop = reason
@@ -478,6 +491,8 @@ class BrowserControlledEnvironment:
         self._done_in_state.add(state_key)
         if mutation_key is not None:
             self._mutations.add(mutation_key)
+            if prepared.action == "type_text":
+                self._typed.add(mutation_key)
             descriptor["mutation_key"] = mutation_key
         self.journal.put(("dispatch", action_id, {**descriptor, "gate_seq": gate_seq,
                                                   "policy_revision": self.observed_revision,
@@ -624,6 +639,7 @@ class BrowserRun:
         self.task, self.chrome = task, chrome
         self.chain = chain             # a TaskChain when run by BrowserCore (handoff in the same session)
         self.retained = False          # the session outlives this attempt, handed to the chain
+        self.restart = False           # the continuation asked to begin again from start_url, in the same session
         # Registered checks come from the service's configuration, never from the task (V0.6 section 11).
         self.checks = dict(checks or {})
         self._claimed: list = []
@@ -786,9 +802,12 @@ class BrowserRun:
         self.adapter.bind_runtime(self.registry, self.slot_evidence.sink)
         controlled = BrowserControlledEnvironment(self.adapter, self.gate, self.journal, self.task)
         controlled.verifier = self.verifier
-        controlled.continued = continued
+        # A restart is a first navigation in the same session: through the same gate, budget and journal.
+        controlled.continued = continued and not self.restart
         if chain is not None:
             controlled.restore(chain.carry)
+        if continued and self.restart:
+            controlled.forget_page_state()
         self.controlled = controlled
         return controlled
 
@@ -870,6 +889,7 @@ class BrowserRun:
         self.assist_left = ASSIST_STEPS
         try:
             self._environment()
+            self.controlled.reset(self.task.goal)  # nothing unless this continuation asked for a restart
             obs = self.controlled.observe()       # the action from the old handoff is never executed (section 14)
         except RuntimeStop as exc:
             return self._assist_stop(exc.reason)

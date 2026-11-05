@@ -1,7 +1,7 @@
 """A handoff chain through a running `reflexmesh browser serve`, every step a separate CLI call.
 
 Revision 1 of the order-note task lacks the order number, so Jev cannot finish and hands over; revision 2 supplies
-it with a clarified goal; if Jev hands over again, this script stands in for the calling LLM: it takes the remaining
+it and asks for a restart from start_url, since the field still holds the wrong value; if Jev hands over again, this script stands in for the calling LLM: it takes the remaining
 steps from wherever the browser stopped, by the visible names of the offered options, then returns to Jev. It is a
 script, not a model: it shows the assisted path, not that an LLM would choose these steps. It prints one line per
 attempt and per assisted step, then the final verification.
@@ -21,8 +21,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-REVISION_2_GOAL = ("The order number is now provided as order@1. Replace the text in the Order number field with "
-                   "order@1, search, open order 125, add the prepared note to it and save the note.")
+REVISION_2_GOAL = "Find order 125 (order number order@1) in the order desk, add the prepared note to it and save the note."
 
 
 def cli(socket: str, command: str, payload: dict | None = None) -> tuple[int, dict]:
@@ -106,7 +105,7 @@ def main() -> int:
     code, r = cli(args.socket, "submit", revision_1)
     brief("A1 jev", code, r)
     if resumable(r):
-        code, r = cli(args.socket, "resume", continuation(r, operation="start", mode="jev", task=revision_2))
+        code, r = cli(args.socket, "resume", continuation(r, operation="start", mode="jev", task=revision_2, restart=True))
         brief("A2 jev, rev 2", code, r)
     attempt = 3
     while resumable(r) and attempt <= 5:
