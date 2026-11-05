@@ -301,6 +301,28 @@ class SameSession(BrowserCase):
         self.assertEqual(SITE.NOTES, {})
         self.assertNotIn("llm", [a["producer"] for a in core.chains[first["chain_id"]].actions])
 
+    def test_a_final_probe_reads_the_live_page_and_leaves_no_trace_in_the_result(self):
+        """The M5 oracle looks after the attempt ended, before the browser closes; the attempt never knows."""
+        spec = importlib.util.spec_from_file_location("m5_runner", ROOT / "experiments/v06/m5/runner.py")
+        runner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(runner)
+        steps = TO_ORDER + SAVE
+        task = BrowserTask.from_dict(self.task())
+        plain = self.core([list(steps)])
+        without = plain.execute(task)
+        plain.close()
+        SITE.NOTES.clear()
+        states = []
+        core = self.core([list(steps)])
+        core.final_probe = lambda adapter: states.append(runner.read_final_state(adapter))
+        withit = core.execute(task)
+        self.assertEqual((withit["attempt_status"], withit["stop_reason"]), (without["attempt_status"], without["stop_reason"]))
+        self.assertEqual(len(states), 1)
+        self.assertRegex(states[0]["url"], r"/orders/125$")
+        self.assertIn("Перезвонить завтра", states[0]["text"])
+        self.assertEqual(sorted(withit), sorted(without))
+        self.assertEqual([a["operation"] for a in withit["actions"]], [a["operation"] for a in without["actions"]])
+
     def test_the_m5_assistant_takes_steps_through_the_gate_and_is_metered(self):
         """J1: the LLM's replies are scripted here, the path through the runtime is real."""
         spec = importlib.util.spec_from_file_location("m5_runner", ROOT / "experiments/v06/m5/runner.py")

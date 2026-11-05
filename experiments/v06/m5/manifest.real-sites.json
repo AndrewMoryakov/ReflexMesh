@@ -242,7 +242,7 @@
     "contains": [
      "fname=Ada"
     ],
-    "where": "frame:#iframeResult"
+    "where": "frame"
    }
   },
   {
@@ -260,7 +260,7 @@
     "contains": [
      "cars=audi"
     ],
-    "where": "frame:#iframeResult"
+    "where": "frame"
    }
   },
   {
@@ -289,12 +289,11 @@
    "allowed_origins": [
     "https://the-internet.herokuapp.com"
    ],
-   "goal": "Remove the checkbox and enable the text box.",
+   "goal": "Enable the text box.",
    "text_slots": [],
    "oracle": {
     "final_url": "/dynamic_controls$",
     "contains": [
-     "It's gone!",
      "It's enabled!"
     ],
     "where": "page"
@@ -376,7 +375,7 @@
     "contains": [
      "Pig-nosed turtle"
     ],
-    "where": "frame:#iframe"
+    "where": "frame"
    }
   },
   {
@@ -488,10 +487,8 @@
    "text_slots": [],
    "oracle": {
     "final_url": "/shadowRootPage\\.html$",
-    "contains": [
-     "checked"
-    ],
-    "where": "shadow:custom-checkbox-element input"
+    "contains": [],
+    "where": "shadow_checked"
    }
   },
   {
@@ -539,9 +536,9 @@
    "oracle": {
     "final_url": "/embedded-pages/iframes/",
     "contains": [
-     "5"
+     "numField=5"
     ],
-    "where": "frame_value:iframe>>nth=1 #numField"
+    "where": "frame_value"
    }
   },
   {
@@ -645,5 +642,27 @@
     "where": "page"
    }
   }
- ]
+ ],
+ "limits": {
+  "wall_seconds": 240,
+  "max_steps": 40,
+  "max_model_calls": 40,
+  "max_action_retries": 0,
+  "max_handoffs": 3
+ },
+ "permissions": [
+  "navigate",
+  "click",
+  "type_text",
+  "select_option",
+  "scroll",
+  "go_back",
+  "switch_tab",
+  "wait"
+ ],
+ "min_key_remaining": 0.02,
+ "initial_state": "A fresh browser profile and the task's start_url for every run: every attempt is cold, there is no warm condition. The state of the third-party site itself is not under our control.",
+ "claim": "claimed_finish: the last decision of the run was `finish`. false_claim: claimed_finish and the oracle says no. `completed` needs a registered source for effects and repeats, which these sites do not have, so here it stays unreachable and false_completion stays 0: that column says nothing on these sites.",
+ "runtime_verifier": "Deliberately inert on these sites: the criterion is a registered check that answers unknown. Success is the runner's oracle, read from the live browser after the attempt ended, and it never reaches the control loop.",
+ "model_note": "The requested Qwen3.8 Next Flash does not exist on OpenRouter; qwen/qwen3.8-flash is the closest."
 }

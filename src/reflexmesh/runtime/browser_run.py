@@ -648,6 +648,7 @@ class BrowserRun:
         self.chain = chain             # a TaskChain when run by BrowserCore (handoff in the same session)
         self.retained = False          # the session outlives this attempt, handed to the chain
         self.restart = False           # the continuation asked to begin again from start_url, in the same session
+        self.final_probe = None        # set by an experiment: called with the adapter before the browser may close
         # Registered checks come from the service's configuration, never from the task (V0.6 section 11).
         self.checks = dict(checks or {})
         self._claimed: list = []
@@ -830,6 +831,12 @@ class BrowserRun:
                 self.adapter is not None and not self.adapter.closed and not self.gate.in_flight.value)
 
     def _release_session(self) -> None:
+        if self.final_probe is not None and self.adapter is not None and not self.adapter.closed:
+            # A test oracle's last look at the live browser. What it reads never reaches this attempt or its result.
+            try:
+                self.final_probe(self.adapter)
+            except Exception:
+                pass
         if self.chain is not None and self.controlled is not None:
             self.chain.carry = self.controlled.carry()
         self.retained = self._retainable()

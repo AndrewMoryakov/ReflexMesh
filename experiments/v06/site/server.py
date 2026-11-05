@@ -199,6 +199,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(302, b"", location=f"http://localhost:{self.server.server_port}/")
         if parts.path == "/catalog":
             return self._send(200, catalog())
+        if parts.path == "/partner":   # a form that sends to another origin (localhost, not 127.0.0.1)
+            return self._send(200, page("Partner", f'<form method="post" action="http://localhost:{self.server.server_port}/orders/125/note">'
+                                        '<button type="submit">Send to partner</button></form>'
+                                        '<form method="get" action="/orders"><button type="submit">Back to orders</button></form>'))
         if parts.path == "/orders":
             return self._send(200, orders(parse_qs(parts.query).get("q", [""])[0].strip()))
         if parts.path.startswith("/orders/"):

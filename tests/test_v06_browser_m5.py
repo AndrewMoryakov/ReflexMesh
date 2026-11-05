@@ -146,6 +146,45 @@ class Runner(unittest.TestCase):
         s = runner.summarize([{"mode": "J0", "attempt_status": "completed", "oracle_success": False, "false_completion": True}])["J0"]
         self.assertEqual((s["claimed_completed"], s["confirmed_success"], s["false_completion"]), (1, 0, 1))
 
+    def test_the_real_site_oracle_needs_the_url_and_every_text(self):
+        o = {"final_url": r"/done$", "contains": ["a b", "c"], "where": "page"}
+        state = {"url": "https://x/done", "title": "", "text": "a b and c", "textareas": "", "frames": [], "frame_values": [], "shadow_text": "", "shadow_checked": 0}
+        self.assertEqual(runner.judge_final(o, state), (True, "matched"))
+        self.assertEqual(runner.judge_final(o, {**state, "url": "https://x/start"}), (False, "url_differs"))
+        self.assertEqual(runner.judge_final(o, {**state, "text": "a b"}), (False, "text_missing"))
+        self.assertEqual(runner.judge_final(o, None), (None, "oracle_unavailable"))
+        self.assertEqual(runner.judge_final({"final_url": "x", "contains": ["k"], "where": "frame"}, {**state, "url": "x", "text": "k", "frames": ["other"]}), (False, "text_missing"))
+        self.assertEqual(runner.judge_final({"final_url": "x", "contains": [], "where": "shadow_checked"}, {**state, "url": "x"}), (False, "not_checked"))
+        self.assertEqual(runner.judge_final({"final_url": "x", "contains": [], "where": "shadow_checked"}, {**state, "url": "x", "shadow_checked": 1}), (True, "matched"))
+
+    def test_every_real_site_task_is_a_valid_browser_task_with_an_inert_criterion(self):
+        from reflexmesh.contracts.browser import BrowserTask
+
+        manifest = json.loads((ROOT / "experiments/v06/m5/manifest.real-sites.json").read_text("utf-8"))
+        self.assertEqual(len(manifest["tasks"]), 30)
+        for spec in manifest["tasks"]:
+            task = BrowserTask.from_dict(runner.task_data(manifest, spec))
+            self.assertEqual([c.predicate for c in task.criteria], ["registered_check"])
+            self.assertEqual(task.criteria_unsupported(frozenset({runner.EXTERNAL_CHECK})), ())
+        check = runner.ExternalOracle()
+        check.claim("a")
+        self.assertEqual(check.judge({}, [], check.evidence())["status"], "unknown")
+        self.assertIsNone(check.settle([], check.evidence(), browser_stopped=True))
+
+    def test_a_claim_of_finishing_is_judged_against_the_oracle(self):
+        rows = [{"mode": "J0", "claimed_finish": True, "oracle_success": False, "false_claim": True, "group": "forms", "task": "a"},
+                {"mode": "J0", "claimed_finish": True, "oracle_success": True, "false_claim": False, "group": "forms", "task": "b"}]
+        s = runner.summarize(rows)["J0"]
+        self.assertEqual((s["claimed_finish"], s["false_claim"], s["confirmed_success"]), (2, 1, 1))
+        self.assertEqual(s["by_group"], {"forms": "1/2"})
+
+    def test_resuming_keeps_finished_runs_and_repeats_only_infra_failures(self):
+        planned = runner.plan({"repeats": 1, "tasks": [{"id": "a"}]})
+        done = [{"task": "a", "mode": "J0", "repeat": 1, "category": "ran"}, {"task": "a", "mode": "J1", "repeat": 1, "category": "infra"}]
+        kept, todo = runner.remaining(planned, done)
+        self.assertEqual([r["mode"] for r in kept], ["J0"])
+        self.assertEqual(sorted(r["mode"] for r in todo), ["J1", "L"])
+
     def test_the_protocol_check_says_it_is_not_the_comparison(self):
         manifest = json.loads((ROOT / "experiments/v06/m5/manifest.protocol-check.json").read_text("utf-8"))
         self.assertEqual(manifest["kind"], "protocol_check")
