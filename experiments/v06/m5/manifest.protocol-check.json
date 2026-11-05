@@ -1,0 +1,16 @@
+{
+  "kind": "protocol_check",
+  "note": "Checks the protocol and its measurements on the demo site. NOT the section 17 comparison: the demo site was used to tune this runtime, so it says nothing about which mode should be the default.",
+  "repeats": 3,
+  "jev_model": "~typesafe/jev-latest",
+  "llm_model": "anthropic/claude-haiku-5.5",
+  "threshold": 0.7,
+  "l_confidence": "not stated: an LLM's own confidence is not calibrated like Jev's, so the threshold does not apply to its choice; every other gate check does",
+  "checks": "experiments/v06/checks/order-desk.json",
+  "tasks": [
+    {"id": "order-note", "group": "search_and_forms", "task": "experiments/v06/tasks/order-note-verified.json",
+     "site": "demo", "oracle": {"kind": "order_desk_note", "order": "125", "note_slot": "note"}},
+    {"id": "wizard-note", "group": "forms", "task": "experiments/v06/tasks/order-note-wizard.json",
+     "site": "demo", "oracle": {"kind": "order_desk_note", "order": "125", "note_slot": "note"}}
+  ]
+}

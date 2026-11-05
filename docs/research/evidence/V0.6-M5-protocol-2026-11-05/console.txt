@@ -1,0 +1,41 @@
+9e12173
+m5 unit exit 0
+assistant test exit 0
+Ran 10 tests in 5.120s
+OK
+Ran 1 test in 20.159s
+OK
+{"attempt_status": "completed", "stop_reason": "verified", "oracle_reason": "one_correct_note", "attempts": 2, "steps": 9, "assist_calls": 3, "assist_steps": 2, "assist_cost": 0.00044550000000000004, "handoff_reasons": ["escalation_requested"], "category": "ran", "detail": null}
+{"attempt_status": "completed", "stop_reason": "verified", "oracle_reason": "one_correct_note", "attempts": 2, "steps": 9, "assist_calls": 3, "assist_steps": 2, "assist_cost": 0.000475695, "handoff_reasons": ["escalation_requested"], "category": "ran", "detail": null}
+{"attempt_status": "completed", "stop_reason": "verified", "oracle_reason": "one_correct_note", "attempts": 2, "steps": 9, "assist_calls": 3, "assist_steps": 2, "assist_cost": 0.00044748, "handoff_reasons": ["escalation_requested"], "category": "ran", "detail": null}
+order-note J0 1 completed verified one_correct_note
+order-note J1 1 completed verified one_correct_note
+order-note L 1 completed verified one_correct_note
+wizard-note J0 1 completed verified one_correct_note
+wizard-note J1 1 completed verified one_correct_note
+wizard-note L 1 completed verified one_correct_note
+order-note J1 2 completed verified one_correct_note
+order-note L 2 completed verified one_correct_note
+order-note J0 2 completed verified one_correct_note
+wizard-note J1 2 completed verified one_correct_note
+wizard-note L 2 completed verified one_correct_note
+wizard-note J0 2 completed verified one_correct_note
+order-note L 3 completed verified one_correct_note
+order-note J0 3 completed verified one_correct_note
+order-note J1 3 completed verified one_correct_note
+wizard-note L 3 completed verified one_correct_note
+wizard-note J0 3 completed verified one_correct_note
+wizard-note J1 3 completed verified one_correct_note
+kind: protocol_check
+Checks the protocol and its measurements on the demo site. NOT the section 17 comparison: the demo site was used to tune this runtime, so it says nothing about which mode should be the default.
+planned runs: 18, rows: 18
+
+J0: confirmed 6/6, claimed completed 6, false completion 0, unknown effects 0, infra 0, before assistance 6, wall p50 23.955 p95 25.717, steps mean 8, model calls mean 5, assist calls 0, cost 0.001552, handoffs {}
+J1: confirmed 6/6, claimed completed 6, false completion 0, unknown effects 0, infra 0, before assistance 6, wall p50 26.139 p95 27.782, steps mean 8, model calls mean 5, assist calls 0, cost 0.001552, handoffs {}
+L: confirmed 6/6, claimed completed 6, false completion 0, unknown effects 0, infra 0, before assistance 6, wall p50 31.724 p95 37.127, steps mean 8, model calls mean 5, assist calls 0, cost 0.00664, handoffs {}
+
+runner exit 0
+suite exit 0
+Ran 191 tests in 702.779s
+OK
+python left: 0

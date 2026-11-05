@@ -540,7 +540,7 @@ class _DriverFailure:
 
 
 # Providers whose every request is a model call, reserved against `max_model_calls` before it is sent.
-MODEL_PROVIDERS = ("jev", "laya")
+MODEL_PROVIDERS = ("jev", "laya", "chat")
 
 
 class JournalingProvider:
@@ -563,8 +563,9 @@ class JournalingProvider:
         try:
             decision = self.inner.decide(state, questions)
         except Exception as exc:
+            protocol = str(exc).startswith("protocol:")
             self.journal.emit("decision_failed", error=type(exc).__name__, status=getattr(exc, "status", None),
-                              protocol=str(exc).startswith("protocol:"))
+                              protocol=protocol, **({"reason": str(exc)[:160]} if protocol else {}))   # keys only, no values
             raise
         answers = decision.answers if type(decision.answers) is dict else {}
         chosen = (answers.get("next_action") or {}).get("choice")

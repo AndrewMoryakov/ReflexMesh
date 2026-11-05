@@ -301,6 +301,31 @@ class SameSession(BrowserCase):
         self.assertEqual(SITE.NOTES, {})
         self.assertNotIn("llm", [a["producer"] for a in core.chains[first["chain_id"]].actions])
 
+    def test_the_m5_assistant_takes_steps_through_the_gate_and_is_metered(self):
+        """J1: the LLM's replies are scripted here, the path through the runtime is real."""
+        spec = importlib.util.spec_from_file_location("m5_runner", ROOT / "experiments/v06/m5/runner.py")
+        runner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(runner)
+
+        class Client:
+            def __init__(self):
+                self.script = [lambda o: {"option_ref": next(x["ref"] for x in o if str(x.get("name")).startswith(("Заказ", "[slot:record")))},
+                               lambda o: {"option_ref": next(x["ref"] for x in o if x["operation"] == "type_text" and x["name"] == "Note"), "slot_ref": "team@1"},
+                               lambda o: {"option_ref": next(x["ref"] for x in o if x["operation"] == "type_text" and x["name"] == "Note"), "slot_ref": "note@1"},
+                               lambda o: {"option_ref": next(x["ref"] for x in o if x.get("name") == "Save note")}]
+
+            def ask(self, system, content):
+                return self.script.pop(0)(content["action_options"]), {"input_tokens": 10, "output_tokens": 2, "cost": 0.5}, "m", "r", 1
+
+        core = self.core([TO_ORDER[:2] + [{"action": "escalate"}], [{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(self.task()))
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        assistant = runner.Assistant(Client(), "goal")
+        done = assistant.help(core, progress)
+        self.assertEqual((done["attempt_status"], done["stop_reason"]), ("completed", "verified"))
+        self.assertEqual(SITE.NOTES, {"125": ["Перезвонить завтра"]})
+        self.assertEqual((assistant.calls, assistant.steps, assistant.input_tokens, assistant.cost), (4, 3, 40, 2.0))
+
     def test_ambiguity_is_resolved_by_one_assisted_step_then_jev_continues(self):
         """LLM assistance: one proposal from the fresh options, through the same gate; then return to Jev."""
         task = self.task(order="12")                      # "12" matches orders 124, 125 and 126

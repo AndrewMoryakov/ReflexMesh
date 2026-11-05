@@ -76,9 +76,10 @@ def main(argv: list[str] | None = None) -> int:
     brun = browser_sub.add_parser("run", help="execute one browser-task/0.1 attempt")
     brun.add_argument("--input", default="-", metavar="FILE")
     brun.add_argument("--output-dir", required=True, metavar="DIR")
-    brun.add_argument("--action-provider", choices=("script", "jev", "laya"), required=True,
+    brun.add_argument("--action-provider", choices=("script", "jev", "laya", "chat"), required=True,
                       help="script plays fixed steps against the offered options (mechanics only); jev calls the real "
-                           "provider; laya asks a local laya-browser server (--decisions-url) in its training format")
+                           "provider; laya asks a local laya-browser server (--decisions-url) in its training format; "
+                           "chat has an ordinary LLM named by --model choose from the same options")
     brun.add_argument("--script", metavar="FILE", help="JSON list of steps for the script provider")
     brun.add_argument("--model", metavar="NAME", help="Jev model name; the provider key comes from the environment")
     brun.add_argument("--decisions-url", metavar="URL",
@@ -97,7 +98,7 @@ def main(argv: list[str] | None = None) -> int:
     bserve.add_argument("--socket", required=True, metavar="PATH", help="Unix socket to listen on (created 0600); on Windows, the address file "
                                                                     "of a named pipe")
     bserve.add_argument("--state-dir", required=True, metavar="DIR", help="where each chain's attempts are written")
-    bserve.add_argument("--action-provider", choices=("script", "jev", "laya"), required=True)
+    bserve.add_argument("--action-provider", choices=("script", "jev", "laya", "chat"), required=True)
     bserve.add_argument("--script", metavar="FILE", help="script provider: a list of steps, or one list per attempt")
     bserve.add_argument("--model", metavar="NAME")
     bserve.add_argument("--decisions-url", metavar="URL")
