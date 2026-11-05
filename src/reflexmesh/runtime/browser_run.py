@@ -948,7 +948,7 @@ class BrowserRun:
         if kind == "tabs":
             return "switch_tab", {"tab": key}
         if kind == "history":
-            return "go_back", {}
+            return "go_back", {"to": key}
         return "invalid_proposal"
 
     def assist_step(self, proposal) -> dict:

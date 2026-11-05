@@ -348,6 +348,20 @@ class SameSession(BrowserCase):
         self.assertEqual(SITE.NOTES, {"125": ["Перезвонить завтра"]})
         self.assertEqual((assistant.calls, assistant.steps, assistant.input_tokens, assistant.cost), (4, 3, 40, 2.0))
 
+    def test_going_back_in_assistance_is_a_step_and_does_not_end_the_attempt(self):
+        core = self.core([TO_ORDER + [{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(self.task()))
+        self.assertEqual(first["handoff"]["page"], self.origin + "/orders/125")
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        back = next(o for o in progress["action_options"] if o["operation"] == "go_back")
+        moved = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "step",
+                             "proposal": {"observation_id": progress["observation"]["observation_id"], "operation": "go_back", "option_ref": back["ref"]}})
+        self.assertEqual(moved["schema_version"], "browser-progress/0.1")
+        self.assertEqual(moved["last_proposal"], {"accepted": True, "dispatched": True})
+        self.assertRegex(moved["observation"]["page"], r"/orders\b")
+        self.assertEqual(moved["assistance_steps_remaining"], 4)
+        core.resume({"token": moved["continuation_token"], "parent_attempt_id": moved["attempt_id"], "operation": "stop"})
+
     def test_ambiguity_is_resolved_by_one_assisted_step_then_jev_continues(self):
         """LLM assistance: one proposal from the fresh options, through the same gate; then return to Jev."""
         task = self.task(order="12")                      # "12" matches orders 124, 125 and 126
