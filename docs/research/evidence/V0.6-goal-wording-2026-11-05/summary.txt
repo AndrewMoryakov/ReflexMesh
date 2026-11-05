@@ -1,0 +1,96 @@
+A-short-nohistory-1/trace.jsonl: completed/verified handoff=None
+    run Order number 0.98; run Search 0.89; run [slot:record@1] 0.93; run Note 0.86; run Save note 0.73
+A-short-nohistory-2/trace.jsonl: completed/verified handoff=None
+    run Order number 0.99; run Search 0.9; run [slot:record@1] 0.89; run Note 0.83; run Save note 0.78
+A-short-nohistory-3/trace.jsonl: completed/verified handoff=None
+    run Order number 0.99; run Search 0.89; run [slot:record@1] 0.91; run Note 0.84; refused Save note 0.67; refused Save note 0.6; run Save note 0.7
+B-long-nohistory-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.95; run Search 0.74; refused Search 0.43; refused Search 0.38; refused Search 0.42
+B-long-nohistory-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.95; run Search 0.83; refused [slot:record@1] 0.48; refused Order number 0.32; refused Order number 0.36
+B-long-nohistory-3/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.95; run Search 0.78; refused Search 0.38; refused Search 0.37; refused Search 0.52
+B-long-nohistory-4/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.95; run Search 0.77; refused Search 0.49; refused Search 0.44; refused Search 0.45
+B-long-nohistory-5/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.94; run Search 0.86; refused [slot:record@1] 0.45; refused Search 0.43; refused Search 0.35
+C-short-history-1/chain-338be672d9ae494d9c54409b848d9618/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number 0.99; run Search 0.8; refused Order number 0.37; escalate escalate 0.34
+C-short-history-1/chain-338be672d9ae494d9c54409b848d9618/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    refused Order number 0.36; refused Order number 0.42; refused Order number 0.28
+C-short-history-2/chain-2d77dc5b68d64f8e8ae72db89b257e54/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number 0.99; run Search 0.8; refused Order number 0.35; escalate escalate 0.35
+C-short-history-2/chain-2d77dc5b68d64f8e8ae72db89b257e54/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    refused Order number 0.35; refused Order number 0.35; refused Order number 0.32
+C-short-history-3/chain-1a6533f6bee447fea9f276cb40c5fc98/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number 0.99; run Search 0.82; escalate escalate 0.34
+C-short-history-3/chain-1a6533f6bee447fea9f276cb40c5fc98/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    refused Order number 0.3; escalate escalate 0.3
+C-short-history-4/chain-812cff03e28540b78067f97d48f305dd/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number 0.99; run Search 0.78; refused Order number 0.31; escalate escalate 0.4
+C-short-history-4/chain-812cff03e28540b78067f97d48f305dd/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    refused Order number 0.31; refused Order number 0.42; escalate escalate 0.31
+C-short-history-5/chain-66b2ef9ee9d240bd9bd83ce7a167e102/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number 0.99; run Search 0.81; refused Order number 0.34; escalate escalate 0.35
+C-short-history-5/chain-66b2ef9ee9d240bd9bd83ce7a167e102/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    refused Order number 0.34; refused Order number 0.3; refused Order number 0.34
+D-fact-nohistory-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.94; refused Search 0.65; refused Search 0.52; refused Search 0.47
+D-fact-nohistory-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.96; refused Search 0.64; refused Search 0.47; refused Search 0.54
+D-fact-nohistory-3/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.95; refused Search 0.63; refused Search 0.47; refused Search 0.53
+D-fact-nohistory-4/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.98; refused Search 0.64; refused Search 0.47; refused Search 0.57
+D-fact-nohistory-5/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.96; refused Search 0.64; refused Search 0.53; refused Search 0.63
+E-fact-history-1/chain-40ec049bfe5b4bc5a0b8ad6afd1dffb7/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.99; run Search 0.81; refused Order number 0.31; refused Order number 0.37; refused Order number 0.32
+E-fact-history-1/chain-40ec049bfe5b4bc5a0b8ad6afd1dffb7/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.85; refused Search 0.39; refused Search 0.36; refused Search 0.32
+E-fact-history-2/chain-c6aacb1537c144f68545b0ee69e6331f/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number 0.99; run Search 0.78; escalate escalate 0.35
+E-fact-history-2/chain-c6aacb1537c144f68545b0ee69e6331f/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.81; refused Search 0.37; refused Search 0.46; refused Search 0.46
+E-fact-history-3/chain-a3ede4d7349d4868a160cbf89f161e99/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number 0.98; run Search 0.82; refused Order number 0.36; refused Order number 0.32; escalate escalate 0.31
+E-fact-history-3/chain-a3ede4d7349d4868a160cbf89f161e99/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.84; refused Search 0.38; refused Search 0.37; refused Search 0.45
+E-fact-history-4/chain-2122491bc5274a87a62ab78e32673c15/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number 0.99; run Search 0.74; escalate escalate 0.31
+E-fact-history-4/chain-2122491bc5274a87a62ab78e32673c15/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.82; refused Search 0.39; refused Search 0.29; refused Search 0.36
+E-fact-history-5/chain-45447693c641448ea418e0d3a81d7d40/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number 0.99; run Search 0.77; escalate escalate 0.36
+E-fact-history-5/chain-45447693c641448ea418e0d3a81d7d40/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.77; refused Search 0.39; refused Search 0.36; refused Search 0.42
+long-history-140743/attempt-1-trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number 0.99; run Search 0.76; escalate escalate 0.35
+long-history-140743/attempt-2-trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.91; run Search 0.89; refused [slot:record@1] 0.49; refused Search 0.62; refused Search 0.59
+long-history-140832/attempt-1-trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number 0.99; run Search 0.78; escalate escalate 0.31
+long-history-140832/attempt-2-trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.88; run Search 0.89; refused Search 0.43; refused Order number 0.35; refused Order number 0.43
+owner-A-short-nohistory-143405/trace.jsonl: completed/verified handoff=None
+    run Order number 0.99; run Search 0.92; run [slot:record@1] 0.94; run Note 0.87; run Save note 0.74
+owner-A-short-nohistory-143900/trace.jsonl: completed/verified handoff=None
+    run Order number 0.99; run Search 0.92; run [slot:record@1] 0.92; run Note 0.89; run Save note 0.73
+owner-A-short-nohistory-144028/trace.jsonl: completed/verified handoff=None
+    run Order number 0.99; run Search 0.92; run [slot:record@1] 0.94; run Note 0.86; run Save note 0.74
+owner-A-short-nohistory-144126/trace.jsonl: completed/verified handoff=None
+    run Order number 0.99; run Search 0.9; run [slot:record@1] 0.94; run Note 0.85; run Save note 0.7
+owner-A-short-nohistory-144301/trace.jsonl: completed/verified handoff=None
+    run Order number 0.99; run Search 0.9; run [slot:record@1] 0.93; run Note 0.85; run Save note 0.74
+owner-long-history-143626/attempt-1-trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number 0.99; run Search 0.8; escalate escalate 0.36
+owner-long-history-143626/attempt-2-trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.92; run Search 0.87; refused [slot:record@1] 0.43; refused Search 0.57; refused Search 0.38
+owner-long-history-143725/attempt-1-trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number 0.98; run Search 0.81; escalate escalate 0.32
+owner-long-history-143725/attempt-2-trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.91; run Search 0.85; refused [slot:record@1] 0.4; refused Search 0.43; refused Search 0.43
+owner-long-history-144733/attempt-1-trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number 0.99; run Search 0.77; escalate escalate 0.32
+owner-long-history-144733/attempt-2-trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number 0.88; run Search 0.88; refused [slot:record@1] 0.49; refused Search 0.46; refused Search 0.39
