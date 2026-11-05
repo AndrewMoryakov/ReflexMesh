@@ -1,0 +1,424 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "order-note-125-verified",
+  "revision": 2,
+  "chain_id": "9382a7419bc545069ed805389c967aec",
+  "attempt_id": "cf1027a32eb541c993c8f5407b1c8a68",
+  "parent_attempt_id": "fa780a4c000e4827ab789853be9b2069",
+  "attempt_status": "completed",
+  "stop_reason": "verified",
+  "task_outcome": "pass",
+  "execution_outcome": "returned",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "note_saved",
+      "kind": "postcondition",
+      "predicate": "revisit_match",
+      "status": "pass",
+      "reason": "value_matches",
+      "scope": "ui_after_reopen",
+      "observed_at": 1793876848.6106133,
+      "evidence_refs": [
+        "browser:cf1027a32eb541c993c8f5407b1c8a68:36"
+      ]
+    },
+    {
+      "id": "note_saved_once",
+      "kind": "postcondition",
+      "predicate": "registered_check",
+      "status": "pass",
+      "reason": "saved_once",
+      "scope": "registered_source",
+      "observed_at": 1793876850.9514043,
+      "evidence_refs": [
+        "browser:cf1027a32eb541c993c8f5407b1c8a68:37"
+      ]
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1793876855.1483479,
+      "evidence_refs": [
+        "runtime:cf1027a32eb541c993c8f5407b1c8a68:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1793876855.1483018,
+      "evidence_refs": [
+        "runtime:cf1027a32eb541c993c8f5407b1c8a68:immutable-slots:coverage:4",
+        "runtime:cf1027a32eb541c993c8f5407b1c8a68:immutable-slots:handoff:2"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "The browser was launched by this chain (a child process with its own profile, verified in use), stayed the same process, had only this runtime on its debugging port at each of 15 observations, and was closed with no process left. A client connecting between two observations is not excluded.",
+      "observed_at": 1793876857.2386498,
+      "evidence_refs": [
+        "runtime:cf1027a32eb541c993c8f5407b1c8a68:ownership"
+      ],
+      "scope": "browser_session_of_chain"
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1793876855.1483984,
+      "evidence_refs": [
+        "runtime:cf1027a32eb541c993c8f5407b1c8a68:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "The registered order-desk record shows each committed form submit requested exactly once, none pending, and no other state change.",
+      "observed_at": 1793876857.2386603,
+      "evidence_refs": [
+        "runtime:cf1027a32eb541c993c8f5407b1c8a68:no_uncertain_repeats",
+        "check:order_desk.note_saved_once:0830b5c8a2e7481eab102ac331b9f6ae"
+      ],
+      "scope": "registered_source"
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1793876855.1484277,
+      "evidence_refs": [
+        "runtime:cf1027a32eb541c993c8f5407b1c8a68:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "11:elements:96",
+      "target_id": "[\"click\", \"link\", \"[slot:record@1]\", \"\", \"http://127.0.0.1:8770/orders/125\", \"\"]@e56ecfaaa4dd4235",
+      "mutation_key": null,
+      "request": {
+        "method": "GET",
+        "path": "/orders/125"
+      },
+      "target": {
+        "role": "link",
+        "name": "[slot:record@1]"
+      },
+      "slot_ref": null,
+      "observation_id": 11,
+      "producer": "llm",
+      "bootstrap": false,
+      "destination": "http://127.0.0.1:8770/orders/125",
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 8,
+      "dispatch_seq": 9,
+      "return_seq": 10,
+      "driver_outcome": "returned",
+      "effect": "not_applied",
+      "evidence_refs": [
+        "check:order_desk.note_saved_once:0830b5c8a2e7481eab102ac331b9f6ae"
+      ],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": true,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 2,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "12:text_fields:103",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@c6fa1bb499474e2e",
+      "mutation_key": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@http://127.0.0.1:8770/orders/125?",
+      "request": null,
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "note@1",
+      "observation_id": 12,
+      "producer": "llm",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 2,
+      "proposal_seq": 15,
+      "dispatch_seq": 16,
+      "return_seq": 17,
+      "driver_outcome": "returned",
+      "effect": "not_applied",
+      "evidence_refs": [
+        "check:order_desk.note_saved_once:0830b5c8a2e7481eab102ac331b9f6ae"
+      ],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 3,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "13:elements:149",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@5edacf72082957c7",
+      "mutation_key": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@http://127.0.0.1:8770/orders/125?",
+      "request": {
+        "method": "POST",
+        "path": "/orders/125/note"
+      },
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 13,
+      "producer": "llm",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 3,
+      "proposal_seq": 21,
+      "dispatch_seq": 22,
+      "return_seq": 23,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "check:order_desk.note_saved_once:0830b5c8a2e7481eab102ac331b9f6ae"
+      ],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 4,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "reopen",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 14,
+      "producer": "verifier",
+      "bootstrap": false,
+      "destination": "http://127.0.0.1:8770/orders/125",
+      "policy_revision": 1,
+      "gate_seq": 4,
+      "proposal_seq": 31,
+      "dispatch_seq": 32,
+      "return_seq": 33,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "browser:cf1027a32eb541c993c8f5407b1c8a68:34"
+      ],
+      "driver_ok": true
+    }
+  ],
+  "budget": {
+    "steps": 5,
+    "model_calls": 0,
+    "dispatches": 4,
+    "limits": {
+      "wall_seconds": 120.0,
+      "max_steps": 53,
+      "max_model_calls": 86,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 48,
+    "remaining_model_calls": 86,
+    "remaining_wall_seconds": 74.593,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 37.027
+  },
+  "handoff": null,
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": null,
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": false
+    },
+    "chromium": "chrome 142.0.7444.176 (install directory)",
+    "chromium_sandbox": true,
+    "headless": false,
+    "decision_provider": {
+      "kind": "llm",
+      "config_id": "caller:llm_assistance",
+      "requested_model": null
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "closed",
+    "profile_removed": true,
+    "browser_processes_left": 0
+  },
+  "watchdog": {
+    "worker_stopped": true,
+    "watchdog_kill": false
+  },
+  "decision": {
+    "kind": "llm",
+    "requested_model": null,
+    "served_models": [],
+    "config_id": "caller:llm_assistance"
+  },
+  "session_id": "f489e79425364b56a26865f4e61f562f",
+  "owner_epoch": 2,
+  "chain_budget": {
+    "used": {
+      "steps": 16,
+      "model_calls": 10
+    },
+    "remaining": {
+      "steps": 48,
+      "model_calls": 86,
+      "wall_seconds": 74.527,
+      "handoffs": 1
+    }
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:cf1027a32eb541c993c8f5407b1c8a68:permissions",
+    "runtime:cf1027a32eb541c993c8f5407b1c8a68:dispatch_ordering",
+    "runtime:cf1027a32eb541c993c8f5407b1c8a68:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 37.027,
+    "total_seconds": 45.473
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:cf1027a32eb541c993c8f5407b1c8a68:immutable-slots:commitment:1",
+      "task_id": "order-note-125-verified",
+      "task_revision": 2,
+      "attempt_id": "cf1027a32eb541c993c8f5407b1c8a68",
+      "run_id": "cf1027a32eb541c993c8f5407b1c8a68",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:cf1027a32eb541c993c8f5407b1c8a68:immutable-slots:commitment:2",
+      "task_id": "order-note-125-verified",
+      "task_revision": 2,
+      "attempt_id": "cf1027a32eb541c993c8f5407b1c8a68",
+      "run_id": "cf1027a32eb541c993c8f5407b1c8a68",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "text",
+      "slot_ref": "note@1"
+    },
+    {
+      "ref": "runtime:cf1027a32eb541c993c8f5407b1c8a68:immutable-slots:handoff:2",
+      "task_id": "order-note-125-verified",
+      "task_revision": 2,
+      "attempt_id": "cf1027a32eb541c993c8f5407b1c8a68",
+      "run_id": "cf1027a32eb541c993c8f5407b1c8a68",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "text",
+      "slot_ref": "note@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:cf1027a32eb541c993c8f5407b1c8a68:immutable-slots:commitment:3",
+      "task_id": "order-note-125-verified",
+      "task_revision": 2,
+      "attempt_id": "cf1027a32eb541c993c8f5407b1c8a68",
+      "run_id": "cf1027a32eb541c993c8f5407b1c8a68",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 3,
+      "generation": 3,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:cf1027a32eb541c993c8f5407b1c8a68:immutable-slots:commitment:4",
+      "task_id": "order-note-125-verified",
+      "task_revision": 2,
+      "attempt_id": "cf1027a32eb541c993c8f5407b1c8a68",
+      "run_id": "cf1027a32eb541c993c8f5407b1c8a68",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 4,
+      "generation": 4,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:cf1027a32eb541c993c8f5407b1c8a68:immutable-slots:coverage:4",
+      "task_id": "order-note-125-verified",
+      "task_revision": 2,
+      "attempt_id": "cf1027a32eb541c993c8f5407b1c8a68",
+      "run_id": "cf1027a32eb541c993c8f5407b1c8a68",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 4,
+      "dispatches": 4,
+      "text_dispatches": 1,
+      "nontext_dispatches": 3,
+      "unknown_dispatches": 0,
+      "sealed_generation": 4,
+      "status": "pass"
+    }
+  ]
+}

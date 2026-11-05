@@ -5,7 +5,10 @@ runtime: the same browser session across attempts, a new attempt and owner epoch
 token with a lease, and an old owner that can no longer act.
 """
 
+import contextlib
 import copy
+import importlib.util
+import io
 import json
 import sys
 import time
@@ -104,6 +107,42 @@ class SameSession(BrowserCase):
                          "token_invalid")
         self.assertEqual(SITE.NOTES, {"125": ["Перезвонить завтра"]})
         self.assertEqual(SITE.CLAIM, {})
+
+    def assisted(self, script):
+        """The chain demo's helper, from where the script stopped; the demo's CLI calls replaced by the core."""
+        spec = importlib.util.spec_from_file_location("chain_demo", ROOT / "experiments/v06/chain_demo.py")
+        demo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(demo)
+        core = self.core([script, [{"action": "escalate"}]])       # the second answers a return to Jev
+        first = core.execute(BrowserTask.from_dict(self.task()))
+        self.assertEqual((first["attempt_status"], first["handoff"]["reason"]), ("incomplete", "escalation_requested"))
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        with contextlib.redirect_stdout(io.StringIO()):
+            return demo.assist(lambda payload: (0, core.resume(payload)), progress), core, first
+
+    def assert_helper_completed(self, done, core, first):
+        self.assertEqual((done["attempt_status"], done["stop_reason"]), ("completed", "verified"))
+        self.assertEqual(SITE.NOTES, {"125": ["Перезвонить завтра"]})
+        self.assertIn("llm", [a["producer"] for a in core.chains[first["chain_id"]].actions])
+
+    def test_the_demo_helper_continues_from_the_found_order_with_its_link_name_masked(self):
+        """Jev stopped on the results page, the case a helper that knows only "Save note" could not help with."""
+        done, core, first = self.assisted(TO_ORDER[:2] + [{"action": "escalate"}])
+        self.assert_helper_completed(done, core, first)
+
+    def test_the_demo_helper_continues_from_the_search_form(self):
+        """Jev typed nothing: the five assisted steps cover the whole path."""
+        done, core, first = self.assisted([{"action": "escalate"}])
+        self.assert_helper_completed(done, core, first)
+        steps = [a["operation"] for a in core.chains[first["chain_id"]].actions if a["producer"] == "llm"]
+        self.assertEqual(steps, ["type_text", "click", "click", "type_text", "click"])
+
+    def test_the_demo_helper_hands_back_when_no_step_fits(self):
+        """On a page it does not know, it takes no step and spends nothing but the return."""
+        done, core, first = self.assisted([{"action": "click", "element": "Dashboard"}, {"action": "escalate"}])
+        self.assertEqual(done["attempt_status"], "incomplete")
+        self.assertEqual(SITE.NOTES, {})
+        self.assertNotIn("llm", [a["producer"] for a in core.chains[first["chain_id"]].actions])
 
     def test_ambiguity_is_resolved_by_one_assisted_step_then_jev_continues(self):
         """LLM assistance: one proposal from the fresh options, through the same gate; then return to Jev."""

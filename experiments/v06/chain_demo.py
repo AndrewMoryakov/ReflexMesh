@@ -1,8 +1,10 @@
 """A handoff chain through a running `reflexmesh browser serve`, every step a separate CLI call.
 
 Revision 1 of the order-note task lacks the order number, so Jev cannot finish and hands over; revision 2 supplies
-it with a clarified goal; if Jev hands over again, this script plays the LLM for at most one assisted step
-("Save note"), then returns to Jev. It prints one line per attempt and the final verification.
+it with a clarified goal; if Jev hands over again, this script stands in for the calling LLM: it takes the remaining
+steps from wherever the browser stopped, by the visible names of the offered options, then returns to Jev. It is a
+script, not a model: it shows the assisted path, not that an LLM would choose these steps. It prints one line per
+attempt and per assisted step, then the final verification.
 
     python experiments/v06/chain_demo.py --socket STATE/svc.sock [--task experiments/v06/tasks/order-note-verified.json]
 
@@ -33,8 +35,9 @@ def cli(socket: str, command: str, payload: dict | None = None) -> tuple[int, di
 
 def brief(tag: str, code: int, r: dict) -> None:
     if r.get("schema_version") == "browser-progress/0.1":
+        rejected = (r.get("last_proposal") or {}).get("rejected")
         print(f"{tag:<18} exit {code}  assistance: page {r['observation']['page']}, "
-              f"{r['assistance_steps_remaining']} steps left")
+              f"{r['assistance_steps_remaining']} steps left" + (f", rejected: {rejected}" if rejected else ""))
     else:
         print(f"{tag:<18} exit {code}  {r.get('attempt_status')}/{r.get('stop_reason')}"
               f"  handoff={(r.get('handoff') or {}).get('reason')}  epoch={r.get('owner_epoch')}"
@@ -48,6 +51,47 @@ def continuation(r: dict, **fields) -> dict:
 def resumable(r: dict) -> bool:
     return (r.get("attempt_status") == "incomplete" and
             bool(((r.get("handoff") or {}).get("continuation") or {}).get("allowed")))
+
+
+def next_step(progress: dict, used: set[str]) -> tuple[dict, str | None] | None:
+    """The next assisted step for this page as (option, slot reference), each named at most once; None when none fits.
+    The goal's order: find the order, open it, type the note, save. A result link's name can be the masked slot."""
+    slots = progress.get("text_slot_refs") or []
+
+    def offered(operation: str, *names: str) -> dict | None:
+        return next((o for o in progress.get("action_options") or []
+                     if o.get("operation") == operation and o.get("name") in names and o["name"] not in used), None)
+
+    if (note := offered("type_text", "Note")) and "note@1" in slots:
+        return note, "note@1"
+    if save := offered("click", "Save note"):
+        return save, None
+    if order := offered("click", "Заказ №125", "[slot:record@1]"):
+        return order, None
+    if (field := offered("type_text", "Order number")) and "order@1" in slots:
+        return field, "order@1"
+    if "Order number" in used and (search := offered("click", "Search")):
+        return search, None
+    return None
+
+
+def assist(resume, progress: dict, tag: str = "   step") -> dict:
+    """Take steps until the attempt ends or none fits, then hand back to Jev. `resume` sends one continuation."""
+    used: set[str] = set()
+    r = progress
+    while r.get("schema_version") == "browser-progress/0.1" and (step := next_step(r, used)):
+        option, slot = step
+        used.add(option["name"])
+        code, r = resume({"token": r["continuation_token"], "parent_attempt_id": r["attempt_id"], "operation": "step",
+                          "proposal": {"observation_id": r["observation"]["observation_id"],
+                                       "operation": option["operation"], "option_ref": option["ref"],
+                                       **({"slot_ref": slot} if slot else {})}})
+        brief(f"{tag} {option['operation']}", code, r)
+    if r.get("schema_version") == "browser-progress/0.1":
+        code, r = resume({"token": r["continuation_token"], "parent_attempt_id": r["attempt_id"],
+                          "operation": "return_to_jev"})
+        brief("   return_to_jev", code, r)
+    return r
 
 
 def main() -> int:
@@ -67,20 +111,9 @@ def main() -> int:
     attempt = 3
     while resumable(r) and attempt <= 5:
         code, r = cli(args.socket, "resume", continuation(r, operation="start", mode="llm"))
-        brief(f"A{attempt} llm", code, r)
+        brief(f"A{attempt} script as LLM", code, r)
         attempt += 1
-        # The caller in the role of the LLM: one option, chosen by its visible name.
-        option = next((o for o in r.get("action_options") or [] if o.get("name") == "Save note"), None)
-        if r.get("schema_version") == "browser-progress/0.1" and option is not None:
-            code, r = cli(args.socket, "resume", {
-                "token": r["continuation_token"], "parent_attempt_id": r["attempt_id"], "operation": "step",
-                "proposal": {"observation_id": r["observation"]["observation_id"],
-                             "operation": option["operation"], "option_ref": option["ref"]}})
-            brief("   step Save note", code, r)
-        if r.get("schema_version") == "browser-progress/0.1":
-            code, r = cli(args.socket, "resume", {"token": r["continuation_token"],
-                                                  "parent_attempt_id": r["attempt_id"], "operation": "return_to_jev"})
-            brief("   return_to_jev", code, r)
+        r = assist(lambda payload: cli(args.socket, "resume", payload), r)
     for row in r.get("verification") or []:
         print(f"    {row['id']}: {row['status']}")
     return 0 if r.get("attempt_status") == "completed" else 1
