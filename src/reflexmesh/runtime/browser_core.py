@@ -58,7 +58,8 @@ def accept_revision(old: BrowserTask, new: BrowserTask) -> str | None:
     for slot in new.slots:
         kept = before.get(slot.reference)
         # An old reference never points at a new value: a changed value needs a new version.
-        if kept is not None and (kept.value != slot.value or kept.sensitivity != slot.sensitivity):
+        if kept is not None and (kept.value != slot.value or kept.sensitivity != slot.sensitivity or
+                                 kept.fields != slot.fields):
             return "slot_reference_redirected"
     return None
 

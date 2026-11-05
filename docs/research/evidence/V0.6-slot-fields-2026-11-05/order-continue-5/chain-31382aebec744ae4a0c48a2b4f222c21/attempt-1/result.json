@@ -1,0 +1,345 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "order-note-125-verified",
+  "revision": 1,
+  "chain_id": "31382aebec744ae4a0c48a2b4f222c21",
+  "attempt_id": "f7fd342e60754c62afe2f3c62b6764a4",
+  "parent_attempt_id": null,
+  "attempt_status": "incomplete",
+  "stop_reason": "needs_handoff",
+  "task_outcome": "unknown",
+  "execution_outcome": "returned",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "note_saved",
+      "kind": "postcondition",
+      "predicate": "revisit_match",
+      "status": "unknown",
+      "reason": "no_anchor",
+      "scope": "ui_observation",
+      "observed_at": 1793889189.067564,
+      "evidence_refs": [
+        "browser:f7fd342e60754c62afe2f3c62b6764a4:8"
+      ]
+    },
+    {
+      "id": "note_saved_once",
+      "kind": "postcondition",
+      "predicate": "registered_check",
+      "status": "fail",
+      "reason": "not_saved",
+      "scope": "registered_source_while_running",
+      "observed_at": 1793889189.0941396,
+      "evidence_refs": [
+        "browser:f7fd342e60754c62afe2f3c62b6764a4:9"
+      ]
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1793889194.3125815,
+      "evidence_refs": [
+        "runtime:f7fd342e60754c62afe2f3c62b6764a4:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1793889194.312551,
+      "evidence_refs": [
+        "runtime:f7fd342e60754c62afe2f3c62b6764a4:immutable-slots:coverage:1"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "Browser session ownership is not established: the browser is not closed.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1793889194.312618,
+      "evidence_refs": [
+        "runtime:f7fd342e60754c62afe2f3c62b6764a4:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "No repeated mutation was observed at the controlled boundary; adapter-internal single-shot execution is not established.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1793889194.312637,
+      "evidence_refs": [
+        "runtime:f7fd342e60754c62afe2f3c62b6764a4:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "start_url",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 0,
+      "producer": "jev",
+      "bootstrap": true,
+      "destination": "http://127.0.0.1:8770/orders",
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 3,
+      "dispatch_seq": 4,
+      "return_seq": 5,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "browser:f7fd342e60754c62afe2f3c62b6764a4:6"
+      ],
+      "driver_ok": true
+    }
+  ],
+  "budget": {
+    "steps": 4,
+    "model_calls": 3,
+    "dispatches": 1,
+    "limits": {
+      "wall_seconds": 120.0,
+      "max_steps": 64,
+      "max_model_calls": 96,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 60,
+    "remaining_model_calls": 93,
+    "remaining_wall_seconds": 108.854,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 11.144
+  },
+  "handoff": {
+    "schema_version": "browser-handoff/0.1",
+    "reason": "no_confident_action",
+    "task_id": "order-note-125-verified",
+    "revision": 1,
+    "chain_id": "31382aebec744ae4a0c48a2b4f222c21",
+    "attempt_id": "f7fd342e60754c62afe2f3c62b6764a4",
+    "parent_attempt_id": null,
+    "observation_ref": 3,
+    "page": "http://127.0.0.1:8770/orders",
+    "available_actions": [
+      {
+        "ref": "3:elements:17",
+        "operation": "click",
+        "role": "link",
+        "name": "Dashboard"
+      },
+      {
+        "ref": "3:elements:19",
+        "operation": "click",
+        "role": "link",
+        "name": "Orders"
+      },
+      {
+        "ref": "3:elements:26",
+        "operation": "click",
+        "role": "button",
+        "name": "Search"
+      }
+    ],
+    "fields_without_slot": [
+      "Order number"
+    ],
+    "operations": [
+      {
+        "id": 1,
+        "attempt_id": "f7fd342e60754c62afe2f3c62b6764a4",
+        "operation": "navigate",
+        "producer": "jev",
+        "option_ref": null,
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "applied"
+      }
+    ],
+    "unresolved_effects": [],
+    "criteria": [
+      {
+        "id": "note_saved",
+        "status": "unknown",
+        "reason": "no_anchor"
+      },
+      {
+        "id": "note_saved_once",
+        "status": "fail",
+        "reason": "not_saved"
+      }
+    ],
+    "permissions": [
+      "click",
+      "go_back",
+      "navigate",
+      "scroll",
+      "select_option",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ],
+    "text_slot_refs": [
+      "note@1",
+      "record@1"
+    ],
+    "owner": {
+      "session_id": "93371f59e9ca44cb8871398ed2bdd082",
+      "owner_epoch": 0,
+      "session_open": true
+    },
+    "remaining": {
+      "steps": 60,
+      "model_calls": 93,
+      "wall_seconds": 108.854,
+      "handoffs": 3
+    },
+    "continuation": {
+      "allowed": true,
+      "token": "[withheld]",
+      "expires_in_seconds": 60.0,
+      "parent_attempt_id": "f7fd342e60754c62afe2f3c62b6764a4",
+      "modes": [
+        "jev",
+        "llm"
+      ],
+      "session_id": "93371f59e9ca44cb8871398ed2bdd082"
+    }
+  },
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": null,
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": false
+    },
+    "chromium": "chrome 142.0.7444.176 (install directory)",
+    "chromium_sandbox": true,
+    "headless": false,
+    "decision_provider": {
+      "kind": "jev",
+      "config_id": "openrouter:~typesafe/jev-latest",
+      "requested_model": "~typesafe/jev-latest"
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "retained",
+    "session_id": "93371f59e9ca44cb8871398ed2bdd082",
+    "profile_removed": false
+  },
+  "watchdog": {
+    "watchdog_kill": false,
+    "worker_stopped": true
+  },
+  "decision": {
+    "kind": "jev",
+    "requested_model": "~typesafe/jev-latest",
+    "served_models": [
+      "typesafe/jev-1.14-20261014"
+    ],
+    "config_id": "openrouter:~typesafe/jev-latest"
+  },
+  "session_id": "93371f59e9ca44cb8871398ed2bdd082",
+  "owner_epoch": 0,
+  "chain_budget": {
+    "used": {
+      "steps": 4,
+      "model_calls": 3
+    },
+    "remaining": {
+      "steps": 60,
+      "model_calls": 93,
+      "wall_seconds": 108.784,
+      "handoffs": 3
+    }
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:f7fd342e60754c62afe2f3c62b6764a4:permissions",
+    "runtime:f7fd342e60754c62afe2f3c62b6764a4:dispatch_ordering",
+    "runtime:f7fd342e60754c62afe2f3c62b6764a4:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 11.144,
+    "total_seconds": 11.216
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:f7fd342e60754c62afe2f3c62b6764a4:immutable-slots:commitment:1",
+      "task_id": "order-note-125-verified",
+      "task_revision": 1,
+      "attempt_id": "f7fd342e60754c62afe2f3c62b6764a4",
+      "run_id": "f7fd342e60754c62afe2f3c62b6764a4",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:f7fd342e60754c62afe2f3c62b6764a4:immutable-slots:coverage:1",
+      "task_id": "order-note-125-verified",
+      "task_revision": 1,
+      "attempt_id": "f7fd342e60754c62afe2f3c62b6764a4",
+      "run_id": "f7fd342e60754c62afe2f3c62b6764a4",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 1,
+      "dispatches": 1,
+      "text_dispatches": 0,
+      "nontext_dispatches": 1,
+      "unknown_dispatches": 0,
+      "sealed_generation": 1,
+      "status": "pass"
+    }
+  ]
+}

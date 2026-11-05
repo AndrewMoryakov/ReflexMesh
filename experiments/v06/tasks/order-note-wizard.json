@@ -23,19 +23,26 @@
       "id": "team",
       "version": 1,
       "value": "Logistics",
-      "sensitivity": "normal"
+      "sensitivity": "normal",
+      "fields": [
+        "Team"
+      ]
     },
     {
       "id": "note",
       "version": 1,
       "value": "Перезвонить завтра",
-      "sensitivity": "normal"
+      "sensitivity": "normal",
+      "fields": [
+        "Note"
+      ]
     },
     {
       "id": "record",
       "version": 1,
       "value": "Заказ №125",
-      "sensitivity": "normal"
+      "sensitivity": "normal",
+      "fields": []
     }
   ],
   "criteria": [

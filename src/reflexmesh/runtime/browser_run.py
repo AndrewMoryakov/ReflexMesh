@@ -116,7 +116,8 @@ class Journal:
         where = f"{parts.scheme}://{parts.netloc}{parts.path}"
         seq = self.emit("observed", observation_id=report["observation_id"], page=where,
                         coverage=report["coverage"], text_chars=report["text_chars"],
-                        options=report["options"], page_signature=report["signature"])
+                        options=report["options"], page_signature=report["signature"],
+                        **({"fields_without_slot": report["fields_without_slot"]} if report.get("fields_without_slot") else {}))
         self.last_observation = {"observation_id": report["observation_id"], "page": where, "seq": seq}
         self.emit("options_built", observation_id=report["observation_id"], options=report["option_list"])
         if effect is not None:
@@ -440,6 +441,12 @@ class BrowserControlledEnvironment:
             self.journal.put(("reobserve", "stale_target"))
             if self._stale_streak >= STALE_LIMIT:
                 raise self._stop("stale_loop")
+            return SkippedAction()
+        if reason == "slot_field_mismatch":
+            # Section 7: an allowed pair is checked in code after the choice. Nothing was sent; the no-progress
+            # count bounds a model that keeps choosing it.
+            self.journal.put(("rejected", reason))
+            self.journal.put(("reobserve", reason))
             return SkippedAction()
         if reason:
             self.journal.put(("rejected", reason))
@@ -1351,6 +1358,7 @@ class BrowserRun:
             "parent_attempt_id": chain.attempts[-2] if chain is not None and len(chain.attempts) > 1 else None,
             "observation_ref": (last or {}).get("observation_id"), "page": (last or {}).get("page"),
             "available_actions": list(report.get("option_list") or []),
+            "fields_without_slot": list(report.get("fields_without_slot") or []),
             "operations": [{"id": a["id"], "attempt_id": a.get("attempt_id", self.attempt_id),
                             "operation": a["operation"], "producer": a.get("producer"), "option_ref": a["option_ref"],
                             "slot_ref": a["slot_ref"], "driver_outcome": a["driver_outcome"], "effect": a["effect"]}

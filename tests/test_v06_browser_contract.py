@@ -93,6 +93,24 @@ class BrowserTaskContract(unittest.TestCase):
             self.invalid(text_slots=[bad], criteria=task_dict()["criteria"])
         self.invalid(text_slots=[slot, dict(slot)])
 
+    def test_slot_fields(self):
+        slot = {"id": "note", "version": 1, "value": "hello", "sensitivity": "normal"}
+        criteria = [{"id": "c", "predicate": "page_match",
+                     "args": {"anchor_slot_ref": "note@1", "field_name": "x", "expected_slot_ref": "note@1"}}]
+        free = BrowserTask.from_dict(task_dict(text_slots=[slot], criteria=criteria)).slots[0]
+        self.assertIsNone(free.fields)
+        self.assertTrue(free.fits("anything"))
+        bound = BrowserTask.from_dict(task_dict(text_slots=[{**slot, "fields": ["Note", "Short  note"]}], criteria=criteria)).slots[0]
+        self.assertEqual(bound.fields, ("Note", "Short  note"))
+        self.assertTrue(bound.fits(" note "))
+        self.assertTrue(bound.fits("short NOTE"))
+        self.assertFalse(bound.fits("Team"))
+        self.assertFalse(bound.fits(""))
+        nowhere = BrowserTask.from_dict(task_dict(text_slots=[{**slot, "fields": []}], criteria=criteria)).slots[0]
+        self.assertFalse(nowhere.fits("Note"))
+        for bad in ("Note", [1], [""], ["  "], ["Note", " note"], ["x" * 201], ["x"] * 33, None):
+            self.invalid(text_slots=[{**slot, "fields": bad}], criteria=criteria)
+
     def test_criteria_and_constraints(self):
         self.invalid(criteria=[])
         self.invalid(criteria=[{"id": "c", "predicate": "page_match", "args": {}}])
