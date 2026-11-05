@@ -565,7 +565,8 @@ class JournalingProvider:
         except Exception as exc:
             protocol = str(exc).startswith("protocol:")
             self.journal.emit("decision_failed", error=type(exc).__name__, status=getattr(exc, "status", None),
-                              protocol=protocol, **({"reason": str(exc)[:160]} if protocol else {}))   # keys only, no values
+                              protocol=protocol, **({"reason": str(exc)[:160]} if protocol else {}),   # keys only, no values
+                              **({"reply_shape": exc.reply_shape} if hasattr(exc, "reply_shape") else {}))
             raise
         answers = decision.answers if type(decision.answers) is dict else {}
         chosen = (answers.get("next_action") or {}).get("choice")

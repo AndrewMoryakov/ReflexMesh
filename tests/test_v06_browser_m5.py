@@ -81,6 +81,20 @@ class ChatProvider(unittest.TestCase):
             with self.assertRaisesRegex(ProviderError, "protocol"):
                 self.provider.decide({}, QUESTIONS)
 
+    def test_a_key_written_as_a_number_is_the_same_key_and_anything_else_is_not(self):
+        """Qwen wrote `592` for the key "592" in about one reply of ten; refusing that charged mode L for a bug of ours."""
+        from systemone_harness.provider import ProviderError
+
+        self.reply = {"next_action": "click", "click__element": 26, "goal_reached": 0}
+        self.assertEqual(self.provider.decide({}, QUESTIONS).answers["click__element"]["choice"], "26")
+        for wrong in (99, 26.0, True, None, ["26"]):
+            self.reply = {"next_action": "click", "click__element": wrong}
+            with self.assertRaisesRegex(ProviderError, "protocol") as caught:
+                self.provider.decide({}, QUESTIONS)
+            self.assertEqual(caught.exception.reply_shape["next_action"], "click")      # the form of what was refused
+            self.assertIn("click__element", caught.exception.reply_shape)
+            self.assertNotIn("99", json.dumps(caught.exception.reply_shape))            # never the value
+
     def test_formatting_around_one_object_is_read_and_two_objects_are_refused(self):
         """All three forms came from a real model on a route that does not honour `response_format`."""
         from systemone_harness.provider import ProviderError

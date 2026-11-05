@@ -123,7 +123,13 @@ class ValidatingProvider:
 
     def decide(self, state, questions: dict):
         decision = self.inner.decide(state, questions)
-        self._validate(decision.answers, questions)
+        try:
+            self._validate(decision.answers, questions)
+        except Exception as exc:
+            shape = (decision.raw or {}).get("reply_shape") if isinstance(decision.raw, dict) else None
+            if shape is not None:
+                exc.reply_shape = shape
+            raise
         self.last_decision = decision
         return decision
 
@@ -265,10 +271,15 @@ class ChatChoiceProvider:
                 answers[key] = {"type": "score", "score": 0, "probabilities": {}, "confidence": 0.99}
             elif key.startswith(f"{action}__"):
                 pick = reply.get(key)   # a wrong one is refused by ValidatingProvider, never guessed
+                if type(pick) is int:   # JSON has no way to insist: the same key, written as a number
+                    pick = str(pick)
                 answers[key] = {"type": "choice", "choice": pick, "confidence": 0.99, "probabilities": {}}
             elif question.get("criteria"):
                 answers[key] = _choice(question["criteria"], next(iter(question["criteria"])))
-        return Decision(answers=answers, usage=usage, model=model, request_id=request_id, latency_ms=latency, raw={})
+        shape = {str(k)[:40]: (v if k == "next_action" and type(v) is str and len(v) <= 40 else type(v).__name__)
+                 for k, v in list(reply.items())[:12]}   # for a refused reply: its form, never a value
+        return Decision(answers=answers, usage=usage, model=model, request_id=request_id, latency_ms=latency,
+                        raw={"reply_shape": shape})
 
     def close(self):
         self.client.close()
