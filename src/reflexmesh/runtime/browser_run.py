@@ -1016,6 +1016,21 @@ class BrowserRun:
         notes["worker_stopped"] = not worker.is_alive()
         return notes
 
+    def _await_browser_exit(self) -> None:
+        """A closed browser's children can outlive the close by moments. The verdict below reads "no process left"
+        once, so give them a bounded time first; one that stays keeps ownership unknown, and the trace names the wait."""
+        adapter = self.adapter
+        if adapter is None or not adapter.closed:
+            return
+        started = time.monotonic()
+        first = leftover = processes_using(adapter.profile_dir)
+        while leftover and time.monotonic() - started < KILL_SECONDS:
+            time.sleep(0.05)
+            leftover = processes_using(adapter.profile_dir)
+        if first:
+            self.journal.emit("browser_exit_awaited", processes=len(first), left=len(leftover),
+                              seconds=round(time.monotonic() - started, 3))
+
     def _settle_registered(self, notes: dict) -> tuple[str, str] | None:
         """Read each registered check once the browser can send nothing more; judge its criteria, settle action
         effects, and return the repeat verdict (None when no check decides it)."""
@@ -1158,6 +1173,7 @@ class BrowserRun:
         except RuntimeStop:
             pass
         self.slot_evidence.drain()
+        self._await_browser_exit()
         repeats = self._settle_registered(notes)
         # Criteria as the runtime's verifier last judged them. After a stop other than finish or met criteria
         # they are late information: the first terminal wins and they never turn the attempt into completed.

@@ -11,6 +11,7 @@ REFLEXMESH_CHROME_NO_SANDBOX=1 starts Chromium without its sandbox, for hosts th
 import importlib.util
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import threading
@@ -195,6 +196,51 @@ class GenericPath(BrowserCase):
         self.assertNotIn("unknown", [e for _, _, e in effects])
         self.assertEqual(SITE.CLAIM, {})                      # released
         self.assertNotIn(checks["desk"]._token or "no-token", json.dumps(result))
+
+    def test_a_browser_process_still_exiting_at_close_does_not_decide_the_verdict(self):
+        """A child of the closed browser may outlive the close by moments. Judged in that moment, ownership was
+        unknown and the attempt incomplete, while the row assessed after cleanup said pass."""
+        import reflexmesh.runtime.browser_run as module
+
+        real, seen = module.processes_using, []
+
+        def still_exiting_once(path):
+            seen.append(path)
+            return [os.getpid()] if len(seen) == 1 else real(path)
+
+        task, checks = self.verified()
+        module.processes_using = still_exiting_once
+        try:
+            result = self.start(task, label_script(HAPPY_PATH), checks=checks).run()
+        finally:
+            module.processes_using = real
+        self.assertTrue(seen)
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("completed", "verified"))
+        self.assertEqual(result["cleanup"]["status"], "closed")
+        self.assertEqual([(r["processes"], r["left"]) for r in self.trace() if r["kind"] == "browser_exit_awaited"], [(1, 0)])
+
+    def test_a_browser_process_that_stays_after_close_keeps_the_attempt_from_completed(self):
+        """The wait is bounded and changes nothing for a process that does not go: no `completed`, and it is killed."""
+        import reflexmesh.runtime.browser_run as module
+
+        real = module.processes_using
+        stuck = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+        self.addCleanup(stuck.wait)
+        self.addCleanup(stuck.kill)
+
+        def never_exits(path):
+            return [stuck.pid] if stuck.poll() is None else real(path)
+
+        task, checks = self.verified()
+        module.processes_using = never_exits
+        try:
+            result = self.start(task, label_script(HAPPY_PATH), checks=checks).run()
+        finally:
+            module.processes_using = real
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "verification_unknown"))
+        self.assertEqual(result["cleanup"]["status"], "forced")
+        waited = [r for r in self.trace() if r["kind"] == "browser_exit_awaited"]
+        self.assertEqual([(r["processes"], r["left"]) for r in waited], [(1, 1)])
 
     def test_a_second_controller_on_the_debugging_port_is_a_violation(self):
         """M4c: another process holding a connection to the browser's CDP port is a second controller."""

@@ -49,6 +49,32 @@ function Test-Port([int] $port) {
     try { $client.Connect('127.0.0.1', $port); return $true } catch { return $false } finally { $client.Close() }
 }
 
+function Clear-Leftovers {
+    # A demo window closed with its X never reaches the cleanup below: the site and the viewer live on with no parent.
+    # Stops only those. A demo whose window is still open is left alone, and a foreign listener is named, not touched.
+    $mine = @(Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object {
+        $_.CommandLine -and $_.CommandLine.Contains($py) -and
+        $_.CommandLine -match 'site\\server\.py --port 8770|browser view .*--port 8780' })
+    $ids = $mine | ForEach-Object { $_.ProcessId }
+    foreach ($root in @($mine | Where-Object { $ids -notcontains $_.ParentProcessId })) {
+        $parent = Get-Process -Id $root.ParentProcessId -ErrorAction SilentlyContinue
+        if ($parent -and $parent.StartTime -le $root.CreationDate) {
+            throw "Another demo window is still open (it waits for Enter): press Enter there, then run this again."
+        }
+        & taskkill.exe /PID $root.ProcessId /T /F 2>&1 | Out-Null
+        Write-Host "Stopped a leftover from an earlier run (pid $($root.ProcessId))"
+    }
+    for ($i = 0; $i -lt 25 -and ((Test-Port 8770) -or (Test-Port 8780)); $i++) { Start-Sleep -Milliseconds 200 }
+    foreach ($port in @(8770, 8780 | Where-Object { Test-Port $_ })) {
+        # Not filtered by state: this listing can misreport a listener's state, and its TIME_WAIT rows belong to pid 0.
+        $owner = (Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | Where-Object { $_.OwningProcess -gt 4 } | Select-Object -First 1).OwningProcess
+        throw "Port $port is held by another program (pid $owner). Stop it and run this again."
+    }
+}
+
+if ($Mode -eq 'chain' -and $Provider -eq 'script') { throw 'Mode chain needs -Provider jev (the scripted chain is covered by the tests)' }
+Clear-Leftovers
+
 if ($Provider -eq 'jev') {
     if (-not $env:OPENROUTER_API_KEY -and -not $env:TYPESAFE_API_KEY) {
         $secure = Read-Host -AsSecureString 'OpenRouter API key (kept in this process only)'
@@ -70,8 +96,6 @@ if ($Provider -eq 'jev') {
     }
 }
 
-if ($Mode -eq 'chain' -and $Provider -eq 'script') { throw 'Mode chain needs -Provider jev (the scripted chain is covered by the tests)' }
-if (Test-Port 8770) { throw 'Port 8770 is already in use: is a demo site from an earlier run still alive?' }
 $started = @()
 try {
     $site = Start-Process -PassThru -WindowStyle Hidden -FilePath $py -ArgumentList 'experiments\v06\site\server.py', '--port', '8770'
@@ -85,7 +109,6 @@ try {
     if ($Mode -eq 'run') {
         $out = Join-Path $OutRoot "run-$stamp"
         New-Item -ItemType Directory -Force $out | Out-Null
-        if (Test-Port 8780) { throw 'Port 8780 (viewer) is already in use' }
         $viewer = Start-Process -PassThru -WindowStyle Hidden -FilePath $py -ArgumentList '-m', 'reflexmesh', 'browser', 'view', '--run-dir', "`"$out`"", '--port', '8780'
         $started += $viewer
         for ($i = 0; $i -lt 50 -and -not (Test-Port 8780); $i++) { Start-Sleep -Milliseconds 200 }
@@ -105,7 +128,7 @@ try {
                     $result.budget.steps, $result.budget.model_calls)
         foreach ($row in $result.verification) { Write-Host ("  {0}: {1}" -f $row.id, $row.status) }
         Write-Host "Files: $out  (Browser Use log: $OutRoot\run-$stamp.stderr.log)"
-        if (-not $NoPause) { Read-Host 'Press Enter to stop the viewer and the demo site' | Out-Null }
+        if (-not $NoPause) { Read-Host 'Press Enter here to stop the viewer and the demo site' | Out-Null }
     } else {
         $state = Join-Path $OutRoot "chain-$stamp"
         New-Item -ItemType Directory -Force $state | Out-Null
