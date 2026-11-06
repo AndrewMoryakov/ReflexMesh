@@ -288,7 +288,7 @@ class BrowserControlledEnvironment:
         self.uncertain = False
         self.observed_revision: int | None = None
         self._stale_streak = 0
-        self._last_state: str | None = None
+        self._last_state: tuple | None = None
         self._unchanged = 0
         self._done_in_state: set[str] = set()
         self._mutations: set[str] = set()
@@ -368,7 +368,9 @@ class BrowserControlledEnvironment:
         if self.verifier is not None and self.verifier.page_check(self.inner):
             # Every criterion holds on this page: the runtime verifies now, whatever the model would say next.
             raise self._stop("criteria_met")
-        state = self.inner.report.get("signature")
+        # A window that moved is a new view even when the text did not change (see the adapter's state_key).
+        signature = self.inner.report.get("signature")
+        state = None if signature is None else (signature, self.inner.report.get("scroll_y"))
         self._unchanged = self._unchanged + 1 if state is not None and state == self._last_state else 0
         self._last_state = state
         if self._unchanged >= NO_PROGRESS_LIMIT:
@@ -1045,6 +1047,12 @@ class BrowserRun:
             if terminal_at is not None and time.monotonic() - terminal_at > GRACE_SECONDS and not notes["watchdog_kill"]:
                 notes["watchdog_kill"] = True
                 if self.adapter is not None:
+                    if not self.retained:
+                        # The driver's own stop can wait behind the call that hangs; the processes do not. With them
+                        # gone the hung call fails on the dropped connection and the loop can finish (M5: a first
+                        # navigation held an attempt with a 240 s limit for 30 minutes).
+                        for pid in processes_using(self.adapter.profile_dir):
+                            _kill(pid)
                     self.adapter.kill()
             worker.join(0.05)
             if terminal_at is not None and time.monotonic() - terminal_at > GRACE_SECONDS + KILL_SECONDS:

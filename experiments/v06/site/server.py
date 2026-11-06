@@ -10,6 +10,7 @@ control loop never reads it.
 Routes:
   /                    dashboard
   /catalog             260 buttons, to see how a dense page is reported
+  /tall                a short text on a tall page: scrolling moves the window, the text stays the same
   /leave               redirects to another origin (localhost), for allowed-origins checks
   /orders[?q=...]      search form, and matching orders when q is given
   /orders/<id>         one order: details, saved notes, a note form with priority and notify
@@ -71,6 +72,13 @@ def catalog() -> bytes:
     """A dense page: 260 buttons, far more than one observation may list."""
     buttons = "".join(f'<li><button type="button">Item {n}</button></li>' for n in range(1, 261))
     return page("Catalog", f"<ul>{buttons}</ul>")
+
+
+def tall() -> bytes:
+    """Four short paragraphs far apart. The whole text is read on every observation, so it is the same at
+    every scroll position, as on an infinite-scroll page before the next batch loads."""
+    parts = "".join(f'<p style="margin-bottom:1500px">Section {n}</p>' for n in range(1, 5))
+    return page("Tall page", parts)
 
 
 def orders(query: str) -> bytes:
@@ -199,6 +207,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(302, b"", location=f"http://localhost:{self.server.server_port}/")
         if parts.path == "/catalog":
             return self._send(200, catalog())
+        if parts.path == "/tall":
+            return self._send(200, tall())
         if parts.path == "/partner":   # a form that sends to another origin (localhost, not 127.0.0.1)
             return self._send(200, page("Partner", f'<form method="post" action="http://localhost:{self.server.server_port}/orders/125/note">'
                                         '<button type="submit">Send to partner</button></form>'
