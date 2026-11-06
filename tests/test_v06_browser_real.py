@@ -545,10 +545,9 @@ class GenericPath(BrowserCase):
         result = self.start(task, label_script(HAPPY_PATH)).run()
         took = time.monotonic() - began
         self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "deadline"))
-        # Limit, grace, then the finish: on Windows each search for the profile's processes takes about 2 s and
-        # the finish makes five. Before the watchdog ended the processes this run took 43 s there, and an M5
-        # attempt 30 minutes.
-        self.assertLess(took, 5 + 5 + 20, f"the attempt took {took:.1f} s")
+        # Limit, grace, then the finish (about 2 s on Windows). Before the watchdog ended the processes this run
+        # took 43 s there, and an M5 attempt 30 minutes.
+        self.assertLess(took, 5 + 5 + 10, f"the attempt took {took:.1f} s")
         self.assertEqual(result["cleanup"]["browser_processes_left"], 0)
 
 
