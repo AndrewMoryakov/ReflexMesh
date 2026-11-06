@@ -1,0 +1,624 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "quotes-scroll",
+  "revision": 1,
+  "chain_id": "09a43cffdee848628fb91a58d29f2f46",
+  "attempt_id": "c6fcb1a10d5e45dfa4aca8e733a8051e",
+  "parent_attempt_id": null,
+  "attempt_status": "incomplete",
+  "stop_reason": "needs_handoff",
+  "task_outcome": "unknown",
+  "execution_outcome": "unknown",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "oracle",
+      "kind": "postcondition",
+      "predicate": "registered_check",
+      "status": "unknown",
+      "reason": "judged_by_external_oracle",
+      "scope": "registered_source_while_running",
+      "observed_at": 1793908623.065322,
+      "evidence_refs": [
+        "browser:c6fcb1a10d5e45dfa4aca8e733a8051e:8"
+      ]
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1793908626.2584858,
+      "evidence_refs": [
+        "runtime:c6fcb1a10d5e45dfa4aca8e733a8051e:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1793908626.2584593,
+      "evidence_refs": [
+        "runtime:c6fcb1a10d5e45dfa4aca8e733a8051e:immutable-slots:coverage:3"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "Browser session ownership is not established: the browser is not closed.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1793908626.2585218,
+      "evidence_refs": [
+        "runtime:c6fcb1a10d5e45dfa4aca8e733a8051e:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "No repeated mutation was observed at the controlled boundary; adapter-internal single-shot execution is not established.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1793908626.2585382,
+      "evidence_refs": [
+        "runtime:c6fcb1a10d5e45dfa4aca8e733a8051e:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "start_url",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 0,
+      "producer": "jev",
+      "bootstrap": true,
+      "destination": "https://quotes.toscrape.com/scroll",
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 3,
+      "dispatch_seq": 4,
+      "return_seq": 5,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "browser:c6fcb1a10d5e45dfa4aca8e733a8051e:6"
+      ],
+      "driver_ok": true
+    },
+    {
+      "id": 2,
+      "operation": "scroll",
+      "risk": "read",
+      "option_ref": "scroll:down",
+      "target_id": "scroll:scroll:down@fe39366082c8be52",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 1,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 2,
+      "proposal_seq": 12,
+      "dispatch_seq": 13,
+      "return_seq": 14,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": false,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 3,
+      "operation": "scroll",
+      "risk": "read",
+      "option_ref": "scroll:up",
+      "target_id": "scroll:scroll:up@fe39366082c8be52",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 2,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 3,
+      "proposal_seq": 21,
+      "dispatch_seq": 22,
+      "return_seq": 23,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": false,
+        "server_effect": "unknown"
+      }
+    }
+  ],
+  "budget": {
+    "steps": 5,
+    "model_calls": 3,
+    "dispatches": 3,
+    "limits": {
+      "wall_seconds": 240.0,
+      "max_steps": 40,
+      "max_model_calls": 40,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 35,
+    "remaining_model_calls": 37,
+    "remaining_wall_seconds": 222.502,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 17.497
+  },
+  "handoff": {
+    "schema_version": "browser-handoff/0.1",
+    "reason": "no_progress",
+    "task_id": "quotes-scroll",
+    "revision": 1,
+    "chain_id": "09a43cffdee848628fb91a58d29f2f46",
+    "attempt_id": "c6fcb1a10d5e45dfa4aca8e733a8051e",
+    "parent_attempt_id": null,
+    "observation_ref": 4,
+    "page": "https://quotes.toscrape.com/scroll",
+    "available_actions": [
+      {
+        "ref": "4:elements:39",
+        "operation": "click",
+        "role": "link",
+        "name": "Quotes to Scrape"
+      },
+      {
+        "ref": "4:elements:47",
+        "operation": "click",
+        "role": "link",
+        "name": "Login"
+      },
+      {
+        "ref": "4:elements:68",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:71",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:74",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:77",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:87",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:90",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:101",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:104",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:107",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:110",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:113",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:123",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:126",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:129",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:132",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:143",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:146",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:157",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:160",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:163",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:174",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:177",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:188",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:191",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:194",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:197",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:208",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:219",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:222",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:225",
+        "operation": "click",
+        "role": "a",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:246",
+        "operation": "click",
+        "role": "link",
+        "name": "GoodReads.com"
+      },
+      {
+        "ref": "4:elements:252",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:255",
+        "operation": "click",
+        "role": "link",
+        "name": "Zyte"
+      }
+    ],
+    "fields_without_slot": [],
+    "operations": [
+      {
+        "id": 1,
+        "attempt_id": "c6fcb1a10d5e45dfa4aca8e733a8051e",
+        "operation": "navigate",
+        "producer": "jev",
+        "option_ref": null,
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "applied"
+      },
+      {
+        "id": 2,
+        "attempt_id": "c6fcb1a10d5e45dfa4aca8e733a8051e",
+        "operation": "scroll",
+        "producer": "jev",
+        "option_ref": "scroll:down",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 3,
+        "attempt_id": "c6fcb1a10d5e45dfa4aca8e733a8051e",
+        "operation": "scroll",
+        "producer": "jev",
+        "option_ref": "scroll:up",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      }
+    ],
+    "unresolved_effects": [
+      2,
+      3
+    ],
+    "criteria": [
+      {
+        "id": "oracle",
+        "status": "unknown",
+        "reason": "judged_by_external_oracle"
+      }
+    ],
+    "permissions": [
+      "click",
+      "go_back",
+      "navigate",
+      "scroll",
+      "select_option",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ],
+    "text_slot_refs": [],
+    "owner": {
+      "session_id": "7385de53f5fc4d96aa1fc523f37907aa",
+      "owner_epoch": 0,
+      "session_open": true
+    },
+    "remaining": {
+      "steps": 35,
+      "model_calls": 37,
+      "wall_seconds": 222.502,
+      "handoffs": 3
+    },
+    "continuation": {
+      "allowed": true,
+      "token": "[withheld]",
+      "expires_in_seconds": 60.0,
+      "parent_attempt_id": "c6fcb1a10d5e45dfa4aca8e733a8051e",
+      "modes": [
+        "jev",
+        "llm"
+      ],
+      "session_id": "7385de53f5fc4d96aa1fc523f37907aa"
+    }
+  },
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": null,
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": false
+    },
+    "chromium": "chrome 142.0.7444.176 (install directory)",
+    "chromium_sandbox": true,
+    "headless": true,
+    "decision_provider": {
+      "kind": "jev",
+      "config_id": "openrouter:~typesafe/jev-latest",
+      "requested_model": "~typesafe/jev-latest"
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "retained",
+    "session_id": "7385de53f5fc4d96aa1fc523f37907aa",
+    "profile_removed": false
+  },
+  "watchdog": {
+    "watchdog_kill": false,
+    "worker_stopped": true
+  },
+  "decision": {
+    "kind": "jev",
+    "requested_model": "~typesafe/jev-latest",
+    "served_models": [
+      "typesafe/jev-1.14-20261014"
+    ],
+    "config_id": "openrouter:~typesafe/jev-latest"
+  },
+  "session_id": "7385de53f5fc4d96aa1fc523f37907aa",
+  "owner_epoch": 0,
+  "chain_budget": {
+    "used": {
+      "steps": 5,
+      "model_calls": 3
+    },
+    "remaining": {
+      "steps": 35,
+      "model_calls": 37,
+      "wall_seconds": 222.436,
+      "handoffs": 3
+    }
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:c6fcb1a10d5e45dfa4aca8e733a8051e:permissions",
+    "runtime:c6fcb1a10d5e45dfa4aca8e733a8051e:dispatch_ordering",
+    "runtime:c6fcb1a10d5e45dfa4aca8e733a8051e:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 17.497,
+    "total_seconds": 17.564
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:c6fcb1a10d5e45dfa4aca8e733a8051e:immutable-slots:commitment:1",
+      "task_id": "quotes-scroll",
+      "task_revision": 1,
+      "attempt_id": "c6fcb1a10d5e45dfa4aca8e733a8051e",
+      "run_id": "c6fcb1a10d5e45dfa4aca8e733a8051e",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:c6fcb1a10d5e45dfa4aca8e733a8051e:immutable-slots:commitment:2",
+      "task_id": "quotes-scroll",
+      "task_revision": 1,
+      "attempt_id": "c6fcb1a10d5e45dfa4aca8e733a8051e",
+      "run_id": "c6fcb1a10d5e45dfa4aca8e733a8051e",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:c6fcb1a10d5e45dfa4aca8e733a8051e:immutable-slots:commitment:3",
+      "task_id": "quotes-scroll",
+      "task_revision": 1,
+      "attempt_id": "c6fcb1a10d5e45dfa4aca8e733a8051e",
+      "run_id": "c6fcb1a10d5e45dfa4aca8e733a8051e",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 3,
+      "generation": 3,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:c6fcb1a10d5e45dfa4aca8e733a8051e:immutable-slots:coverage:3",
+      "task_id": "quotes-scroll",
+      "task_revision": 1,
+      "attempt_id": "c6fcb1a10d5e45dfa4aca8e733a8051e",
+      "run_id": "c6fcb1a10d5e45dfa4aca8e733a8051e",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 3,
+      "dispatches": 3,
+      "text_dispatches": 0,
+      "nontext_dispatches": 3,
+      "unknown_dispatches": 0,
+      "sealed_generation": 3,
+      "status": "pass"
+    }
+  ]
+}

@@ -1,0 +1,181 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "pypi-guide-tab",
+  "revision": 1,
+  "chain_id": "5bc4a0bc2b224366a9daf140bb2d628e",
+  "attempt_id": "276e2391e8fa4a19b9fb399bf7ffff7c",
+  "parent_attempt_id": "f9ab058443e84ba181f21c3a9e1dc75a",
+  "attempt_status": "blocked",
+  "stop_reason": "policy_denied",
+  "task_outcome": "unknown",
+  "execution_outcome": "not_started",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "oracle",
+      "kind": "postcondition",
+      "predicate": "registered_check",
+      "status": "unknown",
+      "reason": "judged_by_external_oracle",
+      "scope": "registered_source",
+      "observed_at": 1793911325.6374097,
+      "evidence_refs": [
+        "browser:276e2391e8fa4a19b9fb399bf7ffff7c:9"
+      ]
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1793911329.8304768,
+      "evidence_refs": [
+        "runtime:276e2391e8fa4a19b9fb399bf7ffff7c:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "Complete supported dispatch coverage is not established.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "The browser was launched by this chain (a child process with its own profile, verified in use), stayed the same process, had only this runtime on its debugging port at each of 4 observations, and was closed with no process left. A client connecting between two observations is not excluded.",
+      "observed_at": 1793911331.956077,
+      "evidence_refs": [
+        "runtime:276e2391e8fa4a19b9fb399bf7ffff7c:ownership"
+      ],
+      "scope": "browser_session_of_chain"
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1793911329.8305073,
+      "evidence_refs": [
+        "runtime:276e2391e8fa4a19b9fb399bf7ffff7c:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "No repeated mutation was observed at the controlled boundary; adapter-internal single-shot execution is not established.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1793911329.8305235,
+      "evidence_refs": [
+        "runtime:276e2391e8fa4a19b9fb399bf7ffff7c:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [],
+  "budget": {
+    "steps": 1,
+    "model_calls": 0,
+    "dispatches": 0,
+    "limits": {
+      "wall_seconds": 240.0,
+      "max_steps": 36,
+      "max_model_calls": 37,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 35,
+    "remaining_model_calls": 37,
+    "remaining_wall_seconds": 200.816,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 30.772
+  },
+  "handoff": null,
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": null,
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": false
+    },
+    "chromium": "chrome 142.0.7444.176 (install directory)",
+    "chromium_sandbox": true,
+    "headless": true,
+    "decision_provider": {
+      "kind": "llm",
+      "config_id": "caller:llm_assistance",
+      "requested_model": null
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "closed",
+    "profile_removed": true,
+    "browser_processes_left": 0
+  },
+  "watchdog": {
+    "worker_stopped": true,
+    "watchdog_kill": false
+  },
+  "decision": {
+    "kind": "llm",
+    "requested_model": null,
+    "served_models": [],
+    "config_id": "caller:llm_assistance"
+  },
+  "session_id": "196ed26adc7247d5b78b7c235b4cb95a",
+  "owner_epoch": 1,
+  "chain_budget": {
+    "used": {
+      "steps": 5,
+      "model_calls": 3
+    },
+    "remaining": {
+      "steps": 35,
+      "model_calls": 37,
+      "wall_seconds": 200.748,
+      "handoffs": 2
+    }
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:276e2391e8fa4a19b9fb399bf7ffff7c:permissions",
+    "runtime:276e2391e8fa4a19b9fb399bf7ffff7c:dispatch_ordering",
+    "runtime:276e2391e8fa4a19b9fb399bf7ffff7c:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 30.772,
+    "total_seconds": 39.252
+  },
+  "slot_evidence": []
+}

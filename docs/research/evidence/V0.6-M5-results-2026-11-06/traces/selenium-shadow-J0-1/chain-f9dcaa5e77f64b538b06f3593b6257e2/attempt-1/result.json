@@ -1,0 +1,371 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "selenium-shadow",
+  "revision": 1,
+  "chain_id": "f9dcaa5e77f64b538b06f3593b6257e2",
+  "attempt_id": "f87000ef02314996943c59314efadf29",
+  "parent_attempt_id": null,
+  "attempt_status": "incomplete",
+  "stop_reason": "verification_unknown",
+  "task_outcome": "unknown",
+  "execution_outcome": "unknown",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "oracle",
+      "kind": "postcondition",
+      "predicate": "registered_check",
+      "status": "unknown",
+      "reason": "judged_by_external_oracle",
+      "scope": "registered_source",
+      "observed_at": 1793908992.4029074,
+      "evidence_refs": [
+        "browser:f87000ef02314996943c59314efadf29:24"
+      ]
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1793908996.611321,
+      "evidence_refs": [
+        "runtime:f87000ef02314996943c59314efadf29:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1793908996.6112788,
+      "evidence_refs": [
+        "runtime:f87000ef02314996943c59314efadf29:immutable-slots:coverage:2"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "The browser was launched by this chain (a child process with its own profile, verified in use), stayed the same process, had only this runtime on its debugging port at each of 3 observations, and was closed with no process left. A client connecting between two observations is not excluded.",
+      "observed_at": 1793908998.7297776,
+      "evidence_refs": [
+        "runtime:f87000ef02314996943c59314efadf29:ownership"
+      ],
+      "scope": "browser_session_of_chain"
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1793908996.6113665,
+      "evidence_refs": [
+        "runtime:f87000ef02314996943c59314efadf29:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "No repeated mutation was observed at the controlled boundary; adapter-internal single-shot execution is not established.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1793908996.6113887,
+      "evidence_refs": [
+        "runtime:f87000ef02314996943c59314efadf29:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "start_url",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 0,
+      "producer": "jev",
+      "bootstrap": true,
+      "destination": "https://www.selenium.dev/selenium/web/shadowRootPage.html",
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 3,
+      "dispatch_seq": 4,
+      "return_seq": 5,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "browser:f87000ef02314996943c59314efadf29:6"
+      ],
+      "driver_ok": true
+    },
+    {
+      "id": 2,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "1:elements:5",
+      "target_id": "[\"click\", \"checkbox\", \"\", \"\", \"\", \"\"]@5adc6db7a2383776",
+      "mutation_key": "[\"click\", \"checkbox\", \"\", \"\", \"\", \"\"]@https://www.selenium.dev/selenium/web/shadowRootPage.html?",
+      "request": null,
+      "target": {
+        "role": "checkbox",
+        "name": ""
+      },
+      "slot_ref": null,
+      "observation_id": 1,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 2,
+      "proposal_seq": 12,
+      "dispatch_seq": 13,
+      "return_seq": 14,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    }
+  ],
+  "budget": {
+    "steps": 3,
+    "model_calls": 2,
+    "dispatches": 2,
+    "limits": {
+      "wall_seconds": 240.0,
+      "max_steps": 40,
+      "max_model_calls": 40,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 37,
+    "remaining_model_calls": 38,
+    "remaining_wall_seconds": 222.011,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 9.544
+  },
+  "handoff": {
+    "schema_version": "browser-handoff/0.1",
+    "reason": "verification_unknown",
+    "task_id": "selenium-shadow",
+    "revision": 1,
+    "chain_id": "f9dcaa5e77f64b538b06f3593b6257e2",
+    "attempt_id": "f87000ef02314996943c59314efadf29",
+    "parent_attempt_id": null,
+    "observation_ref": 3,
+    "page": "https://www.selenium.dev/selenium/web/shadowRootPage.html",
+    "available_actions": [
+      {
+        "ref": "3:elements:4",
+        "operation": "click",
+        "role": "textbox",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:5",
+        "operation": "click",
+        "role": "checkbox",
+        "name": ""
+      }
+    ],
+    "fields_without_slot": [],
+    "operations": [
+      {
+        "id": 1,
+        "attempt_id": "f87000ef02314996943c59314efadf29",
+        "operation": "navigate",
+        "producer": "jev",
+        "option_ref": null,
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "applied"
+      },
+      {
+        "id": 2,
+        "attempt_id": "f87000ef02314996943c59314efadf29",
+        "operation": "click",
+        "producer": "jev",
+        "option_ref": "1:elements:5",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      }
+    ],
+    "unresolved_effects": [
+      2
+    ],
+    "criteria": [
+      {
+        "id": "oracle",
+        "status": "unknown",
+        "reason": "judged_by_external_oracle"
+      }
+    ],
+    "permissions": [
+      "click",
+      "go_back",
+      "navigate",
+      "scroll",
+      "select_option",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ],
+    "text_slot_refs": [],
+    "owner": {
+      "session_id": "c413e2aff8eb49b78a7f9a2e5aa3f7a0",
+      "owner_epoch": 0,
+      "session_open": false
+    },
+    "remaining": {
+      "steps": 37,
+      "model_calls": 38,
+      "wall_seconds": 222.011,
+      "handoffs": 3
+    },
+    "continuation": {
+      "allowed": false,
+      "reason": "session_not_transferable"
+    }
+  },
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": null,
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": false
+    },
+    "chromium": "chrome 142.0.7444.176 (install directory)",
+    "chromium_sandbox": true,
+    "headless": true,
+    "decision_provider": {
+      "kind": "jev",
+      "config_id": "openrouter:~typesafe/jev-latest",
+      "requested_model": "~typesafe/jev-latest"
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "closed",
+    "profile_removed": true,
+    "browser_processes_left": 0
+  },
+  "watchdog": {
+    "watchdog_kill": false,
+    "worker_stopped": true
+  },
+  "decision": {
+    "kind": "jev",
+    "requested_model": "~typesafe/jev-latest",
+    "served_models": [
+      "typesafe/jev-1.14-20261014"
+    ],
+    "config_id": "openrouter:~typesafe/jev-latest"
+  },
+  "session_id": "c413e2aff8eb49b78a7f9a2e5aa3f7a0",
+  "owner_epoch": 0,
+  "chain_budget": {
+    "used": {
+      "steps": 3,
+      "model_calls": 2
+    },
+    "remaining": {
+      "steps": 37,
+      "model_calls": 38,
+      "wall_seconds": 221.941,
+      "handoffs": 3
+    }
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:f87000ef02314996943c59314efadf29:permissions",
+    "runtime:f87000ef02314996943c59314efadf29:dispatch_ordering",
+    "runtime:f87000ef02314996943c59314efadf29:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 9.544,
+    "total_seconds": 18.059
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:f87000ef02314996943c59314efadf29:immutable-slots:commitment:1",
+      "task_id": "selenium-shadow",
+      "task_revision": 1,
+      "attempt_id": "f87000ef02314996943c59314efadf29",
+      "run_id": "f87000ef02314996943c59314efadf29",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:f87000ef02314996943c59314efadf29:immutable-slots:commitment:2",
+      "task_id": "selenium-shadow",
+      "task_revision": 1,
+      "attempt_id": "f87000ef02314996943c59314efadf29",
+      "run_id": "f87000ef02314996943c59314efadf29",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:f87000ef02314996943c59314efadf29:immutable-slots:coverage:2",
+      "task_id": "selenium-shadow",
+      "task_revision": 1,
+      "attempt_id": "f87000ef02314996943c59314efadf29",
+      "run_id": "f87000ef02314996943c59314efadf29",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 2,
+      "dispatches": 2,
+      "text_dispatches": 0,
+      "nontext_dispatches": 2,
+      "unknown_dispatches": 0,
+      "sealed_generation": 2,
+      "status": "pass"
+    }
+  ]
+}

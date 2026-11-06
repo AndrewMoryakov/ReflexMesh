@@ -1,0 +1,693 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "pypi-guide-tab",
+  "revision": 1,
+  "chain_id": "5bc4a0bc2b224366a9daf140bb2d628e",
+  "attempt_id": "f9ab058443e84ba181f21c3a9e1dc75a",
+  "parent_attempt_id": null,
+  "attempt_status": "incomplete",
+  "stop_reason": "needs_handoff",
+  "task_outcome": "unknown",
+  "execution_outcome": "unknown",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "oracle",
+      "kind": "postcondition",
+      "predicate": "registered_check",
+      "status": "unknown",
+      "reason": "judged_by_external_oracle",
+      "scope": "registered_source_while_running",
+      "observed_at": 1793911302.2030752,
+      "evidence_refs": [
+        "browser:f9ab058443e84ba181f21c3a9e1dc75a:8"
+      ]
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1793911305.4453576,
+      "evidence_refs": [
+        "runtime:f9ab058443e84ba181f21c3a9e1dc75a:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1793911305.4453437,
+      "evidence_refs": [
+        "runtime:f9ab058443e84ba181f21c3a9e1dc75a:immutable-slots:coverage:1"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "Browser session ownership is not established: the browser is not closed.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1793911305.445404,
+      "evidence_refs": [
+        "runtime:f9ab058443e84ba181f21c3a9e1dc75a:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "No repeated mutation was observed at the controlled boundary; adapter-internal single-shot execution is not established.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1793911305.4454134,
+      "evidence_refs": [
+        "runtime:f9ab058443e84ba181f21c3a9e1dc75a:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "start_url",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 0,
+      "producer": "jev",
+      "bootstrap": true,
+      "destination": "https://pypi.org/project/flask/",
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 3,
+      "dispatch_seq": 4,
+      "return_seq": 5,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true
+    }
+  ],
+  "budget": {
+    "steps": 4,
+    "model_calls": 3,
+    "dispatches": 1,
+    "limits": {
+      "wall_seconds": 240.0,
+      "max_steps": 40,
+      "max_model_calls": 40,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 36,
+    "remaining_model_calls": 37,
+    "remaining_wall_seconds": 227.326,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 12.673
+  },
+  "handoff": {
+    "schema_version": "browser-handoff/0.1",
+    "reason": "no_confident_action",
+    "task_id": "pypi-guide-tab",
+    "revision": 1,
+    "chain_id": "5bc4a0bc2b224366a9daf140bb2d628e",
+    "attempt_id": "f9ab058443e84ba181f21c3a9e1dc75a",
+    "parent_attempt_id": null,
+    "observation_ref": 3,
+    "page": "https://pypi.org/project/Flask/",
+    "available_actions": [
+      {
+        "ref": "3:elements:223",
+        "operation": "click",
+        "role": "link",
+        "name": "PyPI"
+      },
+      {
+        "ref": "3:elements:16",
+        "operation": "click",
+        "role": "search",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:15",
+        "operation": "click",
+        "role": "textbox",
+        "name": "Search PyPI"
+      },
+      {
+        "ref": "3:elements:234",
+        "operation": "click",
+        "role": "button",
+        "name": "Search"
+      },
+      {
+        "ref": "3:elements:21",
+        "operation": "click",
+        "role": "link",
+        "name": "Blog"
+      },
+      {
+        "ref": "3:elements:24",
+        "operation": "click",
+        "role": "link",
+        "name": "Docs"
+      },
+      {
+        "ref": "3:elements:27",
+        "operation": "click",
+        "role": "link",
+        "name": "Log in"
+      },
+      {
+        "ref": "3:elements:30",
+        "operation": "click",
+        "role": "link",
+        "name": "Register"
+      },
+      {
+        "ref": "3:elements:75",
+        "operation": "click",
+        "role": "button",
+        "name": "Change language"
+      },
+      {
+        "ref": "3:elements:67",
+        "operation": "click",
+        "role": "button",
+        "name": "Copy PIP instructions"
+      },
+      {
+        "ref": "3:elements:443",
+        "operation": "click",
+        "role": "none",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:76",
+        "operation": "click",
+        "role": "tab",
+        "name": "Project description. Focus will be moved to the description."
+      },
+      {
+        "ref": "3:elements:78",
+        "operation": "click",
+        "role": "tab",
+        "name": "Release files. Focus will be moved to the release files panel."
+      },
+      {
+        "ref": "3:elements:79",
+        "operation": "click",
+        "role": "tab",
+        "name": "Release security. Focus will be moved to the security panel."
+      },
+      {
+        "ref": "3:elements:80",
+        "operation": "click",
+        "role": "tab",
+        "name": "Release history. Focus will be moved to the release history panel."
+      },
+      {
+        "ref": "3:elements:516",
+        "operation": "click",
+        "role": "tabpanel",
+        "name": "Project description. Focus will be moved to the description."
+      },
+      {
+        "ref": "3:elements:527",
+        "operation": "click",
+        "role": "link",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:530",
+        "operation": "click",
+        "role": "link",
+        "name": "WSGI"
+      },
+      {
+        "ref": "3:elements:531",
+        "operation": "click",
+        "role": "link",
+        "name": "Werkzeug"
+      },
+      {
+        "ref": "3:elements:532",
+        "operation": "click",
+        "role": "link",
+        "name": "Jinja"
+      },
+      {
+        "ref": "3:elements:539",
+        "operation": "click",
+        "role": "link",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:545",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:549",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:553",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:556",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:559",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:565",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:574",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:578",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:582",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:587",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:591",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:593",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:596",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:609",
+        "operation": "click",
+        "role": "link",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:613",
+        "operation": "click",
+        "role": "link",
+        "name": "please donate today"
+      },
+      {
+        "ref": "3:elements:619",
+        "operation": "click",
+        "role": "link",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:623",
+        "operation": "click",
+        "role": "link",
+        "name": "detailed contributing documentation"
+      },
+      {
+        "ref": "3:elements:638",
+        "operation": "click",
+        "role": "group",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:640",
+        "operation": "click",
+        "role": "disclosuretriangle",
+        "name": "Data verified by PyPI on Feb 19, 2026 ›"
+      },
+      {
+        "ref": "3:elements:652",
+        "operation": "click",
+        "role": "link",
+        "name": "Source"
+      },
+      {
+        "ref": "3:elements:666",
+        "operation": "click",
+        "role": "link",
+        "name": "Changes"
+      },
+      {
+        "ref": "3:elements:674",
+        "operation": "click",
+        "role": "link",
+        "name": "Chat"
+      },
+      {
+        "ref": "3:elements:682",
+        "operation": "click",
+        "role": "link",
+        "name": "Documentation"
+      },
+      {
+        "ref": "3:elements:690",
+        "operation": "click",
+        "role": "link",
+        "name": "Donate"
+      },
+      {
+        "ref": "3:elements:703",
+        "operation": "click",
+        "role": "group",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:56",
+        "operation": "click",
+        "role": "disclosuretriangle",
+        "name": "PyPI data ›"
+      },
+      {
+        "ref": "3:elements:732",
+        "operation": "click",
+        "role": "group",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:734",
+        "operation": "click",
+        "role": "disclosuretriangle",
+        "name": "PyPI data ›"
+      },
+      {
+        "ref": "3:elements:748",
+        "operation": "click",
+        "role": "link",
+        "name": "pallets"
+      },
+      {
+        "ref": "3:elements:770",
+        "operation": "click",
+        "role": "link",
+        "name": "Pallets"
+      },
+      {
+        "ref": "3:elements:785",
+        "operation": "click",
+        "role": "group",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:787",
+        "operation": "click",
+        "role": "disclosuretriangle",
+        "name": "Data verified by PyPI on Feb 19, 2026 ›"
+      },
+      {
+        "ref": "3:elements:801",
+        "operation": "click",
+        "role": "link",
+        "name": "Repository"
+      },
+      {
+        "ref": "3:elements:810",
+        "operation": "click",
+        "role": "link",
+        "name": "Stars: 74974"
+      },
+      {
+        "ref": "3:elements:822",
+        "operation": "click",
+        "role": "link",
+        "name": "Forks: 17261"
+      },
+      {
+        "ref": "3:elements:834",
+        "operation": "click",
+        "role": "link",
+        "name": "Open issues: 2"
+      },
+      {
+        "ref": "3:elements:846",
+        "operation": "click",
+        "role": "link",
+        "name": "Open PRs: 3"
+      },
+      {
+        "ref": "3:elements:864",
+        "operation": "click",
+        "role": "link",
+        "name": "About provenance"
+      },
+      {
+        "ref": "3:elements:873",
+        "operation": "click",
+        "role": "group",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:875",
+        "operation": "click",
+        "role": "disclosuretriangle",
+        "name": "Data verified by PyPI on Feb 19, 2026 ›"
+      },
+      {
+        "ref": "3:elements:887",
+        "operation": "click",
+        "role": "none",
+        "name": ""
+      },
+      {
+        "ref": "3:elements:81",
+        "operation": "click",
+        "role": "link",
+        "name": "View provenance details"
+      },
+      {
+        "ref": "3:elements:909",
+        "operation": "click",
+        "role": "link",
+        "name": "About license expressions"
+      },
+      {
+        "ref": "3:elements:922",
+        "operation": "click",
+        "role": "link",
+        "name": "View SPDX License List"
+      }
+    ],
+    "fields_without_slot": [],
+    "operations": [
+      {
+        "id": 1,
+        "attempt_id": "f9ab058443e84ba181f21c3a9e1dc75a",
+        "operation": "navigate",
+        "producer": "jev",
+        "option_ref": null,
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      }
+    ],
+    "unresolved_effects": [],
+    "criteria": [
+      {
+        "id": "oracle",
+        "status": "unknown",
+        "reason": "judged_by_external_oracle"
+      }
+    ],
+    "permissions": [
+      "click",
+      "go_back",
+      "navigate",
+      "scroll",
+      "select_option",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ],
+    "text_slot_refs": [],
+    "owner": {
+      "session_id": "196ed26adc7247d5b78b7c235b4cb95a",
+      "owner_epoch": 0,
+      "session_open": true
+    },
+    "remaining": {
+      "steps": 36,
+      "model_calls": 37,
+      "wall_seconds": 227.326,
+      "handoffs": 3
+    },
+    "continuation": {
+      "allowed": true,
+      "token": "[withheld]",
+      "expires_in_seconds": 60.0,
+      "parent_attempt_id": "f9ab058443e84ba181f21c3a9e1dc75a",
+      "modes": [
+        "jev",
+        "llm"
+      ],
+      "session_id": "196ed26adc7247d5b78b7c235b4cb95a"
+    }
+  },
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": null,
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": false
+    },
+    "chromium": "chrome 142.0.7444.176 (install directory)",
+    "chromium_sandbox": true,
+    "headless": true,
+    "decision_provider": {
+      "kind": "jev",
+      "config_id": "openrouter:~typesafe/jev-latest",
+      "requested_model": "~typesafe/jev-latest"
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "retained",
+    "session_id": "196ed26adc7247d5b78b7c235b4cb95a",
+    "profile_removed": false
+  },
+  "watchdog": {
+    "watchdog_kill": false,
+    "worker_stopped": true
+  },
+  "decision": {
+    "kind": "jev",
+    "requested_model": "~typesafe/jev-latest",
+    "served_models": [
+      "typesafe/jev-1.14-20261014"
+    ],
+    "config_id": "openrouter:~typesafe/jev-latest"
+  },
+  "session_id": "196ed26adc7247d5b78b7c235b4cb95a",
+  "owner_epoch": 0,
+  "chain_budget": {
+    "used": {
+      "steps": 4,
+      "model_calls": 3
+    },
+    "remaining": {
+      "steps": 36,
+      "model_calls": 37,
+      "wall_seconds": 227.263,
+      "handoffs": 3
+    }
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:f9ab058443e84ba181f21c3a9e1dc75a:permissions",
+    "runtime:f9ab058443e84ba181f21c3a9e1dc75a:dispatch_ordering",
+    "runtime:f9ab058443e84ba181f21c3a9e1dc75a:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 12.673,
+    "total_seconds": 12.737
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:f9ab058443e84ba181f21c3a9e1dc75a:immutable-slots:commitment:1",
+      "task_id": "pypi-guide-tab",
+      "task_revision": 1,
+      "attempt_id": "f9ab058443e84ba181f21c3a9e1dc75a",
+      "run_id": "f9ab058443e84ba181f21c3a9e1dc75a",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:f9ab058443e84ba181f21c3a9e1dc75a:immutable-slots:coverage:1",
+      "task_id": "pypi-guide-tab",
+      "task_revision": 1,
+      "attempt_id": "f9ab058443e84ba181f21c3a9e1dc75a",
+      "run_id": "f9ab058443e84ba181f21c3a9e1dc75a",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 1,
+      "dispatches": 1,
+      "text_dispatches": 0,
+      "nontext_dispatches": 1,
+      "unknown_dispatches": 0,
+      "sealed_generation": 1,
+      "status": "pass"
+    }
+  ]
+}

@@ -1,0 +1,699 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "testpages-frame",
+  "revision": 1,
+  "chain_id": "71856876310a48249eac033d0e3d226c",
+  "attempt_id": "5e482e318c7949dea78ac315d237d504",
+  "parent_attempt_id": null,
+  "attempt_status": "incomplete",
+  "stop_reason": "verification_unknown",
+  "task_outcome": "unknown",
+  "execution_outcome": "unknown",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "oracle",
+      "kind": "postcondition",
+      "predicate": "registered_check",
+      "status": "unknown",
+      "reason": "judged_by_external_oracle",
+      "scope": "registered_source",
+      "observed_at": 1793909276.1705089,
+      "evidence_refs": [
+        "browser:5e482e318c7949dea78ac315d237d504:29"
+      ]
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1793909280.342077,
+      "evidence_refs": [
+        "runtime:5e482e318c7949dea78ac315d237d504:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1793909280.342039,
+      "evidence_refs": [
+        "runtime:5e482e318c7949dea78ac315d237d504:immutable-slots:coverage:2"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "The browser was launched by this chain (a child process with its own profile, verified in use), stayed the same process, had only this runtime on its debugging port at each of 4 observations, and was closed with no process left. A client connecting between two observations is not excluded.",
+      "observed_at": 1793909282.4277515,
+      "evidence_refs": [
+        "runtime:5e482e318c7949dea78ac315d237d504:ownership"
+      ],
+      "scope": "browser_session_of_chain"
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1793909280.342115,
+      "evidence_refs": [
+        "runtime:5e482e318c7949dea78ac315d237d504:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "No repeated mutation was observed at the controlled boundary; adapter-internal single-shot execution is not established.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1793909280.3421345,
+      "evidence_refs": [
+        "runtime:5e482e318c7949dea78ac315d237d504:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "start_url",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 0,
+      "producer": "jev",
+      "bootstrap": true,
+      "destination": "https://testpages.eviltester.com/styled/iframes-test.html",
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 3,
+      "dispatch_seq": 4,
+      "return_seq": 5,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true
+    },
+    {
+      "id": 2,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "1:elements:4217",
+      "target_id": "[\"click\", \"button\", \"Add Amount\", \"\", \"\", \"\"]@506fdb6fee0a3f3c",
+      "mutation_key": "[\"click\", \"button\", \"Add Amount\", \"\", \"\", \"\"]@https://testpages.eviltester.com/pages/embedded-pages/iframes/?",
+      "request": null,
+      "target": {
+        "role": "button",
+        "name": "Add Amount"
+      },
+      "slot_ref": null,
+      "observation_id": 1,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 2,
+      "proposal_seq": 12,
+      "dispatch_seq": 13,
+      "return_seq": 14,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    }
+  ],
+  "budget": {
+    "steps": 4,
+    "model_calls": 3,
+    "dispatches": 2,
+    "limits": {
+      "wall_seconds": 240.0,
+      "max_steps": 40,
+      "max_model_calls": 40,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 36,
+    "remaining_model_calls": 37,
+    "remaining_wall_seconds": 216.167,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 15.479
+  },
+  "handoff": {
+    "schema_version": "browser-handoff/0.1",
+    "reason": "verification_unknown",
+    "task_id": "testpages-frame",
+    "revision": 1,
+    "chain_id": "71856876310a48249eac033d0e3d226c",
+    "attempt_id": "5e482e318c7949dea78ac315d237d504",
+    "parent_attempt_id": null,
+    "observation_ref": 4,
+    "page": "https://testpages.eviltester.com/pages/embedded-pages/iframes/",
+    "available_actions": [
+      {
+        "ref": "4:elements:150",
+        "operation": "click",
+        "role": "link",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:165",
+        "operation": "click",
+        "role": "link",
+        "name": "Pages"
+      },
+      {
+        "ref": "4:elements:171",
+        "operation": "click",
+        "role": "link",
+        "name": "Apps"
+      },
+      {
+        "ref": "4:elements:177",
+        "operation": "click",
+        "role": "link",
+        "name": "Fun and Games"
+      },
+      {
+        "ref": "4:elements:183",
+        "operation": "click",
+        "role": "link",
+        "name": "Tools"
+      },
+      {
+        "ref": "4:elements:189",
+        "operation": "click",
+        "role": "link",
+        "name": "Challenges"
+      },
+      {
+        "ref": "4:elements:195",
+        "operation": "click",
+        "role": "link",
+        "name": "Reference Information and Tutorials"
+      },
+      {
+        "ref": "4:elements:208",
+        "operation": "click",
+        "role": "link",
+        "name": "Learn more"
+      },
+      {
+        "ref": "4:elements:237",
+        "operation": "click",
+        "role": "link",
+        "name": "Practice Pages"
+      },
+      {
+        "ref": "4:elements:249",
+        "operation": "click",
+        "role": "link",
+        "name": "Pages"
+      },
+      {
+        "ref": "4:elements:261",
+        "operation": "click",
+        "role": "link",
+        "name": "Basics"
+      },
+      {
+        "ref": "4:elements:451",
+        "operation": "click",
+        "role": "link",
+        "name": "Input Elements"
+      },
+      {
+        "ref": "4:elements:597",
+        "operation": "click",
+        "role": "link",
+        "name": "Forms"
+      },
+      {
+        "ref": "4:elements:787",
+        "operation": "click",
+        "role": "link",
+        "name": "CSS"
+      },
+      {
+        "ref": "4:elements:889",
+        "operation": "click",
+        "role": "link",
+        "name": "Navigation"
+      },
+      {
+        "ref": "4:elements:1018",
+        "operation": "click",
+        "role": "link",
+        "name": "Embedded Content"
+      },
+      {
+        "ref": "4:elements:1027",
+        "operation": "click",
+        "role": "link",
+        "name": "External Content"
+      },
+      {
+        "ref": "4:elements:1048",
+        "operation": "click",
+        "role": "link",
+        "name": "External Site"
+      },
+      {
+        "ref": "4:elements:1069",
+        "operation": "click",
+        "role": "link",
+        "name": "Frames Example"
+      },
+      {
+        "ref": "4:elements:1090",
+        "operation": "click",
+        "role": "link",
+        "name": "iFrames"
+      },
+      {
+        "ref": "4:elements:1100",
+        "operation": "click",
+        "role": "link",
+        "name": "Instructions"
+      },
+      {
+        "ref": "4:elements:1112",
+        "operation": "click",
+        "role": "link",
+        "name": "Files"
+      },
+      {
+        "ref": "4:elements:1168",
+        "operation": "click",
+        "role": "link",
+        "name": "Storage"
+      },
+      {
+        "ref": "4:elements:1246",
+        "operation": "click",
+        "role": "link",
+        "name": "Interaction"
+      },
+      {
+        "ref": "4:elements:1302",
+        "operation": "click",
+        "role": "link",
+        "name": "Mobile"
+      },
+      {
+        "ref": "4:elements:1336",
+        "operation": "click",
+        "role": "link",
+        "name": "Errors"
+      },
+      {
+        "ref": "4:elements:1438",
+        "operation": "click",
+        "role": "link",
+        "name": "Auth"
+      },
+      {
+        "ref": "4:elements:1474",
+        "operation": "click",
+        "role": "link",
+        "name": "Web Components"
+      },
+      {
+        "ref": "4:elements:1554",
+        "operation": "click",
+        "role": "link",
+        "name": "Browser APIs"
+      },
+      {
+        "ref": "4:elements:1627",
+        "operation": "click",
+        "role": "link",
+        "name": "Apps"
+      },
+      {
+        "ref": "4:elements:2158",
+        "operation": "click",
+        "role": "link",
+        "name": "Fun and Games"
+      },
+      {
+        "ref": "4:elements:2512",
+        "operation": "click",
+        "role": "link",
+        "name": "Tools"
+      },
+      {
+        "ref": "4:elements:2601",
+        "operation": "click",
+        "role": "link",
+        "name": "Challenges"
+      },
+      {
+        "ref": "4:elements:2892",
+        "operation": "click",
+        "role": "link",
+        "name": "Reference Information and Tutorials"
+      },
+      {
+        "ref": "4:elements:3612",
+        "operation": "click",
+        "role": "listitem",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:3614",
+        "operation": "click",
+        "role": "link",
+        "name": "Pages"
+      },
+      {
+        "ref": "4:elements:3619",
+        "operation": "click",
+        "role": "link",
+        "name": "Embedded Content"
+      },
+      {
+        "ref": "4:elements:3633",
+        "operation": "click",
+        "role": "p",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:51",
+        "operation": "click",
+        "role": "link",
+        "name": "Frames"
+      },
+      {
+        "ref": "4:elements:54",
+        "operation": "click",
+        "role": "link",
+        "name": "Interaction"
+      },
+      {
+        "ref": "4:elements:58",
+        "operation": "click",
+        "role": "link",
+        "name": "Intermediate"
+      },
+      {
+        "ref": "4:elements:60",
+        "operation": "click",
+        "role": "separator",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:10",
+        "operation": "click",
+        "role": "spinbutton",
+        "name": "Total Value:"
+      },
+      {
+        "ref": "4:elements:11",
+        "operation": "click",
+        "role": "spinbutton",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:4217",
+        "operation": "click",
+        "role": "button",
+        "name": "Add Amount"
+      },
+      {
+        "ref": "4:elements:61",
+        "operation": "click",
+        "role": "separator",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:3683",
+        "operation": "click",
+        "role": "link",
+        "name": "iFrames - Instructions"
+      },
+      {
+        "ref": "4:elements:3701",
+        "operation": "click",
+        "role": "link",
+        "name": "Patreon Membership site"
+      },
+      {
+        "ref": "4:elements:3704",
+        "operation": "click",
+        "role": "link",
+        "name": "e-books and online training courses"
+      },
+      {
+        "ref": "4:elements:3710",
+        "operation": "click",
+        "role": "link",
+        "name": "Contact Us"
+      },
+      {
+        "ref": "4:elements:62",
+        "operation": "click",
+        "role": "listitem",
+        "name": "Twitter"
+      },
+      {
+        "ref": "4:elements:3724",
+        "operation": "click",
+        "role": "link",
+        "name": "Twitter"
+      },
+      {
+        "ref": "4:elements:63",
+        "operation": "click",
+        "role": "listitem",
+        "name": "LinkedIn"
+      },
+      {
+        "ref": "4:elements:3732",
+        "operation": "click",
+        "role": "link",
+        "name": "LinkedIn"
+      },
+      {
+        "ref": "4:elements:64",
+        "operation": "click",
+        "role": "listitem",
+        "name": "GitHub"
+      },
+      {
+        "ref": "4:elements:3745",
+        "operation": "click",
+        "role": "link",
+        "name": "GitHub"
+      },
+      {
+        "ref": "4:elements:3762",
+        "operation": "click",
+        "role": "link",
+        "name": "Privacy Policy"
+      }
+    ],
+    "fields_without_slot": [],
+    "operations": [
+      {
+        "id": 1,
+        "attempt_id": "5e482e318c7949dea78ac315d237d504",
+        "operation": "navigate",
+        "producer": "jev",
+        "option_ref": null,
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 2,
+        "attempt_id": "5e482e318c7949dea78ac315d237d504",
+        "operation": "click",
+        "producer": "jev",
+        "option_ref": "1:elements:4217",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      }
+    ],
+    "unresolved_effects": [
+      2
+    ],
+    "criteria": [
+      {
+        "id": "oracle",
+        "status": "unknown",
+        "reason": "judged_by_external_oracle"
+      }
+    ],
+    "permissions": [
+      "click",
+      "go_back",
+      "navigate",
+      "scroll",
+      "select_option",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ],
+    "text_slot_refs": [],
+    "owner": {
+      "session_id": "b3193a37f1bc4e02bafa2c6bd28bcaea",
+      "owner_epoch": 0,
+      "session_open": false
+    },
+    "remaining": {
+      "steps": 36,
+      "model_calls": 37,
+      "wall_seconds": 216.167,
+      "handoffs": 3
+    },
+    "continuation": {
+      "allowed": false,
+      "reason": "session_not_transferable"
+    }
+  },
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": null,
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": false
+    },
+    "chromium": "chrome 142.0.7444.176 (install directory)",
+    "chromium_sandbox": true,
+    "headless": true,
+    "decision_provider": {
+      "kind": "jev",
+      "config_id": "openrouter:~typesafe/jev-latest",
+      "requested_model": "~typesafe/jev-latest"
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "closed",
+    "profile_removed": true,
+    "browser_processes_left": 0
+  },
+  "watchdog": {
+    "watchdog_kill": false,
+    "worker_stopped": true
+  },
+  "decision": {
+    "kind": "jev",
+    "requested_model": "~typesafe/jev-latest",
+    "served_models": [
+      "typesafe/jev-1.14-20261014"
+    ],
+    "config_id": "openrouter:~typesafe/jev-latest"
+  },
+  "session_id": "b3193a37f1bc4e02bafa2c6bd28bcaea",
+  "owner_epoch": 0,
+  "chain_budget": {
+    "used": {
+      "steps": 4,
+      "model_calls": 3
+    },
+    "remaining": {
+      "steps": 36,
+      "model_calls": 37,
+      "wall_seconds": 216.096,
+      "handoffs": 3
+    }
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:5e482e318c7949dea78ac315d237d504:permissions",
+    "runtime:5e482e318c7949dea78ac315d237d504:dispatch_ordering",
+    "runtime:5e482e318c7949dea78ac315d237d504:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 15.479,
+    "total_seconds": 23.904
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:5e482e318c7949dea78ac315d237d504:immutable-slots:commitment:1",
+      "task_id": "testpages-frame",
+      "task_revision": 1,
+      "attempt_id": "5e482e318c7949dea78ac315d237d504",
+      "run_id": "5e482e318c7949dea78ac315d237d504",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:5e482e318c7949dea78ac315d237d504:immutable-slots:commitment:2",
+      "task_id": "testpages-frame",
+      "task_revision": 1,
+      "attempt_id": "5e482e318c7949dea78ac315d237d504",
+      "run_id": "5e482e318c7949dea78ac315d237d504",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:5e482e318c7949dea78ac315d237d504:immutable-slots:coverage:2",
+      "task_id": "testpages-frame",
+      "task_revision": 1,
+      "attempt_id": "5e482e318c7949dea78ac315d237d504",
+      "run_id": "5e482e318c7949dea78ac315d237d504",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 2,
+      "dispatches": 2,
+      "text_dispatches": 0,
+      "nontext_dispatches": 2,
+      "unknown_dispatches": 0,
+      "sealed_generation": 2,
+      "status": "pass"
+    }
+  ]
+}

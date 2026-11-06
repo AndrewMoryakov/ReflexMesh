@@ -1,0 +1,235 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "scrape-oscars",
+  "revision": 1,
+  "chain_id": "275b72dbeed44f50b61cfc91037e5dcb",
+  "attempt_id": "c93356c890f14c1cae4350eee644cede",
+  "parent_attempt_id": null,
+  "attempt_status": "incomplete",
+  "stop_reason": "deadline",
+  "task_outcome": "unknown",
+  "execution_outcome": "unknown",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "oracle",
+      "kind": "postcondition",
+      "predicate": "registered_check",
+      "status": "unknown",
+      "reason": "judged_by_external_oracle",
+      "scope": "registered_source",
+      "observed_at": 1793908172.5989573,
+      "evidence_refs": [
+        "browser:c93356c890f14c1cae4350eee644cede:7"
+      ]
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1793908179.1320198,
+      "evidence_refs": [
+        "runtime:c93356c890f14c1cae4350eee644cede:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1793908179.1319726,
+      "evidence_refs": [
+        "runtime:c93356c890f14c1cae4350eee644cede:immutable-slots:coverage:1"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "Browser session ownership is not established: no observation saw this runtime on the debugging port.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1793908179.132073,
+      "evidence_refs": [
+        "runtime:c93356c890f14c1cae4350eee644cede:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "No repeated mutation was observed at the controlled boundary; adapter-internal single-shot execution is not established.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1793908179.1320982,
+      "evidence_refs": [
+        "runtime:c93356c890f14c1cae4350eee644cede:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "start_url",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 0,
+      "producer": "jev",
+      "bootstrap": true,
+      "destination": "https://www.scrapethissite.com/pages/ajax-javascript/",
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 3,
+      "dispatch_seq": 4,
+      "return_seq": 5,
+      "driver_outcome": "error",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": false
+    }
+  ],
+  "budget": {
+    "steps": 1,
+    "model_calls": 0,
+    "dispatches": 1,
+    "limits": {
+      "wall_seconds": 240.0,
+      "max_steps": 40,
+      "max_model_calls": 40,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 39,
+    "remaining_model_calls": 40,
+    "remaining_wall_seconds": 0.0,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 1803.823
+  },
+  "handoff": null,
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": null,
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": false
+    },
+    "chromium": "chrome 142.0.7444.176 (install directory)",
+    "chromium_sandbox": true,
+    "headless": true,
+    "decision_provider": {
+      "kind": "jev",
+      "config_id": "openrouter:~typesafe/jev-latest",
+      "requested_model": "~typesafe/jev-latest"
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "forced",
+    "profile_removed": true,
+    "browser_processes_left": 0
+  },
+  "watchdog": {
+    "watchdog_kill": true,
+    "worker_stopped": true
+  },
+  "decision": {
+    "kind": "jev",
+    "requested_model": "~typesafe/jev-latest",
+    "served_models": [],
+    "config_id": "openrouter:~typesafe/jev-latest"
+  },
+  "session_id": "a53714487f094c17858b3dd6e922f534",
+  "owner_epoch": 0,
+  "chain_budget": {
+    "used": {
+      "steps": 1,
+      "model_calls": 0
+    },
+    "remaining": {
+      "steps": 39,
+      "model_calls": 40,
+      "wall_seconds": 0.0,
+      "handoffs": 3
+    }
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:c93356c890f14c1cae4350eee644cede:permissions",
+    "runtime:c93356c890f14c1cae4350eee644cede:dispatch_ordering",
+    "runtime:c93356c890f14c1cae4350eee644cede:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 1803.823,
+    "total_seconds": 1815.286
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:c93356c890f14c1cae4350eee644cede:immutable-slots:commitment:1",
+      "task_id": "scrape-oscars",
+      "task_revision": 1,
+      "attempt_id": "c93356c890f14c1cae4350eee644cede",
+      "run_id": "c93356c890f14c1cae4350eee644cede",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:c93356c890f14c1cae4350eee644cede:immutable-slots:coverage:1",
+      "task_id": "scrape-oscars",
+      "task_revision": 1,
+      "attempt_id": "c93356c890f14c1cae4350eee644cede",
+      "run_id": "c93356c890f14c1cae4350eee644cede",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 1,
+      "dispatches": 1,
+      "text_dispatches": 0,
+      "nontext_dispatches": 1,
+      "unknown_dispatches": 0,
+      "sealed_generation": 1,
+      "status": "pass"
+    }
+  ]
+}
