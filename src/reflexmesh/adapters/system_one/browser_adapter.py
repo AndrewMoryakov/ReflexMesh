@@ -695,6 +695,10 @@ class GenericBrowserAdapter:
             if operation == "select_option":
                 params_fresh = (("option", f"{index}:{entry.option_text}"),)
             elif operation == "type_text":
+                # The signature cuts names to MAX_NAME, so a label changed after the first 80 characters passes it; the
+                # slot was allowed for the name observed, and a field renamed since is not that field (review of #14).
+                if self._field_name(node) != entry.field_name:
+                    self._stale()
                 params_fresh = (("field", index), ("value", captured["value"]))
                 text = PreparedTextCommand(int(index), resolved)
             else:
