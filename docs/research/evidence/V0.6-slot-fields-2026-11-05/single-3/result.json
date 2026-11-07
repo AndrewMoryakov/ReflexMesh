@@ -1,0 +1,642 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "order-note-125-verified",
+  "revision": 1,
+  "chain_id": "e1b1b50664054f83bb6ae54361a9241d",
+  "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+  "parent_attempt_id": null,
+  "attempt_status": "incomplete",
+  "stop_reason": "needs_handoff",
+  "task_outcome": "unknown",
+  "execution_outcome": "returned",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "note_saved",
+      "kind": "postcondition",
+      "predicate": "revisit_match",
+      "status": "fail",
+      "reason": "value_differs",
+      "scope": "ui_observation",
+      "observed_at": 1793889467.2886682,
+      "evidence_refs": [
+        "browser:e1b1b50664054f83bb6ae54361a9241d:38"
+      ]
+    },
+    {
+      "id": "note_saved_once",
+      "kind": "postcondition",
+      "predicate": "registered_check",
+      "status": "fail",
+      "reason": "not_saved",
+      "scope": "registered_source",
+      "observed_at": 1793889473.2963002,
+      "evidence_refs": [
+        "browser:e1b1b50664054f83bb6ae54361a9241d:61"
+      ]
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1793889477.5092034,
+      "evidence_refs": [
+        "runtime:e1b1b50664054f83bb6ae54361a9241d:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1793889477.509171,
+      "evidence_refs": [
+        "runtime:e1b1b50664054f83bb6ae54361a9241d:immutable-slots:coverage:5",
+        "runtime:e1b1b50664054f83bb6ae54361a9241d:immutable-slots:handoff:2",
+        "runtime:e1b1b50664054f83bb6ae54361a9241d:immutable-slots:handoff:5"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "The browser was launched by this attempt (a child process with its own profile, verified in use), stayed the same process, had only this runtime on its debugging port at each of 7 observations, and was closed with no process left. A client connecting between two observations is not excluded.",
+      "observed_at": 1793889479.6061237,
+      "evidence_refs": [
+        "runtime:e1b1b50664054f83bb6ae54361a9241d:ownership"
+      ],
+      "scope": "browser_session_launched_by_attempt"
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1793889477.5092375,
+      "evidence_refs": [
+        "runtime:e1b1b50664054f83bb6ae54361a9241d:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "The registered order-desk record shows each committed form submit requested exactly once, none pending, and no other state change.",
+      "observed_at": 1793889479.6061344,
+      "evidence_refs": [
+        "runtime:e1b1b50664054f83bb6ae54361a9241d:no_uncertain_repeats",
+        "check:order_desk.note_saved_once:7d8435a0ef8f417fa8fef4e1688657e7"
+      ],
+      "scope": "registered_source"
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1793889477.5092666,
+      "evidence_refs": [
+        "runtime:e1b1b50664054f83bb6ae54361a9241d:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "start_url",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 0,
+      "producer": "jev",
+      "bootstrap": true,
+      "destination": "http://127.0.0.1:8770/orders",
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 3,
+      "dispatch_seq": 4,
+      "return_seq": 5,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "browser:e1b1b50664054f83bb6ae54361a9241d:6"
+      ],
+      "driver_ok": true
+    },
+    {
+      "id": 2,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "1:text_fields:3",
+      "target_id": "[\"type_text\", \"textbox\", \"Order number\", \"\", \"\", \"order@1\"]@5ea827e50a544aba",
+      "mutation_key": "[\"type_text\", \"textbox\", \"Order number\", \"\", \"\", \"order@1\"]@http://127.0.0.1:8770/orders?",
+      "request": null,
+      "target": {
+        "role": "textbox",
+        "name": "Order number"
+      },
+      "slot_ref": "order@1",
+      "observation_id": 1,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 2,
+      "proposal_seq": 13,
+      "dispatch_seq": 14,
+      "return_seq": 15,
+      "driver_outcome": "returned",
+      "effect": "not_applied",
+      "evidence_refs": [
+        "check:order_desk.note_saved_once:7d8435a0ef8f417fa8fef4e1688657e7"
+      ],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 3,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "2:elements:26",
+      "target_id": "[\"click\", \"button\", \"Search\", \"\", \"\", \"\"]@0588a7c7e9357e67",
+      "mutation_key": null,
+      "request": {
+        "method": "GET",
+        "path": "/orders"
+      },
+      "target": {
+        "role": "button",
+        "name": "Search"
+      },
+      "slot_ref": null,
+      "observation_id": 2,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 3,
+      "proposal_seq": 22,
+      "dispatch_seq": 23,
+      "return_seq": 24,
+      "driver_outcome": "returned",
+      "effect": "not_applied",
+      "evidence_refs": [
+        "check:order_desk.note_saved_once:7d8435a0ef8f417fa8fef4e1688657e7"
+      ],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": true,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 4,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "3:elements:62",
+      "target_id": "[\"click\", \"link\", \"[slot:record@1]\", \"\", \"http://127.0.0.1:8770/orders/125\", \"\"]@e56ecfaaa4dd4235",
+      "mutation_key": null,
+      "request": {
+        "method": "GET",
+        "path": "/orders/125"
+      },
+      "target": {
+        "role": "link",
+        "name": "[slot:record@1]"
+      },
+      "slot_ref": null,
+      "observation_id": 3,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": "http://127.0.0.1:8770/orders/125",
+      "policy_revision": 1,
+      "gate_seq": 4,
+      "proposal_seq": 32,
+      "dispatch_seq": 33,
+      "return_seq": 34,
+      "driver_outcome": "returned",
+      "effect": "not_applied",
+      "evidence_refs": [
+        "check:order_desk.note_saved_once:7d8435a0ef8f417fa8fef4e1688657e7"
+      ],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": true,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 5,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "4:text_fields:69",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@c6fa1bb499474e2e",
+      "mutation_key": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@http://127.0.0.1:8770/orders/125?",
+      "request": null,
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "note@1",
+      "observation_id": 4,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 5,
+      "proposal_seq": 42,
+      "dispatch_seq": 43,
+      "return_seq": 44,
+      "driver_outcome": "returned",
+      "effect": "not_applied",
+      "evidence_refs": [
+        "check:order_desk.note_saved_once:7d8435a0ef8f417fa8fef4e1688657e7"
+      ],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    }
+  ],
+  "budget": {
+    "steps": 8,
+    "model_calls": 7,
+    "dispatches": 5,
+    "limits": {
+      "wall_seconds": 120.0,
+      "max_steps": 64,
+      "max_model_calls": 96,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 56,
+    "remaining_model_calls": 89,
+    "remaining_wall_seconds": 95.759,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 15.794
+  },
+  "handoff": {
+    "schema_version": "browser-handoff/0.1",
+    "reason": "no_confident_action",
+    "task_id": "order-note-125-verified",
+    "revision": 1,
+    "chain_id": "e1b1b50664054f83bb6ae54361a9241d",
+    "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+    "parent_attempt_id": null,
+    "observation_ref": 7,
+    "page": "http://127.0.0.1:8770/orders/125",
+    "available_actions": [
+      {
+        "ref": "7:elements:85",
+        "operation": "click",
+        "role": "link",
+        "name": "Dashboard"
+      },
+      {
+        "ref": "7:elements:87",
+        "operation": "click",
+        "role": "link",
+        "name": "Orders"
+      },
+      {
+        "ref": "7:elements:101",
+        "operation": "click",
+        "role": "link",
+        "name": "Open tracking"
+      },
+      {
+        "ref": "7:elements:71",
+        "operation": "click",
+        "role": "checkbox",
+        "name": "Notify customer by email"
+      },
+      {
+        "ref": "7:elements:115",
+        "operation": "click",
+        "role": "button",
+        "name": "Save note"
+      },
+      {
+        "ref": "7:text_fields:69",
+        "operation": "type_text",
+        "role": "textbox",
+        "name": "Note",
+        "slot_refs": [
+          "note@1"
+        ]
+      },
+      {
+        "ref": "7:options:70:Normal",
+        "operation": "select_option",
+        "role": "combobox",
+        "name": "Priority"
+      },
+      {
+        "ref": "7:options:70:High",
+        "operation": "select_option",
+        "role": "combobox",
+        "name": "Priority"
+      },
+      {
+        "ref": "7:options:70:Low",
+        "operation": "select_option",
+        "role": "combobox",
+        "name": "Priority"
+      },
+      {
+        "ref": "7:history:back",
+        "operation": "go_back",
+        "role": "",
+        "name": "/orders"
+      }
+    ],
+    "fields_without_slot": [],
+    "operations": [
+      {
+        "id": 1,
+        "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+        "operation": "navigate",
+        "producer": "jev",
+        "option_ref": null,
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "applied"
+      },
+      {
+        "id": 2,
+        "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+        "operation": "type_text",
+        "producer": "jev",
+        "option_ref": "1:text_fields:3",
+        "slot_ref": "order@1",
+        "driver_outcome": "returned",
+        "effect": "not_applied"
+      },
+      {
+        "id": 3,
+        "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+        "operation": "click",
+        "producer": "jev",
+        "option_ref": "2:elements:26",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "not_applied"
+      },
+      {
+        "id": 4,
+        "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+        "operation": "click",
+        "producer": "jev",
+        "option_ref": "3:elements:62",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "not_applied"
+      },
+      {
+        "id": 5,
+        "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+        "operation": "type_text",
+        "producer": "jev",
+        "option_ref": "4:text_fields:69",
+        "slot_ref": "note@1",
+        "driver_outcome": "returned",
+        "effect": "not_applied"
+      }
+    ],
+    "unresolved_effects": [],
+    "criteria": [
+      {
+        "id": "note_saved",
+        "status": "fail",
+        "reason": "value_differs"
+      },
+      {
+        "id": "note_saved_once",
+        "status": "fail",
+        "reason": "not_saved"
+      }
+    ],
+    "permissions": [
+      "click",
+      "go_back",
+      "navigate",
+      "scroll",
+      "select_option",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ],
+    "text_slot_refs": [
+      "order@1",
+      "note@1",
+      "record@1"
+    ],
+    "owner": {
+      "session_open": false
+    },
+    "remaining": null,
+    "continuation": {
+      "allowed": false,
+      "reason": "no_session_service"
+    }
+  },
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": null,
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": false
+    },
+    "chromium": "chrome 142.0.7444.176 (install directory)",
+    "chromium_sandbox": true,
+    "headless": false,
+    "decision_provider": {
+      "kind": "jev",
+      "config_id": "openrouter:~typesafe/jev-latest",
+      "requested_model": "~typesafe/jev-latest"
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "closed",
+    "profile_removed": true,
+    "browser_processes_left": 0
+  },
+  "watchdog": {
+    "watchdog_kill": false,
+    "worker_stopped": true
+  },
+  "decision": {
+    "kind": "jev",
+    "requested_model": "~typesafe/jev-latest",
+    "served_models": [
+      "typesafe/jev-1.14-20261014"
+    ],
+    "config_id": "openrouter:~typesafe/jev-latest"
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:e1b1b50664054f83bb6ae54361a9241d:permissions",
+    "runtime:e1b1b50664054f83bb6ae54361a9241d:dispatch_ordering",
+    "runtime:e1b1b50664054f83bb6ae54361a9241d:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 15.794,
+    "total_seconds": 24.307
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:e1b1b50664054f83bb6ae54361a9241d:immutable-slots:commitment:1",
+      "task_id": "order-note-125-verified",
+      "task_revision": 1,
+      "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "run_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:e1b1b50664054f83bb6ae54361a9241d:immutable-slots:commitment:2",
+      "task_id": "order-note-125-verified",
+      "task_revision": 1,
+      "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "run_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "text",
+      "slot_ref": "order@1"
+    },
+    {
+      "ref": "runtime:e1b1b50664054f83bb6ae54361a9241d:immutable-slots:handoff:2",
+      "task_id": "order-note-125-verified",
+      "task_revision": 1,
+      "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "run_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "text",
+      "slot_ref": "order@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:e1b1b50664054f83bb6ae54361a9241d:immutable-slots:commitment:3",
+      "task_id": "order-note-125-verified",
+      "task_revision": 1,
+      "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "run_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 3,
+      "generation": 3,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:e1b1b50664054f83bb6ae54361a9241d:immutable-slots:commitment:4",
+      "task_id": "order-note-125-verified",
+      "task_revision": 1,
+      "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "run_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 4,
+      "generation": 4,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:e1b1b50664054f83bb6ae54361a9241d:immutable-slots:commitment:5",
+      "task_id": "order-note-125-verified",
+      "task_revision": 1,
+      "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "run_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 5,
+      "generation": 5,
+      "classification": "text",
+      "slot_ref": "note@1"
+    },
+    {
+      "ref": "runtime:e1b1b50664054f83bb6ae54361a9241d:immutable-slots:handoff:5",
+      "task_id": "order-note-125-verified",
+      "task_revision": 1,
+      "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "run_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 5,
+      "generation": 5,
+      "classification": "text",
+      "slot_ref": "note@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:e1b1b50664054f83bb6ae54361a9241d:immutable-slots:coverage:5",
+      "task_id": "order-note-125-verified",
+      "task_revision": 1,
+      "attempt_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "run_id": "e1b1b50664054f83bb6ae54361a9241d",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 5,
+      "dispatches": 5,
+      "text_dispatches": 2,
+      "nontext_dispatches": 3,
+      "unknown_dispatches": 0,
+      "sealed_generation": 5,
+      "status": "pass"
+    }
+  ]
+}

@@ -127,6 +127,7 @@ class Target:
     option_text: str | None = None
     tab_id: str | None = None
     request: tuple | None = None   # (METHOD, path) a click sends: a link's href, or a submit button's form
+    field_name: str = ""           # a text field's full accessible name: slot `fields` are matched against it, not `name`
 
 
 @dataclass(frozen=True, slots=True)
@@ -339,6 +340,13 @@ class GenericBrowserAdapter:
         return canonical_origin(url) in self._allowed
 
     @staticmethod
+    def _field_name(node) -> str:
+        """The whole accessible name. `_signature` cuts names to MAX_NAME for identity and display; a slot's `fields`
+        accept up to 200 characters, and matching a cut name would hide a field with a longer name and let a slot fit
+        another field that shares the first MAX_NAME characters (review of PR #14)."""
+        return str(getattr(getattr(node, "ax_node", None), "name", None) or "").strip()
+
+    @staticmethod
     def _signature(node) -> tuple:
         attrs = node.attributes or {}
         ax = getattr(node, "ax_node", None)
@@ -446,6 +454,7 @@ class GenericBrowserAdapter:
         select_keys |= {k for k, (node, _) in usable.items() if str(node.tag_name or "").lower() == "select"}
         table: dict[tuple[str, str], Target] = {}
         elements, fields, options, tabs = {}, {}, {}, {}
+        without_slot: list[str] = []
 
         def target(kind, key, node, sig, **extra):
             attrs = node.attributes or {}
@@ -457,7 +466,7 @@ class GenericBrowserAdapter:
             return Target(kind=kind, key=key, operation=KIND_OPERATION[kind], index=int(key.partition(":")[0]),
                           backend_node_id=node.backend_node_id, target_id=node.target_id, frame_id=node.frame_id,
                           signature=sig, role=sig[1] or sig[0], name=sig[2], destination=destination,
-                          request=request, **extra)
+                          request=request, field_name=self._field_name(node) if kind == "text_fields" else "", **extra)
 
         if "click" in granted:
             for key, label in (obs.candidates.get("elements") or {}).items():
@@ -471,6 +480,9 @@ class GenericBrowserAdapter:
             for key, label in (obs.candidates.get("text_fields") or {}).items():
                 if key in usable:
                     node, sig = usable[key]
+                    if not any(slot.fits(self._field_name(node)) for slot in self.task.slots):
+                        without_slot.append(self._scrub(str(sig[2])))   # nothing may go there: no question for the model
+                        continue
                     fields[key] = self._scrub(label)
                     table[("text_fields", key)] = target("text_fields", key, node, sig)
         if "select_option" in granted:
@@ -502,7 +514,8 @@ class GenericBrowserAdapter:
             candidates["text_values"] = {
                 slot.reference: (f"{slot.reference}: {slot.value[:200]}" if slot.sensitivity == "normal"
                                  else f"{slot.reference}: (secret value, not shown)")
-                for slot in self.task.slots}
+                for slot in self.task.slots
+                if any(slot.fits(table[("text_fields", key)].field_name) for key in fields)}
         if options:
             candidates["options"] = options
         if tabs:
@@ -547,8 +560,11 @@ class GenericBrowserAdapter:
             "text_chars": len(obs.text), "options": {kind: len(values) for kind, values in candidates.items()
                                                       if kind != "text_values"},
             "option_list": [{"ref": f"{oid}:{kind}:{key}", "operation": KIND_OPERATION.get(kind, "go_back"),
-                             "role": entry.role, "name": entry.name}
+                             "role": entry.role, "name": entry.name,
+                             **({"slot_refs": [slot.reference for slot in self.task.slots if slot.fits(entry.field_name)]}
+                                if kind == "text_fields" else {})}
                             for (kind, key), entry in table.items()],
+            "fields_without_slot": without_slot,
             "signature": self._page_signature(obs, url)}
         if self._pending_effect is not None:
             self.effect_report = self._assess_effect(self._pending_effect, nodes)
@@ -660,6 +676,8 @@ class GenericBrowserAdapter:
                 resolved = self._registry.resolve(captured["value"])
             except ValueError:
                 raise RuntimeStop("invalid_action") from None
+            if not next(slot for slot in self.task.slots if slot.reference == captured["value"]).fits(entry.field_name):
+                raise RuntimeStop("slot_field_mismatch")
         _, state, nodes, doc = self.backend._run(self._capture())
         if operation == "switch_tab":
             # What matters is the destination tab, not the page in front (which may be blank).
@@ -677,6 +695,10 @@ class GenericBrowserAdapter:
             if operation == "select_option":
                 params_fresh = (("option", f"{index}:{entry.option_text}"),)
             elif operation == "type_text":
+                # The signature cuts names to MAX_NAME, so a label changed after the first 80 characters passes it; the
+                # slot was allowed for the name observed, and a field renamed since is not that field (review of #14).
+                if self._field_name(node) != entry.field_name:
+                    self._stale()
                 params_fresh = (("field", index), ("value", captured["value"]))
                 text = PreparedTextCommand(int(index), resolved)
             else:

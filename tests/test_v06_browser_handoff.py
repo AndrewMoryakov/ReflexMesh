@@ -209,6 +209,86 @@ class SameSession(BrowserCase):
     WIZARD_REST = [{"action": "type_text", "field": "textbox 'Note'", "value": "^note@1"},
                    {"action": "click", "element": "Next"}, {"action": "click", "element": "Save note"}, {"action": "finish"}]
 
+    def test_a_field_no_slot_may_go_into_is_not_offered_and_the_caller_is_told(self):
+        """The note's value is missing: the Note field is no question for the model, and the handoff names it."""
+        core = self.core([self.WIZARD_STEP_1 + [{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(self.wizard_task(without_note=True)))
+        self.assertEqual(first["handoff"]["page"], self.origin + "/orders/125/wizard/2")
+        self.assertEqual(first["handoff"]["fields_without_slot"], ["Note"])
+        self.assertNotIn("type_text", [o["operation"] for o in first["handoff"]["available_actions"]])
+
+    def test_a_slot_is_matched_against_the_whole_field_name_not_the_cut_one(self):
+        """Review of #14: names are cut to 80 characters for display, `fields` take up to 200. Matching the cut name
+        hid a field with a longer name from its own slot, and two fields sharing the first 80 looked the same."""
+        label = "Instructions for the courier who brings this order to the back entrance of the building"
+        data = self.task()
+        data["start_url"] = self.origin + "/long-fields"
+        for slot in data["text_slots"]:
+            if slot["id"] == "note":
+                slot["fields"] = [label + " (morning)"]
+        core = self.core([[{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(data))
+        self.assertEqual(first["handoff"]["fields_without_slot"], [(label + " (evening)")[:80]])
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        typing = [o for o in progress["action_options"] if o["operation"] == "type_text"]
+        self.assertEqual([o["slot_refs"] for o in typing], [["note@1"]])
+        core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "stop"})
+
+    def test_a_field_renamed_after_the_observation_is_stale_even_past_eighty_characters(self):
+        """Review of #14: the check before typing compared the signature, whose name is cut to 80 characters, so a
+        label changed after them kept the slot allowed for the old name. Renamed between observing and typing."""
+        label = "Instructions for the courier who brings this order to the back entrance of the building"
+        data = self.task()
+        data["start_url"] = self.origin + "/long-fields"
+        for slot in data["text_slots"]:
+            if slot["id"] == "note":
+                slot["fields"] = [label + " (morning)"]
+        core = self.core([[{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(data))
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        morning = next(o for o in progress["action_options"] if o["operation"] == "type_text")
+        adapter = core.chains[first["chain_id"]].assist.adapter
+
+        async def rename():
+            cdp = await adapter.backend._session.get_or_create_cdp_session()
+            await cdp.cdp_client.send.Runtime.evaluate(
+                params={"expression": "document.querySelector('label[for=morning]').textContent += ' and later (evening)'"},
+                session_id=cdp.session_id)
+
+        adapter.backend._run(rename())
+        step = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "step",
+                            "proposal": {"observation_id": progress["observation"]["observation_id"], "operation": "type_text",
+                                         "option_ref": morning["ref"], "slot_ref": "note@1"}})
+        self.assertEqual(step["last_proposal"], {"accepted": True, "dispatched": False, "rejected": "stale_target"})
+        core.resume({"token": step["continuation_token"], "parent_attempt_id": step["attempt_id"], "operation": "stop"})
+
+    def test_a_slot_chosen_for_a_field_it_does_not_fit_is_refused_before_anything_is_sent(self):
+        """Section 7: the pair is checked in code after the choice. The assisted path reaches the gate directly."""
+        core = self.core([self.WIZARD_STEP_1 + [{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(self.wizard_task(without_note=True)))
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm", "task": self.wizard_task(revision=2)})
+        note = next(o for o in progress["action_options"] if o["operation"] == "type_text")
+        self.assertEqual((note["name"], note["slot_refs"]), ("Note", ["note@1"]))
+        refused = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "step",
+                               "proposal": {"observation_id": progress["observation"]["observation_id"], "operation": "type_text",
+                                            "option_ref": note["ref"], "slot_ref": "team@1"}})
+        self.assertEqual(refused["last_proposal"], {"accepted": True, "dispatched": False, "rejected": "slot_field_mismatch"})
+        self.assertEqual(refused["assistance_steps_remaining"], 5)
+        typed = core.resume({"token": refused["continuation_token"], "parent_attempt_id": refused["attempt_id"], "operation": "step",
+                             "proposal": {"observation_id": refused["observation"]["observation_id"], "operation": "type_text",
+                                          "option_ref": next(o["ref"] for o in refused["action_options"] if o["operation"] == "type_text"),
+                                          "slot_ref": "note@1"}})
+        self.assertEqual(typed["last_proposal"], {"accepted": True, "dispatched": True})
+        core.resume({"token": typed["continuation_token"], "parent_attempt_id": typed["attempt_id"], "operation": "stop"})
+
+    def test_a_revision_cannot_change_where_a_kept_slot_may_go(self):
+        core = self.core([[{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(self.task()))
+        revised = self.task(revision=2)
+        next(s for s in revised["text_slots"] if s["id"] == "note")["fields"] = ["Order number"]
+        refused = core.resume({**self.resume_token(first), "operation": "start", "mode": "jev", "task": revised})
+        self.assertEqual((refused["error"]["code"], refused["error"]["reason"]), ("revision_refused", "slot_reference_redirected"))
+
     def test_multistep_form_continues_where_it_stopped_without_restart(self):
         """The missing note arrives at step 2. An ordinary continuation keeps the progress and finishes."""
         core = self.core([self.WIZARD_STEP_1 + [{"action": "escalate"}], self.WIZARD_REST])

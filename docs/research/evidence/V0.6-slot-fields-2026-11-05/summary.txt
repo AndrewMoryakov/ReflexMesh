@@ -1,0 +1,90 @@
+order-continue-1/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action fields_without_slot=['Order number']
+    run Search 0.7; refused Search 0.56; refused Search 0.54; refused Search 0.5
+order-continue-1/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    run Order number=order@1 0.94; run Search 0.79; run [slot:record@1] 0.94; run Note=note@1 0.89; run Save note 0.71
+order-continue-2/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action fields_without_slot=['Order number']
+    refused Search 0.59; refused Search 0.57; refused Search 0.55
+order-continue-2/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    run Order number=order@1 0.94; run Search 0.8; run [slot:record@1] 0.95; run Note=note@1 0.84; run Save note 0.74
+order-continue-3/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action fields_without_slot=['Order number']
+    run Search 0.71; refused Search 0.57; refused Search 0.63; refused Search 0.57
+order-continue-3/chain/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number=order@1 0.95; run Search 0.8; run [slot:record@1] 0.93; run Note=note@1 0.89; refused Save note 0.66; refused Save note 0.53; refused Save note 0.53
+order-continue-4/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action fields_without_slot=['Order number']
+    run Search 0.7; refused Search 0.69; refused Search 0.58; refused Search 0.51
+order-continue-4/chain/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number=order@1 0.95; run Search 0.79; run [slot:record@1] 0.92; run Note=note@1 0.87; refused Save note 0.69; refused Save note 0.38; refused Save note 0.41
+order-continue-5/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action fields_without_slot=['Order number']
+    refused Search 0.68; refused Search 0.64; refused Search 0.55
+order-continue-5/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    run Order number=order@1 0.98; run Search 0.78; run [slot:record@1] 0.94; run Note=note@1 0.92; run Save note 0.74
+order-restart-1/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action fields_without_slot=['Order number']
+    run Search 0.71; refused Search 0.66; refused Search 0.65; refused Search 0.47
+order-restart-1/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    run Order number=order@1 0.96; run Search 0.76; run [slot:record@1] 0.91; run Note=note@1 0.85; run Save note 0.83
+order-restart-2/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action fields_without_slot=['Order number']
+    refused Search 0.65; refused Search 0.66; refused Search 0.52
+order-restart-2/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    run Order number=order@1 0.94; refused Search 0.68; refused Search 0.56; run Search 0.7; run [slot:record@1] 0.95; run Note=note@1 0.9; run Save note 0.73
+order-restart-3/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action fields_without_slot=['Order number']
+    refused Search 0.64; refused Search 0.62; refused Search 0.55
+order-restart-3/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    run Order number=order@1 0.94; run Search 0.72; run [slot:record@1] 0.93; run Note=note@1 0.89; run Save note 0.75
+order-restart-4/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action fields_without_slot=['Order number']
+    refused Search 0.64; refused Search 0.6; refused Search 0.5
+order-restart-4/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    run Order number=order@1 0.95; refused Search 0.66; refused Search 0.59; run Search 0.71; run [slot:record@1] 0.93; run Note=note@1 0.92; run Save note 0.73
+order-restart-5/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action fields_without_slot=['Order number']
+    run Search 0.73; refused Search 0.62; refused Search 0.63; refused Search 0.46
+order-restart-5/chain/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number=order@1 0.96; refused Search 0.65; refused Search 0.6; refused Search 0.65
+single-1/trace.jsonl: completed/verified handoff=None
+    run Order number=order@1 0.99; run Search 0.88; run [slot:record@1] 0.94; run Note=note@1 0.86; run Save note 0.76
+single-2/trace.jsonl: completed/verified handoff=None
+    run Order number=order@1 0.99; run Search 0.93; run [slot:record@1] 0.93; run Note=note@1 0.84; run Save note 0.81
+single-3/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Order number=order@1 0.99; run Search 0.89; run [slot:record@1] 0.92; run Note=note@1 0.85; refused Save note 0.68; refused Save note 0.52; refused Save note 0.65
+single-4/trace.jsonl: completed/verified handoff=None
+    run Order number=order@1 0.99; run Search 0.92; run [slot:record@1] 0.93; run Note=note@1 0.87; run Save note 0.76
+single-5/trace.jsonl: completed/verified handoff=None
+    run Order number=order@1 0.99; run Search 0.89; run [slot:record@1] 0.94; run Note=note@1 0.83; run Save note 0.76
+wizard-continue-1/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action fields_without_slot=['Note']
+    run Team=team@1 0.81; run Next 0.88; refused Next 0.4; refused Next 0.35; refused Next 0.33
+wizard-continue-1/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    run Note=note@1 0.71; run Next 0.78; run Save note 0.93
+wizard-continue-10/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action fields_without_slot=['Note']
+    run Team=team@1 0.86; run Next 0.89; refused Next 0.38; refused Next 0.22; refused Next 0.41
+wizard-continue-10/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    refused Note=note@1 0.67; run Note=note@1 0.74; run Next 0.86; run Save note 0.94
+wizard-continue-2/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested fields_without_slot=['Note']
+    run Team=team@1 0.8; run Next 0.84; escalate escalate 0.45
+wizard-continue-2/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    refused Note=note@1 0.64; run Note=note@1 0.77; run Next 0.81; run Save note 0.96
+wizard-continue-3/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested fields_without_slot=['Note']
+    run Team=team@1 0.84; run Next 0.86; escalate escalate 0.45
+wizard-continue-3/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    run Note=note@1 0.71; run Next 0.8; run Save note 0.94
+wizard-continue-4/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested fields_without_slot=['Note']
+    run Team=team@1 0.84; run Next 0.87; escalate escalate 0.45
+wizard-continue-4/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    refused Note=note@1 0.67; run Note=note@1 0.78; run Next 0.82; run Save note 0.96
+wizard-continue-5/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested fields_without_slot=['Note']
+    run Team=team@1 0.84; run Next 0.87; escalate escalate 0.38
+wizard-continue-5/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    refused Note=note@1 0.57; run Note=note@1 0.78; run Next 0.81; run Save note 0.94
+wizard-continue-6/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested fields_without_slot=['Note']
+    run Team=team@1 0.82; run Next 0.87; escalate escalate 0.35
+wizard-continue-6/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    refused Note=note@1 0.65; run Note=note@1 0.77; run Next 0.81; run Save note 0.93
+wizard-continue-7/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action fields_without_slot=['Note']
+    run Team=team@1 0.84; run Next 0.87; refused Next 0.41; refused Next 0.28; refused Next 0.36
+wizard-continue-7/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    refused Note=note@1 0.62; run Note=note@1 0.79; run Next 0.87; run Save note 0.93
+wizard-continue-8/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested fields_without_slot=['Note']
+    run Team=team@1 0.83; run Next 0.84; escalate escalate 0.39
+wizard-continue-8/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    refused Note=note@1 0.65; run Note=note@1 0.78; run Next 0.78; run Save note 0.95
+wizard-continue-9/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested fields_without_slot=['Note']
+    run Team=team@1 0.81; run Next 0.87; escalate escalate 0.35
+wizard-continue-9/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    refused Note=note@1 0.68; run Note=note@1 0.81; run Next 0.86; run Save note 0.93

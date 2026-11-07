@@ -1,0 +1,426 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "order-note-125-wizard",
+  "revision": 2,
+  "chain_id": "15a5b153f6d14ffbbdadd51caaa8b1e2",
+  "attempt_id": "0404cf30d9094b64aae73eb202a3a58a",
+  "parent_attempt_id": "66132e5e0026444dbedbd862dbc7fafe",
+  "attempt_status": "completed",
+  "stop_reason": "verified",
+  "task_outcome": "pass",
+  "execution_outcome": "returned",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "note_saved",
+      "kind": "postcondition",
+      "predicate": "revisit_match",
+      "status": "pass",
+      "reason": "value_matches",
+      "scope": "ui_after_reopen",
+      "observed_at": 1793889009.2695212,
+      "evidence_refs": [
+        "browser:0404cf30d9094b64aae73eb202a3a58a:49"
+      ]
+    },
+    {
+      "id": "note_saved_once",
+      "kind": "postcondition",
+      "predicate": "registered_check",
+      "status": "pass",
+      "reason": "saved_once",
+      "scope": "registered_source",
+      "observed_at": 1793889011.661953,
+      "evidence_refs": [
+        "browser:0404cf30d9094b64aae73eb202a3a58a:50"
+      ]
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1793889015.8584359,
+      "evidence_refs": [
+        "runtime:0404cf30d9094b64aae73eb202a3a58a:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1793889015.8584075,
+      "evidence_refs": [
+        "runtime:0404cf30d9094b64aae73eb202a3a58a:immutable-slots:coverage:4",
+        "runtime:0404cf30d9094b64aae73eb202a3a58a:immutable-slots:handoff:1"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "The browser was launched by this chain (a child process with its own profile, verified in use), stayed the same process, had only this runtime on its debugging port at each of 9 observations, and was closed with no process left. A client connecting between two observations is not excluded.",
+      "observed_at": 1793889017.952082,
+      "evidence_refs": [
+        "runtime:0404cf30d9094b64aae73eb202a3a58a:ownership"
+      ],
+      "scope": "browser_session_of_chain"
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1793889015.8584669,
+      "evidence_refs": [
+        "runtime:0404cf30d9094b64aae73eb202a3a58a:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "The registered order-desk record shows each committed form submit requested exactly once, none pending, and no other state change.",
+      "observed_at": 1793889017.9520924,
+      "evidence_refs": [
+        "runtime:0404cf30d9094b64aae73eb202a3a58a:no_uncertain_repeats",
+        "check:order_desk.note_saved_once:e56174f32df7401ea0529945869056b0"
+      ],
+      "scope": "registered_source"
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1793889015.8584838,
+      "evidence_refs": [
+        "runtime:0404cf30d9094b64aae73eb202a3a58a:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "type_text",
+      "risk": "write",
+      "option_ref": "5:text_fields:32",
+      "target_id": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@1e700ebd9d1b0883",
+      "mutation_key": "[\"type_text\", \"textbox\", \"Note\", \"\", \"\", \"note@1\"]@http://127.0.0.1:8770/orders/125/wizard/2?",
+      "request": null,
+      "target": {
+        "role": "textbox",
+        "name": "Note"
+      },
+      "slot_ref": "note@1",
+      "observation_id": 5,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 16,
+      "dispatch_seq": 17,
+      "return_seq": 18,
+      "driver_outcome": "returned",
+      "effect": "not_applied",
+      "evidence_refs": [
+        "check:order_desk.note_saved_once:e56174f32df7401ea0529945869056b0"
+      ],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown",
+        "field_present": true,
+        "field_shows_slot_value": true
+      }
+    },
+    {
+      "id": 2,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "6:elements:55",
+      "target_id": "[\"click\", \"button\", \"Next\", \"\", \"\", \"\"]@5256a9a19a0b6b58",
+      "mutation_key": "[\"click\", \"button\", \"Next\", \"\", \"\", \"\"]@http://127.0.0.1:8770/orders/125/wizard/2?",
+      "request": {
+        "method": "POST",
+        "path": "/orders/125/wizard/2"
+      },
+      "target": {
+        "role": "button",
+        "name": "Next"
+      },
+      "slot_ref": null,
+      "observation_id": 6,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 2,
+      "proposal_seq": 25,
+      "dispatch_seq": 26,
+      "return_seq": 27,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "check:order_desk.note_saved_once:e56174f32df7401ea0529945869056b0"
+      ],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": true,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 3,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "7:elements:85",
+      "target_id": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@0ea358e6438115d9",
+      "mutation_key": "[\"click\", \"button\", \"Save note\", \"\", \"\", \"\"]@http://127.0.0.1:8770/orders/125/wizard/3?",
+      "request": {
+        "method": "POST",
+        "path": "/orders/125/wizard/3"
+      },
+      "target": {
+        "role": "button",
+        "name": "Save note"
+      },
+      "slot_ref": null,
+      "observation_id": 7,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 3,
+      "proposal_seq": 34,
+      "dispatch_seq": 35,
+      "return_seq": 36,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "check:order_desk.note_saved_once:e56174f32df7401ea0529945869056b0"
+      ],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": true,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 4,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "reopen",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 8,
+      "producer": "verifier",
+      "bootstrap": false,
+      "destination": "http://127.0.0.1:8770/orders/125",
+      "policy_revision": 1,
+      "gate_seq": 4,
+      "proposal_seq": 44,
+      "dispatch_seq": 45,
+      "return_seq": 46,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "browser:0404cf30d9094b64aae73eb202a3a58a:47"
+      ],
+      "driver_ok": true
+    }
+  ],
+  "budget": {
+    "steps": 6,
+    "model_calls": 4,
+    "dispatches": 4,
+    "limits": {
+      "wall_seconds": 120.0,
+      "max_steps": 60,
+      "max_model_calls": 93,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 54,
+    "remaining_model_calls": 89,
+    "remaining_wall_seconds": 91.088,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 20.502
+  },
+  "handoff": null,
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": null,
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": false
+    },
+    "chromium": "chrome 142.0.7444.176 (install directory)",
+    "chromium_sandbox": true,
+    "headless": false,
+    "decision_provider": {
+      "kind": "jev",
+      "config_id": "openrouter:~typesafe/jev-latest",
+      "requested_model": "~typesafe/jev-latest"
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "closed",
+    "profile_removed": true,
+    "browser_processes_left": 0
+  },
+  "watchdog": {
+    "watchdog_kill": false,
+    "worker_stopped": true
+  },
+  "decision": {
+    "kind": "jev",
+    "requested_model": "~typesafe/jev-latest",
+    "served_models": [
+      "typesafe/jev-1.14-20261014"
+    ],
+    "config_id": "openrouter:~typesafe/jev-latest"
+  },
+  "session_id": "6de3724a509044fba58a8530bb2826d6",
+  "owner_epoch": 1,
+  "chain_budget": {
+    "used": {
+      "steps": 10,
+      "model_calls": 7
+    },
+    "remaining": {
+      "steps": 54,
+      "model_calls": 89,
+      "wall_seconds": 91.022,
+      "handoffs": 2
+    }
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:0404cf30d9094b64aae73eb202a3a58a:permissions",
+    "runtime:0404cf30d9094b64aae73eb202a3a58a:dispatch_ordering",
+    "runtime:0404cf30d9094b64aae73eb202a3a58a:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 20.502,
+    "total_seconds": 28.978
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:0404cf30d9094b64aae73eb202a3a58a:immutable-slots:commitment:1",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 2,
+      "attempt_id": "0404cf30d9094b64aae73eb202a3a58a",
+      "run_id": "0404cf30d9094b64aae73eb202a3a58a",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "text",
+      "slot_ref": "note@1"
+    },
+    {
+      "ref": "runtime:0404cf30d9094b64aae73eb202a3a58a:immutable-slots:handoff:1",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 2,
+      "attempt_id": "0404cf30d9094b64aae73eb202a3a58a",
+      "run_id": "0404cf30d9094b64aae73eb202a3a58a",
+      "capture_storage": "attempt_memory",
+      "kind": "handoff",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "text",
+      "slot_ref": "note@1",
+      "status": "pass",
+      "source": "authenticated_boundary_receipt"
+    },
+    {
+      "ref": "runtime:0404cf30d9094b64aae73eb202a3a58a:immutable-slots:commitment:2",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 2,
+      "attempt_id": "0404cf30d9094b64aae73eb202a3a58a",
+      "run_id": "0404cf30d9094b64aae73eb202a3a58a",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:0404cf30d9094b64aae73eb202a3a58a:immutable-slots:commitment:3",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 2,
+      "attempt_id": "0404cf30d9094b64aae73eb202a3a58a",
+      "run_id": "0404cf30d9094b64aae73eb202a3a58a",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 3,
+      "generation": 3,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:0404cf30d9094b64aae73eb202a3a58a:immutable-slots:commitment:4",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 2,
+      "attempt_id": "0404cf30d9094b64aae73eb202a3a58a",
+      "run_id": "0404cf30d9094b64aae73eb202a3a58a",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 4,
+      "generation": 4,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:0404cf30d9094b64aae73eb202a3a58a:immutable-slots:coverage:4",
+      "task_id": "order-note-125-wizard",
+      "task_revision": 2,
+      "attempt_id": "0404cf30d9094b64aae73eb202a3a58a",
+      "run_id": "0404cf30d9094b64aae73eb202a3a58a",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 4,
+      "dispatches": 4,
+      "text_dispatches": 1,
+      "nontext_dispatches": 3,
+      "unknown_dispatches": 0,
+      "sealed_generation": 4,
+      "status": "pass"
+    }
+  ]
+}

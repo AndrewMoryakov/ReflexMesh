@@ -1,0 +1,96 @@
+6f809f3
+key check 200
+=== wizard continue 1
+A1                 exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=0  chain used={'steps': 6, 'model_calls': 5}
+A2 continue        exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 11, 'model_calls': 8}
+SITE posts {'1': 1, '2': 1, '3': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== wizard continue 2
+A1                 exit 4  incomplete/needs_handoff  handoff=escalation_requested  epoch=0  chain used={'steps': 4, 'model_calls': 3}
+A2 continue        exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 10, 'model_calls': 7}
+SITE posts {'1': 1, '2': 1, '3': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== wizard continue 3
+A1                 exit 4  incomplete/needs_handoff  handoff=escalation_requested  epoch=0  chain used={'steps': 4, 'model_calls': 3}
+A2 continue        exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 9, 'model_calls': 6}
+SITE posts {'1': 1, '2': 1, '3': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== wizard continue 4
+A1                 exit 4  incomplete/needs_handoff  handoff=escalation_requested  epoch=0  chain used={'steps': 4, 'model_calls': 3}
+A2 continue        exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 10, 'model_calls': 7}
+SITE posts {'1': 1, '2': 1, '3': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== wizard continue 5
+A1                 exit 4  incomplete/needs_handoff  handoff=escalation_requested  epoch=0  chain used={'steps': 4, 'model_calls': 3}
+A2 continue        exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 10, 'model_calls': 7}
+SITE posts {'1': 1, '2': 1, '3': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== wizard continue 6
+A1                 exit 4  incomplete/needs_handoff  handoff=escalation_requested  epoch=0  chain used={'steps': 4, 'model_calls': 3}
+A2 continue        exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 10, 'model_calls': 7}
+SITE posts {'1': 1, '2': 1, '3': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== wizard continue 7
+A1                 exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=0  chain used={'steps': 6, 'model_calls': 5}
+A2 continue        exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 12, 'model_calls': 9}
+SITE posts {'1': 1, '2': 1, '3': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== wizard continue 8
+A1                 exit 4  incomplete/needs_handoff  handoff=escalation_requested  epoch=0  chain used={'steps': 4, 'model_calls': 3}
+A2 continue        exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 10, 'model_calls': 7}
+SITE posts {'1': 1, '2': 1, '3': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== wizard continue 9
+A1                 exit 4  incomplete/needs_handoff  handoff=escalation_requested  epoch=0  chain used={'steps': 4, 'model_calls': 3}
+A2 continue        exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 10, 'model_calls': 7}
+SITE posts {'1': 1, '2': 1, '3': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== wizard continue 10
+A1                 exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=0  chain used={'steps': 6, 'model_calls': 5}
+A2 continue        exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 12, 'model_calls': 9}
+SITE posts {'1': 1, '2': 1, '3': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== order continue 1
+A1                 exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=0  chain used={'steps': 5, 'model_calls': 4}
+A2 continue        exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 12, 'model_calls': 9}
+SITE posts {'note': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== order continue 2
+A1                 exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=0  chain used={'steps': 4, 'model_calls': 3}
+A2 continue        exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 11, 'model_calls': 8}
+SITE posts {'note': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== order continue 3
+A1                 exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=0  chain used={'steps': 5, 'model_calls': 4}
+A2 continue        exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=1  chain used={'steps': 12, 'model_calls': 11}
+SITE posts {} notes []
+=== order continue 4
+A1                 exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=0  chain used={'steps': 5, 'model_calls': 4}
+A2 continue        exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=1  chain used={'steps': 12, 'model_calls': 11}
+SITE posts {} notes []
+=== order continue 5
+A1                 exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=0  chain used={'steps': 4, 'model_calls': 3}
+A2 continue        exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 11, 'model_calls': 8}
+SITE posts {'note': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== order restart 1
+A1                 exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=0  chain used={'steps': 5, 'model_calls': 4}
+A2 restart         exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 13, 'model_calls': 9}
+SITE posts {'note': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== order restart 2
+A1                 exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=0  chain used={'steps': 4, 'model_calls': 3}
+A2 restart         exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 14, 'model_calls': 10}
+SITE posts {'note': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== order restart 3
+A1                 exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=0  chain used={'steps': 4, 'model_calls': 3}
+A2 restart         exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 12, 'model_calls': 8}
+SITE posts {'note': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== order restart 4
+A1                 exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=0  chain used={'steps': 4, 'model_calls': 3}
+A2 restart         exit 0  completed/verified  handoff=None  epoch=1  chain used={'steps': 14, 'model_calls': 10}
+SITE posts {'note': 1} notes ["\u041f\u0435\u0440\u0435\u0437\u0432\u043e\u043d\u0438\u0442\u044c \u0437\u0430\u0432\u0442\u0440\u0430"]
+=== order restart 5
+A1                 exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=0  chain used={'steps': 5, 'model_calls': 4}
+A2 restart         exit 4  incomplete/needs_handoff  handoff=no_confident_action  epoch=1  chain used={'steps': 10, 'model_calls': 8}
+SITE posts {} notes []
+=== single 1
+exit 0
+=== single 2
+exit 0
+=== single 3
+exit 4
+=== single 4
+exit 0
+=== single 5
+exit 0
+suite exit 0
+Ran 180 tests in 680.899s
+OK
+python left: 0

@@ -18,6 +18,8 @@ from .task import ValidationError, validate_text
 
 SCHEMA_VERSION = "browser-task/0.1"
 MAX_INPUT_BYTES = 64 * 1024
+MAX_SLOT_FIELDS = 32
+MAX_FIELD_NAME = 200
 MAX_SLOT_VALUE = 10_000
 
 # Primitive operations a caller can grant. `focus_region`, `finish` and `escalate` are
@@ -95,16 +97,25 @@ def loads_strict(raw) -> object:
         raise ValidationError("input is not valid JSON") from exc
 
 
+def field_key(name: object) -> str:
+    """A field's label or accessible name, as compared with a slot's `fields`."""
+    return " ".join(str(name or "").split()).casefold()
+
+
 @dataclass(frozen=True)
 class BrowserTextSlot:
     id: str
     version: int
     value: str
     sensitivity: str
+    fields: tuple[str, ...] | None = None   # the fields it may be typed into; () none; None any (section 7)
 
     @property
     def reference(self) -> str:
         return f"{self.id}@{self.version}"
+
+    def fits(self, field_name: object) -> bool:
+        return self.fields is None or field_key(field_name) in {field_key(name) for name in self.fields}
 
     def __repr__(self):  # a value must not leak through a log line
         return f"BrowserTextSlot(reference={self.reference!r}, sensitivity={self.sensitivity!r})"
@@ -226,6 +237,13 @@ class BrowserTask:
             raise ValidationError("text_slots must be a list")
         slots = []
         for raw in raw_slots:
+            names = None
+            if type(raw) is dict and "fields" in raw:
+                raw, names = {k: v for k, v in raw.items() if k != "fields"}, raw["fields"]
+                if (type(names) is not list or len(names) > MAX_SLOT_FIELDS or
+                        any(type(n) is not str or not field_key(n) or len(n) > MAX_FIELD_NAME for n in names) or
+                        len({field_key(n) for n in names}) != len(names)):
+                    raise ValidationError("slot fields must be a list of unique non-empty field names")
             s = _object(raw, {"id", "version", "value", "sensitivity"}, "text slot")
             if type(s["value"]) is not str or len(s["value"]) > MAX_SLOT_VALUE:
                 raise ValidationError("slot value must be a string of at most 10000 characters")
@@ -236,7 +254,7 @@ class BrowserTask:
             if s["sensitivity"] not in SENSITIVITIES:
                 raise ValidationError("slot sensitivity must be normal or secret")
             slots.append(BrowserTextSlot(_ident(s["id"], "slot id"), _integer(s["version"], "slot version"),
-                                         s["value"], s["sensitivity"]))
+                                         s["value"], s["sensitivity"], None if names is None else tuple(names)))
         references = {slot.reference for slot in slots}
         if len(references) != len(slots):
             raise ValidationError("duplicate text slot reference")
