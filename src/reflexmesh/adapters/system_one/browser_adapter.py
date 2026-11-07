@@ -48,9 +48,11 @@ ACTION_KIND = {"click": ("elements", "element"), "type_text": ("text_fields", "f
 CAPABILITIES = {
     "navigate": True, "click": True, "type_text": True, "select_option": True, "scroll": True,
     "go_back": True, "switch_tab": True, "wait": True,
-    # Declared, not probed: a capability is claimed only after an integration probe shows it.
+    # A capability is claimed only after an integration probe shows it (F11, tests in test_v06_browser_real):
+    # content of a frame of the page's own origin and of an open shadow root is offered and acted on exactly;
+    # a frame of another origin is not offered at all. press_key and focus_region are not probed.
     "press_key": False, "focus_region": False,
-    "frames": False, "cross_origin_frames": False, "open_shadow_dom": False,
+    "frames": True, "cross_origin_frames": False, "open_shadow_dom": True,
 }
 
 ACTION_SPACE = {
@@ -784,6 +786,12 @@ class GenericBrowserAdapter:
             index, node = self._find(nodes, entry)
             if node is None or self._signature(node) != entry.signature:
                 self._stale()
+            if entry.frame_ref is not None:
+                # The main document's loader says nothing about a frame's: the frame must still hold the document
+                # the target was observed in (F02). A reloaded frame also renews its nodes, so this is a second guard.
+                fresh = doc["frames"].get(entry.frame_ref)
+                if fresh is None or fresh["loader"] != entry.frame_loader:
+                    self._stale()
             if operation == "select_option":
                 params_fresh = (("option", f"{index}:{entry.option_text}"),)
             elif operation == "type_text":

@@ -262,6 +262,35 @@ class SameSession(BrowserCase):
         self.assertEqual(step["last_proposal"], {"accepted": True, "dispatched": False, "rejected": "stale_target"})
         core.resume({"token": step["continuation_token"], "parent_attempt_id": step["attempt_id"], "operation": "stop"})
 
+    def test_a_frame_reloaded_after_the_observation_makes_its_target_stale(self):
+        """F11 and F02: a field inside a same-origin frame, observed; the frame reloads; the typing is refused, not sent
+        into the new document."""
+        data = self.task()
+        data["start_url"] = self.origin + "/f11/same"
+        data["text_slots"] = [{"id": "word", "version": 1, "value": "kiwi", "sensitivity": "normal"}]
+        data["criteria"] = [{"id": "seen", "predicate": "page_match",
+                             "args": {"anchor_slot_ref": "word@1", "field_name": "Word", "expected_slot_ref": "word@1"}}]
+        SITE.F11_HITS.clear()
+        core = self.core([[{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(data))
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        word = next(o for o in progress["action_options"] if o["operation"] == "type_text")
+        adapter = core.chains[first["chain_id"]].assist.adapter
+
+        async def reload_frame():
+            cdp = await adapter.backend._session.get_or_create_cdp_session()
+            await cdp.cdp_client.send.Runtime.evaluate(
+                params={"expression": "new Promise(r => { const f = document.querySelector('iframe'); f.onload = () => r(1); f.contentWindow.location.reload(); })",
+                        "awaitPromise": True}, session_id=cdp.session_id)
+
+        adapter.backend._run(reload_frame())
+        step = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "step",
+                            "proposal": {"observation_id": progress["observation"]["observation_id"], "operation": "type_text",
+                                         "option_ref": word["ref"], "slot_ref": "word@1"}})
+        self.assertEqual(step["last_proposal"], {"accepted": True, "dispatched": False, "rejected": "stale_target"})
+        core.resume({"token": step["continuation_token"], "parent_attempt_id": step["attempt_id"], "operation": "stop"})
+        self.assertEqual(SITE.F11_HITS, [])
+
     def test_a_slot_chosen_for_a_field_it_does_not_fit_is_refused_before_anything_is_sent(self):
         """Section 7: the pair is checked in code after the choice. The assisted path reaches the gate directly."""
         core = self.core([self.WIZARD_STEP_1 + [{"action": "escalate"}]])

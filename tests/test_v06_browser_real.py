@@ -485,6 +485,24 @@ class GenericPath(BrowserCase):
         self.assertNotIn("frame_content_not_offered", coverage["reasons"])         # nothing was left out
         self.assertEqual((coverage["frame_nodes_omitted"], coverage["frames_not_offered"]), (0, 0))
 
+    def test_open_shadow_root_content_is_offered_and_the_exact_value_lands_in_it(self):
+        """F11, positive: an open shadow root. Its form sits inside the root, so the submit is resolved there."""
+        result, coverage, offered = self.f11_run("shadow-open")
+        self.assertIn(("type_text", "Word"), offered)
+        self.assertEqual(SITE.F11_HITS, [{"kind": "shadow-open", "word": "kiwi"}])
+        self.assertEqual([a.get("request") for a in result["actions"] if a["operation"] == "click"],
+                         [{"method": "POST", "path": "/f11/hit/shadow-open"}])
+        self.assertEqual(coverage["status"], "complete")
+
+    def test_declared_capabilities_are_the_probed_ones(self):
+        """F11: the declaration matches the probes above, and every result carries it."""
+        from reflexmesh.adapters.system_one.browser_adapter import CAPABILITIES
+
+        self.assertEqual({k: CAPABILITIES[k] for k in ("frames", "cross_origin_frames", "open_shadow_dom")},
+                         {"frames": True, "cross_origin_frames": False, "open_shadow_dom": True})
+        result, _, _ = self.f11_run("same")
+        self.assertEqual(result["components"]["capabilities"]["cross_origin_frames"], False)
+
     def test_a_link_to_another_origin_is_refused_before_any_request(self):
         steps = [{"action": "click", "element": "External portal"}]
         result = self.start(self.task(start="/"), label_script(steps)).run()
