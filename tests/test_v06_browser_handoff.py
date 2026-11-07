@@ -217,6 +217,23 @@ class SameSession(BrowserCase):
         self.assertEqual(first["handoff"]["fields_without_slot"], ["Note"])
         self.assertNotIn("type_text", [o["operation"] for o in first["handoff"]["available_actions"]])
 
+    def test_a_slot_is_matched_against_the_whole_field_name_not_the_cut_one(self):
+        """Review of #14: names are cut to 80 characters for display, `fields` take up to 200. Matching the cut name
+        hid a field with a longer name from its own slot, and two fields sharing the first 80 looked the same."""
+        label = "Instructions for the courier who brings this order to the back entrance of the building"
+        data = self.task()
+        data["start_url"] = self.origin + "/long-fields"
+        for slot in data["text_slots"]:
+            if slot["id"] == "note":
+                slot["fields"] = [label + " (morning)"]
+        core = self.core([[{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(data))
+        self.assertEqual(first["handoff"]["fields_without_slot"], [(label + " (evening)")[:80]])
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        typing = [o for o in progress["action_options"] if o["operation"] == "type_text"]
+        self.assertEqual([o["slot_refs"] for o in typing], [["note@1"]])
+        core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "stop"})
+
     def test_a_slot_chosen_for_a_field_it_does_not_fit_is_refused_before_anything_is_sent(self):
         """Section 7: the pair is checked in code after the choice. The assisted path reaches the gate directly."""
         core = self.core([self.WIZARD_STEP_1 + [{"action": "escalate"}]])

@@ -10,6 +10,7 @@ control loop never reads it.
 Routes:
   /                    dashboard
   /catalog             260 buttons, to see how a dense page is reported
+  /long-fields         two fields whose labels share their first 87 characters
   /leave               redirects to another origin (localhost), for allowed-origins checks
   /orders[?q=...]      search form, and matching orders when q is given
   /orders/<id>         one order: details, saved notes, a note form with priority and notify
@@ -71,6 +72,16 @@ def catalog() -> bytes:
     """A dense page: 260 buttons, far more than one observation may list."""
     buttons = "".join(f'<li><button type="button">Item {n}</button></li>' for n in range(1, 261))
     return page("Catalog", f"<ul>{buttons}</ul>")
+
+
+LONG_LABEL = "Instructions for the courier who brings this order to the back entrance of the building"
+
+
+def long_fields() -> bytes:
+    """Two text fields whose labels differ only after the first 87 characters: an observation cuts names to 80."""
+    inputs = "".join(f'<p><label for="{key}">{LONG_LABEL} ({when})</label><input id="{key}" name="{key}" type="text"></p>'
+                     for key, when in (("morning", "morning"), ("evening", "evening")))
+    return page("Delivery", f'<form method="get" action="/long-fields">{inputs}<button type="submit">Send</button></form>')
 
 
 def orders(query: str) -> bytes:
@@ -199,6 +210,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(302, b"", location=f"http://localhost:{self.server.server_port}/")
         if parts.path == "/catalog":
             return self._send(200, catalog())
+        if parts.path == "/long-fields":
+            return self._send(200, long_fields())
         if parts.path == "/orders":
             return self._send(200, orders(parse_qs(parts.query).get("q", [""])[0].strip()))
         if parts.path.startswith("/orders/"):
