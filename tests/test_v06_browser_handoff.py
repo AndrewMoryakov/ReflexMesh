@@ -121,7 +121,7 @@ class SameSession(BrowserCase):
 
     def test_restart_begins_again_from_start_url_in_the_same_browser(self):
         """`restart: true`: a first navigation through the gate, in the same session and the same process."""
-        core = self.core([TO_ORDER[:2] + [{"action": "escalate"}], TO_ORDER + SAVE])
+        core = self.core([[{"action": "escalate"}], TO_ORDER + SAVE])
         first = core.execute(BrowserTask.from_dict(self.task()))
         chain = core.chains[first["chain_id"]]
         pid = chain.session.session["pid"]
@@ -139,14 +139,20 @@ class SameSession(BrowserCase):
         self.assertEqual(done["budget"]["steps"], 8)
         self.assertEqual(SITE.NOTES, {"125": ["Перезвонить завтра"]})
 
-    def test_restart_lets_the_same_value_be_typed_again_on_the_fresh_page(self):
-        """The same slot, the same field, the same search: without forgetting the page's state all are repeats."""
-        core = self.core([TO_ORDER + SAVE[:1] + [{"action": "escalate"}], TO_ORDER + SAVE])
+    def test_restart_does_not_make_the_same_typing_a_new_operation(self):
+        """Section 9: typing may have a server effect (autosave) and nothing settles it mid-chain, so the same slot
+        in the same field on the same document stays a repeat after a restart. Until the review of PR #13 a restart
+        forgot it and this chain completed."""
+        core = self.core([TO_ORDER[:1] + [{"action": "escalate"}], TO_ORDER[:1] * 3])
         first = core.execute(BrowserTask.from_dict(self.task()))
         self.assertEqual(first["handoff"]["reason"], "escalation_requested")
-        done = core.resume({**self.resume_token(first), "operation": "start", "mode": "jev", "restart": True})
-        self.assertEqual((done["attempt_status"], done["stop_reason"]), ("completed", "verified"))
-        self.assertEqual(SITE.NOTES, {"125": ["Перезвонить завтра"]})
+        second = core.resume({**self.resume_token(first), "operation": "start", "mode": "jev", "restart": True})
+        self.assertEqual((second["attempt_status"], second["handoff"]["reason"]), ("incomplete", "no_progress"))
+        trace = [json.loads(line) for line in (self.attempt_dir(first, 2) / "trace.jsonl").read_text("utf-8").splitlines()]
+        self.assertIn("repeated_mutation", [r.get("reason") for r in trace if r["kind"] == "admission_rejected"])
+        restarted = next(r for r in trace if r["kind"] == "session_restarted")
+        self.assertEqual(restarted["kept_typed"], 1)
+        self.assertEqual(SITE.NOTES, {})
 
     def test_without_restart_the_same_value_stays_a_repeat(self):
         """The guard is unchanged for an ordinary continuation: this is the failing half of the test above."""
