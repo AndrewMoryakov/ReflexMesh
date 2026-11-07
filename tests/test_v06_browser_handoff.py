@@ -370,6 +370,28 @@ class SameSession(BrowserCase):
         self.assertEqual((done["attempt_status"], done["stop_reason"]), ("completed", "verified"))
         self.assertEqual(SITE.NOTES, {"125": ["Перезвонить завтра"]})
         self.assertEqual((assistant.calls, assistant.steps, assistant.input_tokens, assistant.cost), (4, 3, 40, 2.0))
+        # Section 12: the assistant's requests are on the chain's model-call counter, reserved before each request.
+        self.assertEqual(done["chain_budget"]["used"]["model_calls"], first["budget"]["model_calls"] + 4)
+
+    def test_the_m5_assistant_stops_when_the_shared_model_call_budget_is_spent(self):
+        """Review of #15: the assistant's calls bypassed max_model_calls; a reservation now comes first."""
+        spec = importlib.util.spec_from_file_location("m5_runner", ROOT / "experiments/v06/m5/runner.py")
+        runner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(runner)
+
+        class Client:
+            asked = 0
+
+            def ask(self, system, content):
+                Client.asked += 1
+                ref = next(x["ref"] for x in content["action_options"] if x.get("ref") and x["operation"] == "click")
+                return {"option_ref": ref}, {"input_tokens": 1, "output_tokens": 1, "cost": 0.0}, "m", "r", 1
+
+        core = self.core([[{"action": "escalate"}], [{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(self.task(max_model_calls=2)))
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        runner.Assistant(Client(), "goal").help(core, progress)
+        self.assertEqual(Client.asked, 2 - first["budget"]["model_calls"])
 
     def test_going_back_in_assistance_is_a_step_and_does_not_end_the_attempt(self):
         core = self.core([TO_ORDER + [{"action": "escalate"}]])

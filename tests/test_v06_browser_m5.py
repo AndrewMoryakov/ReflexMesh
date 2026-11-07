@@ -78,8 +78,11 @@ class ChatProvider(unittest.TestCase):
         for reply in ({"next_action": "navigate"}, {"next_action": "click", "click__element": "99"}, {"next_action": "click"},
                       "not json", ["a list"]):
             self.reply = reply
-            with self.assertRaisesRegex(ProviderError, "protocol"):
+            with self.assertRaisesRegex(ProviderError, "protocol") as caught:
                 self.provider.decide({}, QUESTIONS)
+            # The refused reply was a paid request: its id and usage go with the refusal into decision_failed.
+            self.assertTrue(hasattr(caught.exception, "request_id"))
+            self.assertIn("cost", caught.exception.usage)
 
     def test_a_key_written_as_a_number_is_the_same_key_and_anything_else_is_not(self):
         """Qwen wrote `592` for the key "592" in about one reply of ten; refusing that charged mode L for a bug of ours."""
@@ -155,6 +158,39 @@ class Runner(unittest.TestCase):
         self.assertEqual((s["runs"], s["confirmed_success"], s["infra_failures"]), (2, 1, 1))
         self.assertIsNone(s["cost"])
         self.assertEqual(runner.summarize(rows[:1])["L"]["cost"], 0.1)
+
+    def test_scroll_and_wait_are_named_by_operation_and_a_reply_without_a_ref_names_nothing(self):
+        """Review of #15: scroll and wait are offered without a ref. Looking them up by ref picked scroll for any reply
+        without one, and sent it without a direction."""
+        progress = {"observation": {"observation_id": 7},
+                    "action_options": [{"ref": "7:elements:3", "operation": "click", "name": "Go"},
+                                       {"ref": None, "operation": "scroll"}, {"ref": None, "operation": "wait"}]}
+        self.assertEqual(runner.assist_proposal(progress, {"operation": "scroll", "direction": "down"}),
+                         {"observation_id": 7, "operation": "scroll", "direction": "down"})
+        self.assertEqual(runner.assist_proposal(progress, {"operation": "wait"}), {"observation_id": 7, "operation": "wait"})
+        self.assertEqual(runner.assist_proposal(progress, {"option_ref": "7:elements:3"}),
+                         {"observation_id": 7, "operation": "click", "option_ref": "7:elements:3"})
+        for reply in ({}, {"option_ref": None}, {"operation": "scroll"}, {"operation": "scroll", "direction": "left"},
+                      {"option_ref": "7:elements:9"}):
+            self.assertIsNone(runner.assist_proposal(progress, reply), reply)
+
+    def test_a_reply_refused_for_its_format_is_still_paid_for(self):
+        """Review of #15: only decision_received was counted, and 11 of L's 19 refused runs showed a cost of 0."""
+        import tempfile
+
+        def run_cost(events):
+            out = Path(tempfile.mkdtemp())
+            attempt = out / "t-L-1" / "chain-x" / "attempt-1"
+            attempt.mkdir(parents=True)
+            (attempt / "trace.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events), "utf-8")
+            with mock.patch.dict(os.environ, {"OPENROUTER_API_KEY": "k"}):
+                return runner.costs_of(out, {"task": "t", "mode": "L", "repeat": 1})
+
+        received = {"kind": "decision_received", "request_id": "a", "usage": {"cost": 0.25}}
+        refused = {"kind": "decision_failed", "protocol": True, "request_id": "b", "usage": {"cost": 0.5}}
+        self.assertEqual(run_cost([received, refused]), 0.75)
+        self.assertIsNone(run_cost([received, {"kind": "decision_failed", "protocol": True}]))   # traces from before: unknown
+        self.assertEqual(run_cost([received, {"kind": "decision_failed", "protocol": False}]), 0.25)   # no reply, no cost
 
     def test_a_claim_the_oracle_denies_is_a_false_completion(self):
         s = runner.summarize([{"mode": "J0", "attempt_status": "completed", "oracle_success": False, "false_completion": True}])["J0"]

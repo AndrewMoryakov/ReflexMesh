@@ -129,6 +129,8 @@ class ValidatingProvider:
             shape = (decision.raw or {}).get("reply_shape") if isinstance(decision.raw, dict) else None
             if shape is not None:
                 exc.reply_shape = shape
+            # A refused reply was still a paid request: its id and usage go with the refusal, or its cost is lost.
+            exc.request_id, exc.usage = getattr(decision, "request_id", None), getattr(decision, "usage", None)
             raise
         self.last_decision = decision
         return decision
@@ -214,17 +216,28 @@ class ChatClient:
             raise ProviderError(f"HTTP {r.status_code} from the provider", r.status_code)
         try:
             data = r.json()
-            objects = json_objects(data["choices"][0]["message"]["content"])
-        except (ValueError, KeyError, IndexError, TypeError):
-            raise ProviderError("protocol: the model did not answer with a JSON object") from None
-        if len(objects) != 1:
-            raise ProviderError(f"protocol: the model answered with {len(objects)} JSON objects, not one")
-        reply = objects[0]
-        used = data.get("usage") or {}
+        except ValueError:
+            data = None
+        data = data if isinstance(data, dict) else {}
+        used = data.get("usage") if isinstance(data.get("usage"), dict) else {}
         usage = {"input_tokens": int(used.get("prompt_tokens") or 0), "output_tokens": int(used.get("completion_tokens") or 0)}
         if type(used.get("cost")) in (int, float):
             usage["cost"] = used["cost"]
-        return reply, usage, str(data.get("model") or self.model), str(data.get("id") or ""), latency
+        request_id = str(data.get("id") or "")
+
+        def refused(message: str) -> Exception:
+            # The reply is refused, the request was paid for: its id and usage go with the refusal (review of PR #15).
+            exc = ProviderError(message)
+            exc.request_id, exc.usage = request_id or None, usage
+            return exc
+
+        try:
+            objects = json_objects(data["choices"][0]["message"]["content"])
+        except (ValueError, KeyError, IndexError, TypeError):
+            raise refused("protocol: the model did not answer with a JSON object") from None
+        if len(objects) != 1:
+            raise refused(f"protocol: the model answered with {len(objects)} JSON objects, not one")
+        return objects[0], usage, str(data.get("model") or self.model), request_id, latency
 
     def close(self) -> None:
         self._client.close()

@@ -234,6 +234,24 @@ class BrowserCore:
         finally:
             self.running.pop(chain.chain_id, None)
 
+    def reserve_assist_call(self, attempt_id: str) -> bool:
+        """Metered LLM assistance (section 12): one request of the assisting caller, reserved on the chain's model-call
+        counter before it is sent, as every Jev request is. False when the budget is spent or no assistance with that
+        attempt is running: the caller must not send the request then. The request itself stays the caller's; this
+        only counts it (review of PR #15: the M5 assistant's calls were not counted)."""
+        from reflexmesh.runtime.runner import RuntimeStop
+
+        chain = next((c for c in self.chains.values()
+                      if c.assist is not None and c.assist.attempt_id == attempt_id), None)
+        if chain is None:
+            return False
+        try:
+            chain.assist.gate.reserve_call()
+        except RuntimeStop:
+            return False
+        chain.assist.journal.emit("assist_call_reserved")
+        return True
+
     def resume(self, continuation: dict) -> dict:
         if type(continuation) is not dict:
             return _error("invalid_continuation")
