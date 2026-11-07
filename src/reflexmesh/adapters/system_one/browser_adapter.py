@@ -129,6 +129,8 @@ class Target:
     tab_id: str | None = None
     request: tuple | None = None   # (METHOD, path) a click sends: a link's href, or a submit button's form
     field_name: str = ""           # a text field's full accessible name: slot `fields` are matched against it, not `name`
+    frame_ref: str | None = None   # the frame whose document holds the node, None for the page's own document
+    frame_loader: str | None = None   # that frame's document when observed
 
 
 @dataclass(frozen=True, slots=True)
@@ -172,6 +174,35 @@ def essential_text(text: str) -> str:
     return "\n".join(line for line in lines if line and line != "*")
 
 
+DOCUMENT_NODE, DOCUMENT_FRAGMENT_NODE = 9, 11
+
+
+def _node_kind(node) -> int:
+    kind = getattr(node, "node_type", None)
+    try:
+        return int(getattr(kind, "value", kind))
+    except (TypeError, ValueError):
+        return -1
+
+
+def enclosing(node) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """(frames, shadow roots) a node sits in, nearest first: the ids of the frames whose documents hold it and the
+    modes of the shadow roots on the way. Browser Use leaves `frame_id` empty on a frame's content and sets it only on
+    the frame's own element and its document's root, so the chain of parents is what tells (probe of 2026-11-07)."""
+    frames, shadows = [], []
+    current = node.parent_node
+    while current is not None:
+        kind = _node_kind(current)
+        if kind == DOCUMENT_FRAGMENT_NODE and current.shadow_root_type is not None:
+            shadows.append(str(getattr(current.shadow_root_type, "value", current.shadow_root_type)).lower())
+        elif kind == DOCUMENT_NODE:
+            host = current.parent_node
+            if host is not None and str(host.node_name or "").upper() in ("IFRAME", "FRAME"):
+                frames.append(str(host.frame_id or ""))
+        current = current.parent_node
+    return tuple(frames), tuple(shadows)
+
+
 def form_request(node, page_url: str) -> tuple | None:
     """(METHOD, path) a submit button sends, read from its form in the DOM snapshot; None when it is not a
     plain form submit (a script handler may send anything, and that stays unknown)."""
@@ -188,6 +219,8 @@ def form_submission(node, page_url: str) -> tuple | None:
         return None
     form = node.parent_node
     while form is not None and str(form.tag_name or "").lower() != "form":
+        if _node_kind(form) in (DOCUMENT_NODE, DOCUMENT_FRAGMENT_NODE):
+            return None   # a form never owns a button across a frame's document or a shadow root
         form = form.parent_node
     if form is None:
         return None
@@ -282,7 +315,10 @@ class GenericBrowserAdapter:
         if self.backend is None:
             options = {"chromium_sandbox": self.sandbox, "enable_default_extensions": False,
                        "highlight_elements": False, "captcha_solver": False, "auto_download_pdfs": False,
-                       "allowed_domains": sorted(self._allowed)}
+                       "allowed_domains": sorted(self._allowed),
+                       # Out-of-process frames of other sites are not read at all; content of any other-origin frame is
+                       # also dropped in `observe`, which is the rule (an other-origin frame of the same site is in-process).
+                       "cross_origin_iframes": False}
             # The backend's own text map holds labels, never values: a value reaches the page
             # only through the prepared, witnessed text command.
             self.backend = _backend_class()(
@@ -349,12 +385,22 @@ class GenericBrowserAdapter:
         cdp = await session.get_or_create_cdp_session()
         tree = await cdp.cdp_client.send.Page.getFrameTree(session_id=cdp.session_id)
         frame = tree["frameTree"]["frame"]
+        frames: dict[str, dict] = {}
+
+        def walk(branch):
+            info = branch.get("frame") or {}
+            if info.get("id"):
+                frames[info["id"]] = {"url": str(info.get("url") or ""), "loader": info.get("loaderId")}
+            for child in branch.get("childFrames") or []:
+                walk(child)
+
+        walk(tree["frameTree"])
         history = await cdp.cdp_client.send.Page.getNavigationHistory(session_id=cdp.session_id)
         entries = history.get("entries") or []
         at = history.get("currentIndex", 0)
         previous = entries[at - 1].get("url") if at and at - 1 < len(entries) else None
         doc = {"frame_id": frame.get("id"), "loader_id": frame.get("loaderId"), "target_id": cdp.target_id,
-               "url": state.url, "previous_url": previous}
+               "url": state.url, "previous_url": previous, "frames": frames}
         return obs, state, nodes, doc
 
     def _origin_allowed(self, url: str) -> bool:
@@ -457,10 +503,23 @@ class GenericBrowserAdapter:
         self._observation_id += 1
         oid = self._observation_id
         granted = self.task.permissions
-        main_frame = doc["frame_id"]
-        usable, skipped_frames, disabled = {}, 0, 0
+        main_frame, main_origin = doc["frame_id"], canonical_origin(url)
+        usable, skipped_frames, disabled, frames_not_offered = {}, 0, 0, 0
         for index, node in nodes.items():
             if node.frame_id and main_frame and node.frame_id != main_frame:
+                # A frame's own element or its document's root: a container, not content. A frame of another origin
+                # is counted here: one of another site is out of process and not read at all, so no node of it shows.
+                if str(node.node_name or "").upper() in ("IFRAME", "FRAME"):
+                    child = doc["frames"].get(node.frame_id)
+                    if child is None or canonical_origin(child["url"]) != main_origin:
+                        frames_not_offered += 1
+                continue
+            frames_of, _ = enclosing(node)
+            if any((doc["frames"].get(f) is None or canonical_origin(doc["frames"][f]["url"]) != main_origin)
+                   for f in frames_of):
+                # Content of a frame is offered only when every frame around it holds a document of the page's own
+                # origin (`cross_origin_frames: False`). A frame of another origin received a typed value and the
+                # form that sent it while the page's origin was the only one allowed (probe of 2026-11-07).
                 skipped_frames += 1
                 continue
             sig = self._signature(node)
@@ -469,53 +528,59 @@ class GenericBrowserAdapter:
             if sig[4]:
                 disabled += 1
                 continue
-            usable[str(index)] = (node, sig)
+            usable[str(index)] = (node, sig, frames_of)
         field_keys = set(obs.candidates.get("text_fields") or {})
         select_keys = {key.partition(":")[0] for key in (obs.candidates.get("options") or {})}
-        select_keys |= {k for k, (node, _) in usable.items() if str(node.tag_name or "").lower() == "select"}
+        select_keys |= {k for k, (node, _, _) in usable.items() if str(node.tag_name or "").lower() == "select"}
         table: dict[tuple[str, str], Target] = {}
         elements, fields, options, tabs = {}, {}, {}, {}
         without_slot: list[str] = []
 
-        def target(kind, key, node, sig, **extra):
+        def base_of(frames_of) -> str:
+            """Links and forms resolve against the document that holds them, a frame's own when in a frame."""
+            return doc["frames"][frames_of[0]]["url"] if frames_of else url
+
+        def target(kind, key, node, sig, frames_of, **extra):
             attrs = node.attributes or {}
             href = attrs.get("href")
-            destination = urljoin(url, href) if href and kind == "elements" else None
+            destination = urljoin(base_of(frames_of), href) if href and kind == "elements" else None
             request = None
             if kind == "elements":
-                request = ("GET", urlsplit(destination).path) if destination else form_request(node, url)
+                request = ("GET", urlsplit(destination).path) if destination else form_request(node, base_of(frames_of))
+            nearest = frames_of[0] if frames_of else None
             return Target(kind=kind, key=key, operation=KIND_OPERATION[kind], index=int(key.partition(":")[0]),
                           backend_node_id=node.backend_node_id, target_id=node.target_id, frame_id=node.frame_id,
                           signature=sig, role=sig[1] or sig[0], name=sig[2], destination=destination,
-                          request=request, field_name=self._field_name(node) if kind == "text_fields" else "", **extra)
+                          request=request, field_name=self._field_name(node) if kind == "text_fields" else "",
+                          frame_ref=nearest, frame_loader=doc["frames"][nearest]["loader"] if nearest else None, **extra)
 
         if "click" in granted:
             for key, label in (obs.candidates.get("elements") or {}).items():
                 if key in usable and key not in field_keys and key not in select_keys:
-                    node, sig = usable[key]
-                    submits = form_submission(node, url)
+                    node, sig, frames_of = usable[key]
+                    submits = form_submission(node, base_of(frames_of))
                     if submits and not self._origin_allowed(submits[1]):
                         continue   # a form sending to another origin is no option: the request would leave first
-                    entry = target("elements", key, node, sig)
+                    entry = target("elements", key, node, sig, frames_of)
                     where = urlsplit(entry.destination).path if entry.destination else ""
                     elements[key] = self._scrub(label + (f" → {where}" if where else ""))
                     table[("elements", key)] = entry
         if "type_text" in granted:
             for key, label in (obs.candidates.get("text_fields") or {}).items():
                 if key in usable:
-                    node, sig = usable[key]
+                    node, sig, frames_of = usable[key]
                     if not any(slot.fits(self._field_name(node)) for slot in self.task.slots):
                         without_slot.append(self._scrub(str(sig[2])))   # nothing may go there: no question for the model
                         continue
                     fields[key] = self._scrub(label)
-                    table[("text_fields", key)] = target("text_fields", key, node, sig)
+                    table[("text_fields", key)] = target("text_fields", key, node, sig, frames_of)
         if "select_option" in granted:
             for key, label in (obs.candidates.get("options") or {}).items():
                 index, _, text = key.partition(":")
                 if index in usable:
-                    node, sig = usable[index]
+                    node, sig, frames_of = usable[index]
                     options[key] = self._scrub(label)
-                    table[("options", key)] = target("options", key, node, sig, option_text=text)
+                    table[("options", key)] = target("options", key, node, sig, frames_of, option_text=text)
         if "switch_tab" in granted:
             for tab in state.tabs or []:
                 tab_id = str(getattr(tab, "target_id", "") or "")
@@ -562,7 +627,7 @@ class GenericBrowserAdapter:
             reasons.append("text_truncated")
         if blank:
             reasons.append("blank_page")
-        if skipped_frames:
+        if skipped_frames or frames_not_offered:
             reasons.append("frame_content_not_offered")
         if below:
             reasons.append("more_content_below")
@@ -571,7 +636,7 @@ class GenericBrowserAdapter:
         coverage = {"status": "partial" if reasons else "complete", "reasons": reasons,
                     "controls_total": len(nodes), "controls_offered": len(considered),
                     "controls_not_offered": len(unreachable), "disabled_omitted": disabled,
-                    "frame_nodes_omitted": skipped_frames,
+                    "frame_nodes_omitted": skipped_frames, "frames_not_offered": frames_not_offered,
                     "next_window": "scroll" if (below or above) else None}
         obs.candidates = candidates
         obs.text = self._scrub(obs.text)

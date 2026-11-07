@@ -436,6 +436,55 @@ class GenericPath(BrowserCase):
         self.assertEqual([r["reason"] for r in trace if r["kind"] == "admission_rejected"], [])
         self.assertEqual([a["operation"] for a in result["actions"]], ["navigate", "scroll", "scroll", "scroll"])
 
+    F11_STEPS = [{"action": "type_text", "field": "Word", "value": "^word@1"}, {"action": "click", "element": "Send word"},
+                 {"action": "finish"}]
+
+    def f11_run(self, kind, query=""):
+        """One attempt on an F11 probe page: type the word into the small form and send it."""
+        SITE.F11_HITS.clear()
+        SITE.REQUESTS.clear()
+        self.out = tempfile.TemporaryDirectory()
+        self.addCleanup(self.out.cleanup)
+        task = self.task(start=f"/f11/{kind}{query}",
+                         text_slots=[{"id": "word", "version": 1, "value": "kiwi", "sensitivity": "normal"}],
+                         criteria=[{"id": "seen", "predicate": "page_match",
+                                    "args": {"anchor_slot_ref": "word@1", "field_name": "Word", "expected_slot_ref": "word@1"}}])
+        result = self.start(task, label_script(self.F11_STEPS)).run()
+        trace = self.trace()
+        observed = next(r for r in trace if r["kind"] == "observed")
+        offered = {(o["operation"], o["name"]) for o in next(r for r in trace if r["kind"] == "options_built")["options"]}
+        return result, observed["coverage"], offered
+
+    def test_frame_content_of_another_origin_is_not_offered_and_nothing_reaches_it(self):
+        """F11, negative. The page's origin is the only one allowed. A frame of another site (out of process) and a
+        frame of another origin on the same site (in process) both received the typed value and sent it before."""
+        other = ThreadingHTTPServer(("127.0.0.1", 0), SITE.Handler)
+        threading.Thread(target=other.serve_forever, daemon=True).start()
+        self.addCleanup(other.server_close)
+        self.addCleanup(other.shutdown)
+        for kind, query in (("cross", ""), ("cross-port", f"?port={other.server_port}")):
+            with self.subTest(kind):
+                result, coverage, offered = self.f11_run(kind, query)
+                self.assertNotIn(("click", "Send word"), offered)
+                self.assertNotIn(("type_text", "Word"), offered)
+                self.assertEqual(SITE.F11_HITS, [])
+                self.assertEqual([r for r in SITE.REQUESTS if "/f11/hit" in r["path"]], [])
+                self.assertIn("frame_content_not_offered", coverage["reasons"])      # said, not hidden
+                self.assertEqual(coverage["frames_not_offered"], 1)
+                # In process its field and button are read and dropped; out of process nothing of it is read.
+                self.assertEqual(coverage["frame_nodes_omitted"] >= 2, kind == "cross-port")
+                self.assertEqual(result["budget"]["dispatches"], 1)                  # the first navigation only
+
+    def test_same_origin_frame_content_is_offered_and_the_exact_value_lands_in_it(self):
+        """F11, positive: a frame of the page's own origin. Its form resolves against the frame's document."""
+        result, coverage, offered = self.f11_run("same")
+        self.assertIn(("type_text", "Word"), offered)
+        self.assertEqual(SITE.F11_HITS, [{"kind": "same", "word": "kiwi"}])
+        self.assertEqual([a.get("request") for a in result["actions"] if a["operation"] == "click"],
+                         [{"method": "POST", "path": "/f11/hit/same"}])
+        self.assertNotIn("frame_content_not_offered", coverage["reasons"])         # nothing was left out
+        self.assertEqual((coverage["frame_nodes_omitted"], coverage["frames_not_offered"]), (0, 0))
+
     def test_a_link_to_another_origin_is_refused_before_any_request(self):
         steps = [{"action": "click", "element": "External portal"}]
         result = self.start(self.task(start="/"), label_script(steps)).run()
