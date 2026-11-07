@@ -352,6 +352,89 @@ class SameSession(BrowserCase):
         self.assertEqual(SITE.NOTES, {})
         self.assertNotIn("llm", [a["producer"] for a in core.chains[first["chain_id"]].actions])
 
+    def test_a_final_probe_reads_the_live_page_and_leaves_no_trace_in_the_result(self):
+        """The M5 oracle looks after the attempt ended, before the browser closes; the attempt never knows."""
+        spec = importlib.util.spec_from_file_location("m5_runner", ROOT / "experiments/v06/m5/runner.py")
+        runner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(runner)
+        steps = TO_ORDER + SAVE
+        task = BrowserTask.from_dict(self.task())
+        plain = self.core([list(steps)])
+        without = plain.execute(task)
+        plain.close()
+        SITE.NOTES.clear()
+        states = []
+        core = self.core([list(steps)])
+        core.final_probe = lambda adapter: states.append(runner.read_final_state(adapter))
+        withit = core.execute(task)
+        self.assertEqual((withit["attempt_status"], withit["stop_reason"]), (without["attempt_status"], without["stop_reason"]))
+        self.assertEqual(len(states), 1)
+        self.assertRegex(states[0]["url"], r"/orders/125$")
+        self.assertIn("Перезвонить завтра", states[0]["text"])
+        self.assertEqual(sorted(withit), sorted(without))
+        self.assertEqual([a["operation"] for a in withit["actions"]], [a["operation"] for a in without["actions"]])
+
+    def test_the_m5_assistant_takes_steps_through_the_gate_and_is_metered(self):
+        """J1: the LLM's replies are scripted here, the path through the runtime is real."""
+        spec = importlib.util.spec_from_file_location("m5_runner", ROOT / "experiments/v06/m5/runner.py")
+        runner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(runner)
+
+        class Client:
+            def __init__(self):
+                self.script = [lambda o: {"option_ref": next(x["ref"] for x in o if str(x.get("name")).startswith(("Заказ", "[slot:record")))},
+                               lambda o: {"option_ref": next(x["ref"] for x in o if x["operation"] == "type_text" and x["name"] == "Note"), "slot_ref": "team@1"},
+                               lambda o: {"option_ref": next(x["ref"] for x in o if x["operation"] == "type_text" and x["name"] == "Note"), "slot_ref": "note@1"},
+                               lambda o: {"option_ref": next(x["ref"] for x in o if x.get("name") == "Save note")}]
+
+            def ask(self, system, content):
+                return self.script.pop(0)(content["action_options"]), {"input_tokens": 10, "output_tokens": 2, "cost": 0.5}, "m", "r", 1
+
+        core = self.core([TO_ORDER[:2] + [{"action": "escalate"}], [{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(self.task()))
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        assistant = runner.Assistant(Client(), "goal")
+        done = assistant.help(core, progress)
+        self.assertEqual((done["attempt_status"], done["stop_reason"]), ("completed", "verified"))
+        self.assertEqual(SITE.NOTES, {"125": ["Перезвонить завтра"]})
+        self.assertEqual((assistant.calls, assistant.steps, assistant.input_tokens, assistant.cost), (4, 3, 40, 2.0))
+        # Section 12: the assistant's requests are on the chain's model-call counter, reserved before each request.
+        self.assertEqual(done["chain_budget"]["used"]["model_calls"], first["budget"]["model_calls"] + 4)
+
+    def test_the_m5_assistant_stops_when_the_shared_model_call_budget_is_spent(self):
+        """Review of #15: the assistant's calls bypassed max_model_calls; a reservation now comes first."""
+        spec = importlib.util.spec_from_file_location("m5_runner", ROOT / "experiments/v06/m5/runner.py")
+        runner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(runner)
+
+        class Client:
+            asked = 0
+
+            def ask(self, system, content):
+                Client.asked += 1
+                ref = next(x["ref"] for x in content["action_options"] if x.get("ref") and x["operation"] == "click")
+                return {"option_ref": ref}, {"input_tokens": 1, "output_tokens": 1, "cost": 0.0}, "m", "r", 1
+
+        core = self.core([[{"action": "escalate"}], [{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(self.task(max_model_calls=2)))
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        runner.Assistant(Client(), "goal").help(core, progress)
+        self.assertEqual(Client.asked, 2 - first["budget"]["model_calls"])
+
+    def test_going_back_in_assistance_is_a_step_and_does_not_end_the_attempt(self):
+        core = self.core([TO_ORDER + [{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(self.task()))
+        self.assertEqual(first["handoff"]["page"], self.origin + "/orders/125")
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        back = next(o for o in progress["action_options"] if o["operation"] == "go_back")
+        moved = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "step",
+                             "proposal": {"observation_id": progress["observation"]["observation_id"], "operation": "go_back", "option_ref": back["ref"]}})
+        self.assertEqual(moved["schema_version"], "browser-progress/0.1")
+        self.assertEqual(moved["last_proposal"], {"accepted": True, "dispatched": True})
+        self.assertRegex(moved["observation"]["page"], r"/orders\b")
+        self.assertEqual(moved["assistance_steps_remaining"], 4)
+        core.resume({"token": moved["continuation_token"], "parent_attempt_id": moved["attempt_id"], "operation": "stop"})
+
     def test_ambiguity_is_resolved_by_one_assisted_step_then_jev_continues(self):
         """LLM assistance: one proposal from the fresh options, through the same gate; then return to Jev."""
         task = self.task(order="12")                      # "12" matches orders 124, 125 and 126

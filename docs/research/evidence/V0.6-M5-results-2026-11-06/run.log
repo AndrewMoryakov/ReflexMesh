@@ -1,0 +1,105 @@
+d264499
+openrouter direct 200
+suite exit 0
+Ran 199 tests in 779.546s
+OK
+wiki-everest L 3 incomplete verification_unknown matched https://en.wikipedia.org/wiki/Mount_Everest ran
+wiki-everest J0 3 incomplete needs_handoff url_differs https://en.wikipedia.org/wiki/Main_Page ran
+wiki-everest J1 3 incomplete verification_unknown matched https://en.wikipedia.org/wiki/Mount_Everest ran
+wiki-lovelace L 3 incomplete verification_unknown matched https://en.wikipedia.org/wiki/Ada_Lovelace ran
+wiki-lovelace J0 3 incomplete needs_handoff url_differs https://en.wikipedia.org/wiki/Main_Page ran
+wiki-lovelace J1 3 incomplete verification_unknown matched https://en.wikipedia.org/wiki/Ada_Lovelace ran
+wiki-help-tab L 3 incomplete verification_unknown matched https://en.wikipedia.org/wiki/Help:Searching ran
+wiki-help-tab J0 3 incomplete verification_unknown matched https://en.wikipedia.org/wiki/Help:Searching ran
+wiki-help-tab J1 3 incomplete verification_unknown matched https://en.wikipedia.org/wiki/Help:Searching ran
+arxiv-resnet L 3 failed protocol_error url_differs https://arxiv.org/search/ ran
+arxiv-resnet J0 3 incomplete needs_handoff url_differs https://arxiv.org/search/ ran
+arxiv-resnet J1 3 incomplete verification_unknown matched https://arxiv.org/abs/1512.03385 ran
+arxiv-bert L 3 incomplete verification_unknown matched https://arxiv.org/abs/1810.04805 ran
+arxiv-bert J0 3 incomplete needs_handoff url_differs https://arxiv.org/search/advanced ran
+arxiv-bert J1 3 incomplete needs_handoff matched https://arxiv.org/abs/1810.04805 ran
+arxiv-bibtex L 3 incomplete verification_unknown matched https://arxiv.org/abs/1706.03762 ran
+arxiv-bibtex J0 3 incomplete needs_handoff matched https://arxiv.org/abs/1706.03762 ran
+arxiv-bibtex J1 3 incomplete needs_handoff matched https://arxiv.org/abs/1706.03762 ran
+pypi-history L 3 incomplete verification_unknown matched https://pypi.org/project/Flask/#history ran
+pypi-history J0 3 incomplete verification_unknown matched https://pypi.org/project/Flask/#history ran
+pypi-history J1 3 incomplete verification_unknown matched https://pypi.org/project/Flask/#history ran
+pypi-psf-tab L 3 incomplete verification_unknown matched https://www.python.org/psf-landing/ ran
+pypi-psf-tab J0 3 incomplete needs_handoff url_differs https://pypi.org/project/Flask/ ran
+pypi-psf-tab J1 3 incomplete needs_handoff matched https://www.python.org/psf-landing/ ran
+pypi-guide-tab L 3 incomplete verification_unknown matched https://packaging.python.org/en/latest/ ran
+pypi-guide-tab J0 3 incomplete needs_handoff url_differs https://pypi.org/project/Flask/ ran
+pypi-guide-tab J1 3 blocked policy_denied url_differs https://pypi.org/project/Flask/ ran
+w3-tryit-tab L 3 incomplete verification_unknown matched https://www.w3schools.com/html/tryit.asp?filename=tryhtml_iframe_height_width ran
+w3-tryit-tab J0 3 incomplete needs_handoff url_differs https://www.w3schools.com/html/html_iframe.asp ran
+w3-tryit-tab J1 3 incomplete needs_handoff matched https://www.w3schools.com/html/tryit.asp?filename=tryhtml_iframe_height_width ran
+w3-form-frame L 3 incomplete verification_unknown matched https://www.w3schools.com/html/tryit.asp?filename=tryhtml_form_submit ran
+w3-form-frame J0 3 incomplete verification_unknown text_missing https://www.w3schools.com/html/tryit.asp?filename=tryhtml_form_submit ran
+w3-form-frame J1 3 incomplete verification_unknown text_missing https://www.w3schools.com/html/tryit.asp?filename=tryhtml_form_submit ran
+w3-select-frame L 3 incomplete verification_unknown matched https://www.w3schools.com/tags/tryit.asp?filename=tryhtml_select ran
+w3-select-frame J0 3 incomplete verification_unknown matched https://www.w3schools.com/tags/tryit.asp?filename=tryhtml_select ran
+w3-select-frame J1 3 incomplete verification_unknown matched https://www.w3schools.com/tags/tryit.asp?filename=tryhtml_select ran
+internet-loading L 3 incomplete verification_unknown matched https://the-internet.herokuapp.com/dynamic_loading/1 ran
+internet-loading J0 3 incomplete needs_handoff text_missing https://the-internet.herokuapp.com/dynamic_loading/1 ran
+internet-loading J1 3 incomplete needs_handoff matched https://the-internet.herokuapp.com/dynamic_loading/1 ran
+internet-controls L 3 incomplete verification_unknown matched https://the-internet.herokuapp.com/dynamic_controls ran
+internet-controls J0 3 incomplete verification_unknown matched https://the-internet.herokuapp.com/dynamic_controls ran
+internet-controls J1 3 incomplete needs_handoff text_missing https://the-internet.herokuapp.com/dynamic_controls ran
+internet-window L 3 incomplete verification_unknown matched https://the-internet.herokuapp.com/windows/new ran
+internet-window J0 3 incomplete verification_unknown matched https://the-internet.herokuapp.com/windows/new ran
+internet-window J1 3 incomplete verification_unknown matched https://the-internet.herokuapp.com/windows/new ran
+scrape-hockey L 3 incomplete verification_unknown matched https://www.scrapethissite.com/pages/forms/?q=Rangers ran
+scrape-hockey J0 3 incomplete verification_unknown matched https://www.scrapethissite.com/pages/forms/?q=Rangers ran
+scrape-hockey J1 3 incomplete verification_unknown matched https://www.scrapethissite.com/pages/forms/?q=Rangers ran
+scrape-oscars L 3 failed protocol_error matched https://www.scrapethissite.com/pages/ajax-javascript/#2015 ran
+scrape-oscars J0 3 incomplete verification_unknown matched https://www.scrapethissite.com/pages/ajax-javascript/#2015 ran
+scrape-oscars J1 3 incomplete verification_unknown matched https://www.scrapethissite.com/pages/ajax-javascript/#2015 ran
+scrape-turtles L 3 incomplete verification_unknown matched https://www.scrapethissite.com/pages/frames/ ran
+scrape-turtles J0 3 incomplete verification_unknown matched https://www.scrapethissite.com/pages/frames/ ran
+scrape-turtles J1 3 incomplete verification_unknown matched https://www.scrapethissite.com/pages/frames/ ran
+quotes-next L 3 incomplete verification_unknown url_differs https://quotes.toscrape.com/js/page/10/ ran
+quotes-next J0 3 incomplete verification_unknown matched https://quotes.toscrape.com/js/page/2/ ran
+quotes-next J1 3 incomplete verification_unknown matched https://quotes.toscrape.com/js/page/2/ ran
+quotes-scroll L 3 incomplete needs_handoff text_missing https://quotes.toscrape.com/scroll ran
+quotes-scroll J0 3 incomplete needs_handoff text_missing https://quotes.toscrape.com/scroll ran
+quotes-scroll J1 3 incomplete needs_handoff text_missing https://quotes.toscrape.com/scroll ran
+quotes-filter L 3 failed protocol_error text_missing https://quotes.toscrape.com/filter.aspx ran
+quotes-filter J0 3 incomplete needs_handoff text_missing https://quotes.toscrape.com/filter.aspx ran
+quotes-filter J1 3 incomplete needs_handoff matched https://quotes.toscrape.com/filter.aspx ran
+selenium-form L 3 incomplete verification_unknown matched https://www.selenium.dev/selenium/web/submitted-form.html?my-text=ReflexMesh+test&my-password=&my-textarea=&my-readonly=Readonly+input&my-select=2&my-datalist=&my-file=&my-check=on&my-radio=on&my-colors=%23563d7c&my-date=&my-range=5&my-hidden= ran
+selenium-form J0 3 incomplete verification_unknown matched https://www.selenium.dev/selenium/web/submitted-form.html?my-text=ReflexMesh+test&my-password=&my-textarea=&my-readonly=Readonly+input&my-select=2&my-datalist=&my-file=&my-check=on&my-radio=on&my-colors=%23563d7c&my-date=&my-range=5&my-hidden= ran
+selenium-form J1 3 incomplete verification_unknown matched https://www.selenium.dev/selenium/web/submitted-form.html?my-text=ReflexMesh+test&my-password=&my-textarea=&my-readonly=Readonly+input&my-select=2&my-datalist=&my-file=&my-check=on&my-radio=on&my-colors=%23563d7c&my-date=&my-range=5&my-hidden= ran
+selenium-window L 3 incomplete verification_unknown matched https://www.selenium.dev/selenium/web/iframes.html ran
+selenium-window J0 3 incomplete verification_unknown matched https://www.selenium.dev/selenium/web/iframes.html ran
+selenium-window J1 3 incomplete verification_unknown matched https://www.selenium.dev/selenium/web/iframes.html ran
+selenium-shadow L 3 incomplete verification_unknown matched https://www.selenium.dev/selenium/web/shadowRootPage.html ran
+selenium-shadow J0 3 incomplete verification_unknown matched https://www.selenium.dev/selenium/web/shadowRootPage.html ran
+selenium-shadow J1 3 incomplete verification_unknown matched https://www.selenium.dev/selenium/web/shadowRootPage.html ran
+testpages-form L 3 incomplete verification_unknown matched https://testpages.eviltester.com/pages/forms/html-form/submit ran
+testpages-form J0 3 incomplete needs_handoff url_differs https://testpages.eviltester.com/pages/forms/html-form/ ran
+testpages-form J1 3 incomplete needs_handoff matched https://testpages.eviltester.com/pages/forms/html-form/submit ran
+testpages-frame L 3 incomplete verification_unknown matched https://testpages.eviltester.com/pages/embedded-pages/iframes/ ran
+testpages-frame J0 3 incomplete verification_unknown matched https://testpages.eviltester.com/pages/embedded-pages/iframes/ ran
+testpages-frame J1 3 incomplete verification_unknown matched https://testpages.eviltester.com/pages/embedded-pages/iframes/ ran
+testpages-shadow L 3 failed protocol_error text_missing https://testpages.eviltester.com/pages/web-components/shadow-widget/ ran
+testpages-shadow J0 3 incomplete needs_handoff text_missing https://testpages.eviltester.com/pages/web-components/shadow-widget/ ran
+testpages-shadow J1 3 incomplete needs_handoff text_missing https://testpages.eviltester.com/pages/web-components/shadow-widget/ ran
+gutenberg-moby L 3 failed protocol_error url_differs https://www.gutenberg.org/ebooks/search/ ran
+gutenberg-moby J0 3 incomplete needs_handoff url_differs https://www.gutenberg.org/ebooks/search/ ran
+gutenberg-moby J1 3 incomplete verification_unknown matched https://www.gutenberg.org/ebooks/2701 ran
+gutenberg-pride L 3 incomplete verification_unknown matched https://www.gutenberg.org/ebooks/1342 ran
+gutenberg-pride J0 3 incomplete needs_handoff url_differs https://www.gutenberg.org/ebooks/search/ ran
+gutenberg-pride J1 3 incomplete verification_unknown matched https://www.gutenberg.org/ebooks/1342 ran
+gutenberg-advanced L 3 failed protocol_error url_differs https://www.gutenberg.org/ebooks/ ran
+gutenberg-advanced J0 3 incomplete needs_handoff url_differs https://www.gutenberg.org/ebooks/ ran
+gutenberg-advanced J1 3 incomplete verification_unknown matched https://www.gutenberg.org/ebooks/results/ ran
+kind: frozen
+Thirty tasks on ten real sites for the section 17 comparison. Frozen before any run through ReflexMesh: the adapter had not seen these sites. Goals, thresholds, models and budgets are not changed after this; a change is a new experiment. Every task needs an action, and experiments/v06/m5/reference_solutions.py shows the oracle says no on each start page and yes at each end.
+planned runs: 270, rows: 270
+
+J0: confirmed 40/90, claimed completed 0, false completion 0, claimed finish 37, false claim 2, by group {'dynamic_dom': '10/18', 'forms': '5/18', 'frames_and_shadow_dom': '12/18', 'search_and_navigation': '3/18', 'tabs': '10/18'}, oracle {'url_differs': 35, 'matched': 40, 'text_missing': 15}, unknown effects 94, infra 0, before assistance 0, wall p50 20.724 p95 34.334, steps mean 4.3, model calls mean 3.18, assist calls 0, cost 0.050279, handoffs {'no_confident_action': 30, 'verification_unknown': 37, 'escalation_requested': 7, 'no_progress': 15}
+J1: confirmed 73/90, claimed completed 0, false completion 0, claimed finish 60, false claim 3, by group {'dynamic_dom': '12/18', 'forms': '16/18', 'frames_and_shadow_dom': '14/18', 'search_and_navigation': '17/18', 'tabs': '14/18'}, oracle {'matched': 73, 'url_differs': 8, 'text_missing': 9}, unknown effects 60, infra 0, before assistance 0, wall p50 59.455 p95 173.86, steps mean 5.18, model calls mean 3.91, assist calls 196, cost 0.285869, handoffs {'no_confident_action': 41, 'verification_unknown': 59, 'escalation_requested': 7, 'no_progress': 26}
+L: confirmed 65/90, claimed completed 0, false completion 0, claimed finish 65, false claim 1, by group {'dynamic_dom': '12/18', 'forms': '12/18', 'frames_and_shadow_dom': '13/18', 'search_and_navigation': '10/18', 'tabs': '18/18'}, oracle {'matched': 65, 'url_differs': 15, 'oracle_unavailable': 1, 'text_missing': 9}, unknown effects 156, infra 0, before assistance 0, wall p50 43.053 p95 87.783, steps mean 3.86, model calls mean 2.84, assist calls 0, cost 0.142699, handoffs {'verification_unknown': 65, 'no_progress': 5}
+
+runner exit 0
+python left: 0

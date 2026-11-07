@@ -71,6 +71,11 @@ def provider_setup(args) -> tuple:
 
             provider, config_id = laya_provider(getattr(args, "decisions_url", None))
             return provider, config_id, provider.model
+        if args.action_provider == "chat":
+            from reflexmesh.adapters.system_one.decision_providers import chat_provider_from_env
+
+            provider, config_id = chat_provider_from_env(args.model, base_url=getattr(args, "decisions_url", None))
+            return provider, config_id, provider.model
         from reflexmesh.adapters.system_one.decision_providers import jev_provider_from_env
 
         provider, config_id = jev_provider_from_env(args.model, base_url=getattr(args, "decisions_url", None))

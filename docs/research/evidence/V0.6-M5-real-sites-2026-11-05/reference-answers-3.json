@@ -1,0 +1,47 @@
+{
+ "pypi-history": [
+  "https://pypi.org/project/Flask/#history",
+  "ance 1.0.4 Jul 5, 2019 2 release files No pro",
+  "1.0 Nov 13, 2024"
+ ],
+ "arxiv-bert": [
+  true,
+  "res arXiv:1810.04805 [pdf, other] cs.CL BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+  2
+ ],
+ "arxiv-attention": [
+  false,
+  50,
+  null
+ ],
+ "scrape-turtle-detail": "Carettochelyidae The Carettochelyidae family of turtles — more commonly known as \"Pig-nosed turtle\" — were first discovered in 1887 by Boulenger. ← Back to all Turtles",
+ "gutenberg-adv": [
+  "https://www.gutenberg.org/ebooks/results/",
+  "hor = Melville (99 items match) Title = Bartleby (1 items match) 1 books found. Titles Etext-No. Author Title Language 11231 Melville, Herman, 1819-1891 Bartleb",
+  [
+   "/ebooks/11231"
+  ]
+ ],
+ "gutenberg-1342": [
+  "",
+  "Author Austen, Jane, 1775-1817",
+  "Release Date Jun 1, 1998 Last "
+ ],
+ "quotes-last": [
+  "Ralph Waldo Emerson | “Finish each day and be done with it. You have don",
+  "Mark Twain | “I have never let my schooling interfere with my e",
+  "Dr. Seuss | “I have heard there are troubles of more than one "
+ ],
+ "quotes-first-page-authors": [
+  "Albert Einstein",
+  "J.K. Rowling",
+  "Albert Einstein",
+  "Jane Austen",
+  "Marilyn Monroe",
+  "Albert Einstein",
+  "André Gide",
+  "Thomas A. Edison",
+  "Eleanor Roosevelt",
+  "Steve Martin"
+ ]
+}

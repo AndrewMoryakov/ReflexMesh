@@ -4,13 +4,16 @@
 visible description. It proves the mechanics of the loop and says nothing about Jev.
 `jev` is the real provider, built from the environment with provider retries OFF: a
 hidden retry would be a model request the call budget never saw.
+`chat` is an ordinary LLM over the same options, the comparison of section 17.
 """
 
 from __future__ import annotations
 
+import json
 import math
 import os
 import re
+import time
 from urllib.parse import urlsplit
 
 CONTROL_ACTIONS = ("finish", "escalate")
@@ -120,7 +123,15 @@ class ValidatingProvider:
 
     def decide(self, state, questions: dict):
         decision = self.inner.decide(state, questions)
-        self._validate(decision.answers, questions)
+        try:
+            self._validate(decision.answers, questions)
+        except Exception as exc:
+            shape = (decision.raw or {}).get("reply_shape") if isinstance(decision.raw, dict) else None
+            if shape is not None:
+                exc.reply_shape = shape
+            # A refused reply was still a paid request: its id and usage go with the refusal, or its cost is lost.
+            exc.request_id, exc.usage = getattr(decision, "request_id", None), getattr(decision, "usage", None)
+            raise
         self.last_decision = decision
         return decision
 
@@ -159,6 +170,143 @@ class ValidatingProvider:
     def close(self):
         if hasattr(self.inner, "close"):
             self.inner.close()
+
+
+def json_objects(text: str) -> list[dict]:
+    """The top-level JSON objects in a reply. `response_format` is not honoured on every route: a model may fence
+    the object or write a sentence around it. That is formatting; two objects are a choice not made, and not guessed."""
+    decoder, found, at = json.JSONDecoder(), [], 0
+    while (at := text.find("{", at)) != -1:
+        try:
+            value, end = decoder.raw_decode(text, at)
+        except ValueError:
+            at += 1
+            continue
+        found.append(value)
+        at = end
+    return found
+
+
+class ChatClient:
+    """One JSON reply from an ordinary chat model through OpenRouter; no retries, for the same reason as Jev."""
+
+    def __init__(self, api_key: str, model: str, timeout: float = 60.0, base_url: str = "https://openrouter.ai"):
+        import httpx
+
+        self.model, self.base_url = model, base_url.rstrip("/")
+        self._headers = {"authorization": f"Bearer {api_key}", "content-type": "application/json"}
+        self._client = httpx.Client(timeout=timeout)
+
+    def ask(self, system: str, content: object) -> tuple[dict, dict, str, str, int]:
+        """(reply object, usage, served model, request id, latency in ms)."""
+        import httpx
+        from systemone_harness.provider import ProviderError
+
+        body = {"model": self.model, "temperature": 0, "response_format": {"type": "json_object"},
+                "usage": {"include": True},
+                "messages": [{"role": "system", "content": system},
+                             {"role": "user", "content": json.dumps(content, ensure_ascii=False)}]}
+        started = time.time()
+        try:
+            r = self._client.post(self.base_url + "/api/v1/chat/completions", json=body, headers=self._headers)
+        except httpx.HTTPError as exc:
+            raise ProviderError(type(exc).__name__) from None
+        latency = int((time.time() - started) * 1000)
+        if r.status_code != 200:
+            raise ProviderError(f"HTTP {r.status_code} from the provider", r.status_code)
+        try:
+            data = r.json()
+        except ValueError:
+            data = None
+        data = data if isinstance(data, dict) else {}
+        used = data.get("usage") if isinstance(data.get("usage"), dict) else {}
+        usage = {"input_tokens": int(used.get("prompt_tokens") or 0), "output_tokens": int(used.get("completion_tokens") or 0)}
+        if type(used.get("cost")) in (int, float):
+            usage["cost"] = used["cost"]
+        request_id = str(data.get("id") or "")
+
+        def refused(message: str) -> Exception:
+            # The reply is refused, the request was paid for: its id and usage go with the refusal (review of PR #15).
+            exc = ProviderError(message)
+            exc.request_id, exc.usage = request_id or None, usage
+            return exc
+
+        try:
+            objects = json_objects(data["choices"][0]["message"]["content"])
+        except (ValueError, KeyError, IndexError, TypeError):
+            raise refused("protocol: the model did not answer with a JSON object") from None
+        if len(objects) != 1:
+            raise refused(f"protocol: the model answered with {len(objects)} JSON objects, not one")
+        return objects[0], usage, str(data.get("model") or self.model), request_id, latency
+
+    def close(self) -> None:
+        self._client.close()
+
+
+CHAT_SYSTEM = ("You operate a web page toward the goal in `state`, one action at a time. Choose only from what `questions` "
+               "offers, by its key, and never invent one. A value can be typed only by choosing its key. Finish when the "
+               "page shows the goal is done. Escalate when nothing offered can move it forward. Reply with one JSON object: "
+               "`next_action`, one key per parameter of that action named `<action>__<parameter>`, and `goal_reached`, a "
+               "number from 0 to 1.")
+
+
+class ChatChoiceProvider:
+    """Mode L of section 17: an ordinary LLM chooses every action from the same finite options, through the same
+    adapter, gate, verifier and budget. It states no calibrated confidence, so its choice passes the threshold;
+    every other check of the gate still applies."""
+
+    def __init__(self, client: ChatClient):
+        self.client = client
+        self.model = client.model
+
+    @property
+    def _client(self):
+        return self.client._client
+
+    def decide(self, state, questions: dict):
+        from systemone_harness.provider import Decision
+
+        reply, usage, model, request_id, latency = self.client.ask(CHAT_SYSTEM, {"state": state, "questions": questions})
+        action = reply.get("next_action")
+        goal = reply.get("goal_reached")
+        offered = (questions.get("next_action") or {}).get("criteria") or {}
+        answers = {"next_action": {"type": "choice", "choice": action, "confidence": 0.99, "probabilities": {}},
+                   "goal_reached": {"type": "noul", "noul": 0.95 if action == "finish" else
+                                    (float(goal) if _is_probability(goal) else 0.0)}}
+        if type(action) is str and action in offered:
+            answers["next_action"]["probabilities"] = {name: (0.99 if name == action else 0.0) for name in offered}
+        for key, question in questions.items():
+            if key in answers:
+                continue
+            if question.get("type") == "noul":
+                answers[key] = {"type": "noul", "noul": 0.99}
+            elif question.get("type") != "choice":
+                answers[key] = {"type": "score", "score": 0, "probabilities": {}, "confidence": 0.99}
+            elif key.startswith(f"{action}__"):
+                pick = reply.get(key)   # a wrong one is refused by ValidatingProvider, never guessed
+                if type(pick) is int:   # JSON has no way to insist: the same key, written as a number
+                    pick = str(pick)
+                answers[key] = {"type": "choice", "choice": pick, "confidence": 0.99, "probabilities": {}}
+            elif question.get("criteria"):
+                answers[key] = _choice(question["criteria"], next(iter(question["criteria"])))
+        shape = {str(k)[:40]: (v if k == "next_action" and type(v) is str and len(v) <= 40 else type(v).__name__)
+                 for k, v in list(reply.items())[:12]}   # for a refused reply: its form, never a value
+        return Decision(answers=answers, usage=usage, model=model, request_id=request_id, latency_ms=latency,
+                        raw={"reply_shape": shape})
+
+    def close(self):
+        self.client.close()
+
+
+def chat_provider_from_env(model: str | None, timeout: float = 60.0, base_url: str | None = None):
+    """The model is always named: there is no default LLM to compare against."""
+    if not model:
+        raise ProviderUnavailable("the chat provider requires --model")
+    if not os.environ.get("OPENROUTER_API_KEY"):
+        raise ProviderUnavailable("no key for the chat provider: set OPENROUTER_API_KEY")
+    client = ChatClient(os.environ["OPENROUTER_API_KEY"], model, timeout,
+                        _checked_endpoint(base_url) if base_url else "https://openrouter.ai")
+    return ChatChoiceProvider(client), f"openrouter-chat:{model}"
 
 
 def _checked_endpoint(url: str) -> str:

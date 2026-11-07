@@ -1,0 +1,40 @@
+{
+ "resnet": [
+  true,
+  1,
+  "1512.03385 [pdf, other] cs.CV Deep Residual Learning for Image Recognition Autho"
+ ],
+ "w3form": [
+  "HTML Forms First name: Last name: If you click the \"Submit\" button, the form-data will be sent to a page called \"/action",
+  "Submitted Form Data Your input was received as: fname=Ada&lname=Doe The server has processed your input and returned this answer. Note: This tutorial will not teach you how servers are processing inpu"
+ ],
+ "w3check": "ERR Locator.inner_text: Timeout 40000ms exceeded.\nCall log:\n  - waiting for locator(\"#iframeResult\").content_frame.locator(\"body\")\n",
+ "tpframe": [
+  "https://testpages.eviltester.com/pages/embedded-pages/iframes/",
+  "Increment Number Total Value: += Amount: Add Amount",
+  " <h1>Increment Number</h1> <div> <label for=\"numField\">Total Value:</label> <input style=\"margin-left: 1em;width:50%\" type=\"number\" id=\"numField\" value=\"0\"> <br> <label for=\"incBy\">+= Amount:</label> <input style=\"margin-left: 1em;width:50%\" type=\"number\" id=\"incField\" value=\"5\"> <br> <button id=\"incBtn\" style=\"margin-left: 25%; margin-top: 0.5em;\">Add Amoun"
+ ],
+ "tpindex": [
+  "Frames Example -> /pages/embedded-pages/frames/",
+  "Instructions -> /pages/embedded-pages/frames/frames-instructions/",
+  "iFrames -> /pages/embedded-pages/iframes/",
+  "Instructions -> /pages/embedded-pages/iframes/iframes-instructions/",
+  "Styles -> /pages/web-components/shadow-dom-style/",
+  "Instructions -> /pages/web-components/shadow-dom-style/shadow-dom-instructions/",
+  "Component -> /pages/web-components/shadow-web-component/",
+  "Instructions -> /pages/web-components/shadow-web-component/web-component-instructions/",
+  "Widget -> /pages/web-components/shadow-widget/",
+  "Instructions -> /pages/web-components/shadow-widget/web-component-widget-instructions/",
+  "Frames4 -> /tags/frames/",
+  "Shadow Dom3 -> /tags/shadow-dom/"
+ ],
+ "controls": [
+  "It's gone!",
+  "It's enabled!"
+ ],
+ "qjs": [
+  "https://quotes.toscrape.com/js/page/2/",
+  "Marilyn Monroe",
+  "“This life is what you make it. No matter what, you're going"
+ ]
+}

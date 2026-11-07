@@ -433,6 +433,16 @@ class GenericPath(BrowserCase):
         self.assertEqual(result["budget"]["dispatches"], 1)  # only the permitted first navigation
         self.assertFalse([r for r in SITE.REQUESTS if (r.get("host") or "").startswith("localhost")])
 
+    def test_a_form_that_sends_to_another_origin_is_not_offered(self):
+        """The check on a link's destination does not see a form's action, and the request would leave first."""
+        result = self.start(self.task(start="/partner"), label_script([{"action": "click", "element": "Back to orders"}])).run()
+        options = next(r["options"] for r in self.trace() if r["kind"] == "options_built")
+        names = [o["name"] for o in options]
+        self.assertIn("Back to orders", names)
+        self.assertNotIn("Send to partner", names)
+        self.assertEqual(result["actions"][-1]["request"], {"method": "GET", "path": "/orders"})
+        self.assertFalse([r for r in SITE.REQUESTS if r["method"] == "POST" and not r["path"].startswith("/__")])
+
     def test_an_off_origin_redirect_is_detected_after_the_request_not_prevented(self):
         """Known limit, pinned so it cannot change unnoticed.
 

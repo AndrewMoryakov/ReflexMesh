@@ -1,0 +1,693 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "testpages-shadow",
+  "revision": 1,
+  "chain_id": "c9662b564da541b092a210fbc60b1f5a",
+  "attempt_id": "1a06a6aff5404a22afc1c80b2cd90bba",
+  "parent_attempt_id": null,
+  "attempt_status": "incomplete",
+  "stop_reason": "needs_handoff",
+  "task_outcome": "unknown",
+  "execution_outcome": "unknown",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "oracle",
+      "kind": "postcondition",
+      "predicate": "registered_check",
+      "status": "unknown",
+      "reason": "judged_by_external_oracle",
+      "scope": "registered_source_while_running",
+      "observed_at": 1793909349.3466594,
+      "evidence_refs": [
+        "browser:1a06a6aff5404a22afc1c80b2cd90bba:8"
+      ]
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1793909354.8203723,
+      "evidence_refs": [
+        "runtime:1a06a6aff5404a22afc1c80b2cd90bba:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1793909354.8203466,
+      "evidence_refs": [
+        "runtime:1a06a6aff5404a22afc1c80b2cd90bba:immutable-slots:coverage:2"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "Browser session ownership is not established: the browser is not closed.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1793909354.8204055,
+      "evidence_refs": [
+        "runtime:1a06a6aff5404a22afc1c80b2cd90bba:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "No repeated mutation was observed at the controlled boundary; adapter-internal single-shot execution is not established.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1793909354.8204226,
+      "evidence_refs": [
+        "runtime:1a06a6aff5404a22afc1c80b2cd90bba:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "start_url",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 0,
+      "producer": "jev",
+      "bootstrap": true,
+      "destination": "https://testpages.eviltester.com/pages/web-components/shadow-widget/",
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 3,
+      "dispatch_seq": 4,
+      "return_seq": 5,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "browser:1a06a6aff5404a22afc1c80b2cd90bba:6"
+      ],
+      "driver_ok": true
+    },
+    {
+      "id": 2,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "1:elements:56",
+      "target_id": "[\"click\", \"button\", \"(+) Increase\", \"\", \"\", \"\"]@669b9fa37b337622",
+      "mutation_key": "[\"click\", \"button\", \"(+) Increase\", \"\", \"\", \"\"]@https://testpages.eviltester.com/pages/web-components/shadow-widget/?",
+      "request": null,
+      "target": {
+        "role": "button",
+        "name": "(+) Increase"
+      },
+      "slot_ref": null,
+      "observation_id": 1,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 2,
+      "proposal_seq": 12,
+      "dispatch_seq": 13,
+      "return_seq": 14,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    }
+  ],
+  "budget": {
+    "steps": 6,
+    "model_calls": 4,
+    "dispatches": 2,
+    "limits": {
+      "wall_seconds": 240.0,
+      "max_steps": 40,
+      "max_model_calls": 40,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 34,
+    "remaining_model_calls": 36,
+    "remaining_wall_seconds": 225.731,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 14.268
+  },
+  "handoff": {
+    "schema_version": "browser-handoff/0.1",
+    "reason": "no_progress",
+    "task_id": "testpages-shadow",
+    "revision": 1,
+    "chain_id": "c9662b564da541b092a210fbc60b1f5a",
+    "attempt_id": "1a06a6aff5404a22afc1c80b2cd90bba",
+    "parent_attempt_id": null,
+    "observation_ref": 5,
+    "page": "https://testpages.eviltester.com/pages/web-components/shadow-widget/",
+    "available_actions": [
+      {
+        "ref": "5:elements:145",
+        "operation": "click",
+        "role": "link",
+        "name": ""
+      },
+      {
+        "ref": "5:elements:160",
+        "operation": "click",
+        "role": "link",
+        "name": "Pages"
+      },
+      {
+        "ref": "5:elements:166",
+        "operation": "click",
+        "role": "link",
+        "name": "Apps"
+      },
+      {
+        "ref": "5:elements:172",
+        "operation": "click",
+        "role": "link",
+        "name": "Fun and Games"
+      },
+      {
+        "ref": "5:elements:178",
+        "operation": "click",
+        "role": "link",
+        "name": "Tools"
+      },
+      {
+        "ref": "5:elements:184",
+        "operation": "click",
+        "role": "link",
+        "name": "Challenges"
+      },
+      {
+        "ref": "5:elements:190",
+        "operation": "click",
+        "role": "link",
+        "name": "Reference Information and Tutorials"
+      },
+      {
+        "ref": "5:elements:203",
+        "operation": "click",
+        "role": "link",
+        "name": "Learn more"
+      },
+      {
+        "ref": "5:elements:232",
+        "operation": "click",
+        "role": "link",
+        "name": "Practice Pages"
+      },
+      {
+        "ref": "5:elements:244",
+        "operation": "click",
+        "role": "link",
+        "name": "Pages"
+      },
+      {
+        "ref": "5:elements:256",
+        "operation": "click",
+        "role": "link",
+        "name": "Basics"
+      },
+      {
+        "ref": "5:elements:446",
+        "operation": "click",
+        "role": "link",
+        "name": "Input Elements"
+      },
+      {
+        "ref": "5:elements:592",
+        "operation": "click",
+        "role": "link",
+        "name": "Forms"
+      },
+      {
+        "ref": "5:elements:782",
+        "operation": "click",
+        "role": "link",
+        "name": "CSS"
+      },
+      {
+        "ref": "5:elements:884",
+        "operation": "click",
+        "role": "link",
+        "name": "Navigation"
+      },
+      {
+        "ref": "5:elements:1013",
+        "operation": "click",
+        "role": "link",
+        "name": "Embedded Content"
+      },
+      {
+        "ref": "5:elements:1113",
+        "operation": "click",
+        "role": "link",
+        "name": "Files"
+      },
+      {
+        "ref": "5:elements:1169",
+        "operation": "click",
+        "role": "link",
+        "name": "Storage"
+      },
+      {
+        "ref": "5:elements:1247",
+        "operation": "click",
+        "role": "link",
+        "name": "Interaction"
+      },
+      {
+        "ref": "5:elements:1303",
+        "operation": "click",
+        "role": "link",
+        "name": "Mobile"
+      },
+      {
+        "ref": "5:elements:1337",
+        "operation": "click",
+        "role": "link",
+        "name": "Errors"
+      },
+      {
+        "ref": "5:elements:1437",
+        "operation": "click",
+        "role": "link",
+        "name": "Auth"
+      },
+      {
+        "ref": "5:elements:1471",
+        "operation": "click",
+        "role": "link",
+        "name": "Web Components"
+      },
+      {
+        "ref": "5:elements:1481",
+        "operation": "click",
+        "role": "link",
+        "name": "Styles"
+      },
+      {
+        "ref": "5:elements:1502",
+        "operation": "click",
+        "role": "link",
+        "name": "Component"
+      },
+      {
+        "ref": "5:elements:1523",
+        "operation": "click",
+        "role": "link",
+        "name": "Widget"
+      },
+      {
+        "ref": "5:elements:1533",
+        "operation": "click",
+        "role": "link",
+        "name": "Instructions"
+      },
+      {
+        "ref": "5:elements:1547",
+        "operation": "click",
+        "role": "link",
+        "name": "Browser APIs"
+      },
+      {
+        "ref": "5:elements:1620",
+        "operation": "click",
+        "role": "link",
+        "name": "Apps"
+      },
+      {
+        "ref": "5:elements:2151",
+        "operation": "click",
+        "role": "link",
+        "name": "Fun and Games"
+      },
+      {
+        "ref": "5:elements:2505",
+        "operation": "click",
+        "role": "link",
+        "name": "Tools"
+      },
+      {
+        "ref": "5:elements:2594",
+        "operation": "click",
+        "role": "link",
+        "name": "Challenges"
+      },
+      {
+        "ref": "5:elements:2885",
+        "operation": "click",
+        "role": "link",
+        "name": "Reference Information and Tutorials"
+      },
+      {
+        "ref": "5:elements:3592",
+        "operation": "click",
+        "role": "listitem",
+        "name": ""
+      },
+      {
+        "ref": "5:elements:3594",
+        "operation": "click",
+        "role": "link",
+        "name": "Pages"
+      },
+      {
+        "ref": "5:elements:3599",
+        "operation": "click",
+        "role": "link",
+        "name": "Web Components"
+      },
+      {
+        "ref": "5:elements:3612",
+        "operation": "click",
+        "role": "p",
+        "name": ""
+      },
+      {
+        "ref": "5:elements:45",
+        "operation": "click",
+        "role": "link",
+        "name": "Shadow Dom"
+      },
+      {
+        "ref": "5:elements:49",
+        "operation": "click",
+        "role": "link",
+        "name": "Advanced"
+      },
+      {
+        "ref": "5:elements:51",
+        "operation": "click",
+        "role": "separator",
+        "name": ""
+      },
+      {
+        "ref": "5:elements:54",
+        "operation": "click",
+        "role": "button",
+        "name": "(-) Decrease"
+      },
+      {
+        "ref": "5:elements:55",
+        "operation": "click",
+        "role": "button",
+        "name": "(c) Reset"
+      },
+      {
+        "ref": "5:elements:56",
+        "operation": "click",
+        "role": "button",
+        "name": "(+) Increase"
+      },
+      {
+        "ref": "5:elements:3667",
+        "operation": "click",
+        "role": "separator",
+        "name": ""
+      },
+      {
+        "ref": "5:elements:3673",
+        "operation": "click",
+        "role": "link",
+        "name": "Shadow Dom - Interactive Web Components - Instructions"
+      },
+      {
+        "ref": "5:elements:3691",
+        "operation": "click",
+        "role": "link",
+        "name": "Patreon Membership site"
+      },
+      {
+        "ref": "5:elements:3694",
+        "operation": "click",
+        "role": "link",
+        "name": "e-books and online training courses"
+      },
+      {
+        "ref": "5:elements:3700",
+        "operation": "click",
+        "role": "link",
+        "name": "Contact Us"
+      },
+      {
+        "ref": "5:elements:57",
+        "operation": "click",
+        "role": "listitem",
+        "name": "Twitter"
+      },
+      {
+        "ref": "5:elements:3714",
+        "operation": "click",
+        "role": "link",
+        "name": "Twitter"
+      },
+      {
+        "ref": "5:elements:58",
+        "operation": "click",
+        "role": "listitem",
+        "name": "LinkedIn"
+      },
+      {
+        "ref": "5:elements:3722",
+        "operation": "click",
+        "role": "link",
+        "name": "LinkedIn"
+      },
+      {
+        "ref": "5:elements:59",
+        "operation": "click",
+        "role": "listitem",
+        "name": "GitHub"
+      },
+      {
+        "ref": "5:elements:3735",
+        "operation": "click",
+        "role": "link",
+        "name": "GitHub"
+      },
+      {
+        "ref": "5:elements:3752",
+        "operation": "click",
+        "role": "link",
+        "name": "Privacy Policy"
+      }
+    ],
+    "fields_without_slot": [],
+    "operations": [
+      {
+        "id": 1,
+        "attempt_id": "1a06a6aff5404a22afc1c80b2cd90bba",
+        "operation": "navigate",
+        "producer": "jev",
+        "option_ref": null,
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "applied"
+      },
+      {
+        "id": 2,
+        "attempt_id": "1a06a6aff5404a22afc1c80b2cd90bba",
+        "operation": "click",
+        "producer": "jev",
+        "option_ref": "1:elements:56",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      }
+    ],
+    "unresolved_effects": [
+      2
+    ],
+    "criteria": [
+      {
+        "id": "oracle",
+        "status": "unknown",
+        "reason": "judged_by_external_oracle"
+      }
+    ],
+    "permissions": [
+      "click",
+      "go_back",
+      "navigate",
+      "scroll",
+      "select_option",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ],
+    "text_slot_refs": [],
+    "owner": {
+      "session_id": "4b417ba4313645fcb6b70dd828207ae4",
+      "owner_epoch": 0,
+      "session_open": true
+    },
+    "remaining": {
+      "steps": 34,
+      "model_calls": 36,
+      "wall_seconds": 225.731,
+      "handoffs": 3
+    },
+    "continuation": {
+      "allowed": true,
+      "token": "[withheld]",
+      "expires_in_seconds": 60.0,
+      "parent_attempt_id": "1a06a6aff5404a22afc1c80b2cd90bba",
+      "modes": [
+        "jev",
+        "llm"
+      ],
+      "session_id": "4b417ba4313645fcb6b70dd828207ae4"
+    }
+  },
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": null,
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": false
+    },
+    "chromium": "chrome 142.0.7444.176 (install directory)",
+    "chromium_sandbox": true,
+    "headless": true,
+    "decision_provider": {
+      "kind": "jev",
+      "config_id": "openrouter:~typesafe/jev-latest",
+      "requested_model": "~typesafe/jev-latest"
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "retained",
+    "session_id": "4b417ba4313645fcb6b70dd828207ae4",
+    "profile_removed": false
+  },
+  "watchdog": {
+    "watchdog_kill": false,
+    "worker_stopped": true
+  },
+  "decision": {
+    "kind": "jev",
+    "requested_model": "~typesafe/jev-latest",
+    "served_models": [
+      "typesafe/jev-1.14-20261014"
+    ],
+    "config_id": "openrouter:~typesafe/jev-latest"
+  },
+  "session_id": "4b417ba4313645fcb6b70dd828207ae4",
+  "owner_epoch": 0,
+  "chain_budget": {
+    "used": {
+      "steps": 6,
+      "model_calls": 4
+    },
+    "remaining": {
+      "steps": 34,
+      "model_calls": 36,
+      "wall_seconds": 225.654,
+      "handoffs": 3
+    }
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:1a06a6aff5404a22afc1c80b2cd90bba:permissions",
+    "runtime:1a06a6aff5404a22afc1c80b2cd90bba:dispatch_ordering",
+    "runtime:1a06a6aff5404a22afc1c80b2cd90bba:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 14.268,
+    "total_seconds": 14.346
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:1a06a6aff5404a22afc1c80b2cd90bba:immutable-slots:commitment:1",
+      "task_id": "testpages-shadow",
+      "task_revision": 1,
+      "attempt_id": "1a06a6aff5404a22afc1c80b2cd90bba",
+      "run_id": "1a06a6aff5404a22afc1c80b2cd90bba",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:1a06a6aff5404a22afc1c80b2cd90bba:immutable-slots:commitment:2",
+      "task_id": "testpages-shadow",
+      "task_revision": 1,
+      "attempt_id": "1a06a6aff5404a22afc1c80b2cd90bba",
+      "run_id": "1a06a6aff5404a22afc1c80b2cd90bba",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:1a06a6aff5404a22afc1c80b2cd90bba:immutable-slots:coverage:2",
+      "task_id": "testpages-shadow",
+      "task_revision": 1,
+      "attempt_id": "1a06a6aff5404a22afc1c80b2cd90bba",
+      "run_id": "1a06a6aff5404a22afc1c80b2cd90bba",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 2,
+      "dispatches": 2,
+      "text_dispatches": 0,
+      "nontext_dispatches": 2,
+      "unknown_dispatches": 0,
+      "sealed_generation": 2,
+      "status": "pass"
+    }
+  ]
+}

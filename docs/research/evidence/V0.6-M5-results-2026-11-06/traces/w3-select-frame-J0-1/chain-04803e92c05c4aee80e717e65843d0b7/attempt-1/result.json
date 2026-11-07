@@ -1,0 +1,929 @@
+{
+  "schema_version": "browser-result/0.1",
+  "task_id": "w3-select-frame",
+  "revision": 1,
+  "chain_id": "04803e92c05c4aee80e717e65843d0b7",
+  "attempt_id": "8c16228a70844368aa7ba4d4d0224fa8",
+  "parent_attempt_id": null,
+  "attempt_status": "incomplete",
+  "stop_reason": "verification_unknown",
+  "task_outcome": "unknown",
+  "execution_outcome": "unknown",
+  "outputs": [],
+  "verification": [
+    {
+      "id": "oracle",
+      "kind": "postcondition",
+      "predicate": "registered_check",
+      "status": "unknown",
+      "reason": "judged_by_external_oracle",
+      "scope": "registered_source",
+      "observed_at": 1793905616.1127794,
+      "evidence_refs": [
+        "browser:8c16228a70844368aa7ba4d4d0224fa8:33"
+      ]
+    },
+    {
+      "id": "runtime.permissions",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every committed dispatch was checked against the live permission mask.",
+      "observed_at": 1793905620.3407214,
+      "evidence_refs": [
+        "runtime:8c16228a70844368aa7ba4d4d0224fa8:permissions"
+      ]
+    },
+    {
+      "id": "runtime.immutable_slots",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every sealed committed action has supported immutable-slot evidence.",
+      "observed_at": 1793905620.3406744,
+      "evidence_refs": [
+        "runtime:8c16228a70844368aa7ba4d4d0224fa8:immutable-slots:coverage:3"
+      ]
+    },
+    {
+      "id": "runtime.ownership",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "The browser was launched by this chain (a child process with its own profile, verified in use), stayed the same process, had only this runtime on its debugging port at each of 4 observations, and was closed with no process left. A client connecting between two observations is not excluded.",
+      "observed_at": 1793905622.455086,
+      "evidence_refs": [
+        "runtime:8c16228a70844368aa7ba4d4d0224fa8:ownership"
+      ],
+      "scope": "browser_session_of_chain"
+    },
+    {
+      "id": "runtime.dispatch_ordering",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Every gate sequence number is accounted for and dispatches follow their proposals in order.",
+      "observed_at": 1793905620.340767,
+      "evidence_refs": [
+        "runtime:8c16228a70844368aa7ba4d4d0224fa8:dispatch_ordering"
+      ]
+    },
+    {
+      "id": "runtime.no_uncertain_repeats",
+      "kind": "execution_constraint",
+      "status": "unknown",
+      "reason": "No repeated mutation was observed at the controlled boundary; adapter-internal single-shot execution is not established.",
+      "observed_at": null,
+      "evidence_refs": []
+    },
+    {
+      "id": "runtime.budget",
+      "kind": "execution_constraint",
+      "status": "pass",
+      "reason": "Observed local counters respect enabled limits; null limits are disabled.",
+      "observed_at": 1793905620.3407936,
+      "evidence_refs": [
+        "runtime:8c16228a70844368aa7ba4d4d0224fa8:budget"
+      ],
+      "scope": "steps_and_locally_controlled_model_calls"
+    }
+  ],
+  "actions": [
+    {
+      "id": 1,
+      "operation": "navigate",
+      "risk": "write",
+      "option_ref": null,
+      "target_id": "start_url",
+      "mutation_key": null,
+      "request": null,
+      "target": null,
+      "slot_ref": null,
+      "observation_id": 0,
+      "producer": "jev",
+      "bootstrap": true,
+      "destination": "https://www.w3schools.com/tags/tryit.asp",
+      "policy_revision": 1,
+      "gate_seq": 1,
+      "proposal_seq": 3,
+      "dispatch_seq": 4,
+      "return_seq": 5,
+      "driver_outcome": "returned",
+      "effect": "applied",
+      "evidence_refs": [
+        "browser:8c16228a70844368aa7ba4d4d0224fa8:6"
+      ],
+      "driver_ok": true
+    },
+    {
+      "id": 2,
+      "operation": "select_option",
+      "risk": "write",
+      "option_ref": "1:options:3:Audi",
+      "target_id": "[\"select_option\", \"combobox\", \"Choose a car:\", \"Audi\", \"\", \"\"]@ee2bb426b4985974",
+      "mutation_key": "[\"select_option\", \"combobox\", \"Choose a car:\", \"Audi\", \"\", \"\"]@https://www.w3schools.com/tags/tryit.asp?51d6e97259bb",
+      "request": null,
+      "target": {
+        "role": "combobox",
+        "name": "Choose a car:"
+      },
+      "slot_ref": null,
+      "observation_id": 1,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 2,
+      "proposal_seq": 12,
+      "dispatch_seq": 13,
+      "return_seq": 14,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    },
+    {
+      "id": 3,
+      "operation": "click",
+      "risk": "write",
+      "option_ref": "2:elements:795",
+      "target_id": "[\"click\", \"button\", \"Submit\", \"\", \"\", \"\"]@4862906b1df16a3b",
+      "mutation_key": null,
+      "request": {
+        "method": "GET",
+        "path": "/action_page.php"
+      },
+      "target": {
+        "role": "button",
+        "name": "Submit"
+      },
+      "slot_ref": null,
+      "observation_id": 2,
+      "producer": "jev",
+      "bootstrap": false,
+      "destination": null,
+      "policy_revision": 1,
+      "gate_seq": 3,
+      "proposal_seq": 21,
+      "dispatch_seq": 22,
+      "return_seq": 23,
+      "driver_outcome": "returned",
+      "effect": "unknown",
+      "evidence_refs": [],
+      "driver_ok": true,
+      "ui_effect": {
+        "source": "ui_observation",
+        "url_changed": false,
+        "content_changed": true,
+        "server_effect": "unknown"
+      }
+    }
+  ],
+  "budget": {
+    "steps": 4,
+    "model_calls": 3,
+    "dispatches": 3,
+    "limits": {
+      "wall_seconds": 240.0,
+      "max_steps": 40,
+      "max_model_calls": 40,
+      "max_handoffs": 3
+    },
+    "remaining_steps": 36,
+    "remaining_model_calls": 37,
+    "remaining_wall_seconds": 211.777,
+    "model_call_limit_scope": "locally_controlled_provider_requests",
+    "elapsed_seconds": 19.742
+  },
+  "handoff": {
+    "schema_version": "browser-handoff/0.1",
+    "reason": "verification_unknown",
+    "task_id": "w3-select-frame",
+    "revision": 1,
+    "chain_id": "04803e92c05c4aee80e717e65843d0b7",
+    "attempt_id": "8c16228a70844368aa7ba4d4d0224fa8",
+    "parent_attempt_id": null,
+    "observation_ref": 4,
+    "page": "https://www.w3schools.com/tags/tryit.asp",
+    "available_actions": [
+      {
+        "ref": "4:elements:187",
+        "operation": "click",
+        "role": "link",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:22",
+        "operation": "click",
+        "role": "link",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:23",
+        "operation": "click",
+        "role": "link",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:24",
+        "operation": "click",
+        "role": "link",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:25",
+        "operation": "click",
+        "role": "link",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:26",
+        "operation": "click",
+        "role": "button",
+        "name": "Run ❯"
+      },
+      {
+        "ref": "4:elements:10",
+        "operation": "click",
+        "role": "link",
+        "name": "Get your own website"
+      },
+      {
+        "ref": "4:elements:13",
+        "operation": "click",
+        "role": "none",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:27",
+        "operation": "click",
+        "role": "link",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:8",
+        "operation": "click",
+        "role": "textbox",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:37",
+        "operation": "click",
+        "role": "generic",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:296",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:304",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:316",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:322",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:324",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:342",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:356",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:360",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:370",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:374",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:378",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:382",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:388",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:390",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:396",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:400",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:404",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:408",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:412",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:416",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:422",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:426",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:430",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:438",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:440",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:442",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:448",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:452",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:456",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:460",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:464",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:466",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:468",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:474",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:478",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:482",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:486",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:490",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:492",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:494",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:500",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:504",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:508",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:512",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:516",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:518",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:520",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:526",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:528",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:530",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:536",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:540",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:542",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:544",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:550",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:554",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:558",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:566",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:576",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:578",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:600",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:612",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:614",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:620",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:622",
+        "operation": "click",
+        "role": "span",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:1299",
+        "operation": "click",
+        "role": "link",
+        "name": "PHP tutorial"
+      },
+      {
+        "ref": "4:elements:828",
+        "operation": "click",
+        "role": "generic",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:830",
+        "operation": "click",
+        "role": "generic",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:1152",
+        "operation": "click",
+        "role": "link",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:1111",
+        "operation": "click",
+        "role": "link",
+        "name": "REMOVE ADS"
+      },
+      {
+        "ref": "4:elements:1205",
+        "operation": "click",
+        "role": "link",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:740",
+        "operation": "click",
+        "role": "generic",
+        "name": ""
+      },
+      {
+        "ref": "4:elements:741",
+        "operation": "click",
+        "role": "image",
+        "name": ""
+      },
+      {
+        "ref": "4:history:back",
+        "operation": "go_back",
+        "role": "",
+        "name": "/tags/tryit.asp"
+      }
+    ],
+    "fields_without_slot": [],
+    "operations": [
+      {
+        "id": 1,
+        "attempt_id": "8c16228a70844368aa7ba4d4d0224fa8",
+        "operation": "navigate",
+        "producer": "jev",
+        "option_ref": null,
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "applied"
+      },
+      {
+        "id": 2,
+        "attempt_id": "8c16228a70844368aa7ba4d4d0224fa8",
+        "operation": "select_option",
+        "producer": "jev",
+        "option_ref": "1:options:3:Audi",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      },
+      {
+        "id": 3,
+        "attempt_id": "8c16228a70844368aa7ba4d4d0224fa8",
+        "operation": "click",
+        "producer": "jev",
+        "option_ref": "2:elements:795",
+        "slot_ref": null,
+        "driver_outcome": "returned",
+        "effect": "unknown"
+      }
+    ],
+    "unresolved_effects": [
+      2,
+      3
+    ],
+    "criteria": [
+      {
+        "id": "oracle",
+        "status": "unknown",
+        "reason": "judged_by_external_oracle"
+      }
+    ],
+    "permissions": [
+      "click",
+      "go_back",
+      "navigate",
+      "scroll",
+      "select_option",
+      "switch_tab",
+      "type_text",
+      "wait"
+    ],
+    "text_slot_refs": [],
+    "owner": {
+      "session_id": "1fc7757689c5477982517b9aee354dbd",
+      "owner_epoch": 0,
+      "session_open": false
+    },
+    "remaining": {
+      "steps": 36,
+      "model_calls": 37,
+      "wall_seconds": 211.777,
+      "handoffs": 3
+    },
+    "continuation": {
+      "allowed": false,
+      "reason": "session_not_transferable"
+    }
+  },
+  "components": {
+    "reflexmesh": "0.2.0",
+    "browser_use": {
+      "version": "0.13.10",
+      "commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "pinned_commit": "5c892e013a73e6622e6f50336e1eb0aa2c4405f2",
+      "matches_pin": true
+    },
+    "systemone_harness": {
+      "version": "0.4.0",
+      "commit": null,
+      "pinned_commit": "ab8e8f08b4a6268c0633a474423d556599ee06a4",
+      "matches_pin": false
+    },
+    "chromium": "chrome 142.0.7444.176 (install directory)",
+    "chromium_sandbox": true,
+    "headless": true,
+    "decision_provider": {
+      "kind": "jev",
+      "config_id": "openrouter:~typesafe/jev-latest",
+      "requested_model": "~typesafe/jev-latest"
+    },
+    "capabilities": {
+      "navigate": true,
+      "click": true,
+      "type_text": true,
+      "select_option": true,
+      "scroll": true,
+      "go_back": true,
+      "switch_tab": true,
+      "wait": true,
+      "press_key": false,
+      "focus_region": false,
+      "frames": false,
+      "cross_origin_frames": false,
+      "open_shadow_dom": false
+    }
+  },
+  "cleanup": {
+    "status": "closed",
+    "profile_removed": true,
+    "browser_processes_left": 0
+  },
+  "watchdog": {
+    "watchdog_kill": false,
+    "worker_stopped": true
+  },
+  "decision": {
+    "kind": "jev",
+    "requested_model": "~typesafe/jev-latest",
+    "served_models": [
+      "typesafe/jev-1.14-20261014"
+    ],
+    "config_id": "openrouter:~typesafe/jev-latest"
+  },
+  "session_id": "1fc7757689c5477982517b9aee354dbd",
+  "owner_epoch": 0,
+  "chain_budget": {
+    "used": {
+      "steps": 4,
+      "model_calls": 3
+    },
+    "remaining": {
+      "steps": 36,
+      "model_calls": 37,
+      "wall_seconds": 211.641,
+      "handoffs": 3
+    }
+  },
+  "trace_ref": "trace.jsonl",
+  "evidence_refs": [
+    "runtime:8c16228a70844368aa7ba4d4d0224fa8:permissions",
+    "runtime:8c16228a70844368aa7ba4d4d0224fa8:dispatch_ordering",
+    "runtime:8c16228a70844368aa7ba4d4d0224fa8:budget"
+  ],
+  "timing": {
+    "terminal_after_seconds": 19.742,
+    "total_seconds": 28.359
+  },
+  "slot_evidence": [
+    {
+      "ref": "runtime:8c16228a70844368aa7ba4d4d0224fa8:immutable-slots:commitment:1",
+      "task_id": "w3-select-frame",
+      "task_revision": 1,
+      "attempt_id": "8c16228a70844368aa7ba4d4d0224fa8",
+      "run_id": "8c16228a70844368aa7ba4d4d0224fa8",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 1,
+      "generation": 1,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:8c16228a70844368aa7ba4d4d0224fa8:immutable-slots:commitment:2",
+      "task_id": "w3-select-frame",
+      "task_revision": 1,
+      "attempt_id": "8c16228a70844368aa7ba4d4d0224fa8",
+      "run_id": "8c16228a70844368aa7ba4d4d0224fa8",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 2,
+      "generation": 2,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:8c16228a70844368aa7ba4d4d0224fa8:immutable-slots:commitment:3",
+      "task_id": "w3-select-frame",
+      "task_revision": 1,
+      "attempt_id": "8c16228a70844368aa7ba4d4d0224fa8",
+      "run_id": "8c16228a70844368aa7ba4d4d0224fa8",
+      "capture_storage": "attempt_memory",
+      "kind": "commitment",
+      "action_id": 3,
+      "generation": 3,
+      "classification": "nontext",
+      "slot_ref": null
+    },
+    {
+      "ref": "runtime:8c16228a70844368aa7ba4d4d0224fa8:immutable-slots:coverage:3",
+      "task_id": "w3-select-frame",
+      "task_revision": 1,
+      "attempt_id": "8c16228a70844368aa7ba4d4d0224fa8",
+      "run_id": "8c16228a70844368aa7ba4d4d0224fa8",
+      "capture_storage": "attempt_memory",
+      "kind": "sealed_coverage",
+      "generation": 3,
+      "dispatches": 3,
+      "text_dispatches": 0,
+      "nontext_dispatches": 3,
+      "unknown_dispatches": 0,
+      "sealed_generation": 3,
+      "status": "pass"
+    }
+  ]
+}

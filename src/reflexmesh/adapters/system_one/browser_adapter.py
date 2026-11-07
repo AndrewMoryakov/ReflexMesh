@@ -174,6 +174,12 @@ def essential_text(text: str) -> str:
 def form_request(node, page_url: str) -> tuple | None:
     """(METHOD, path) a submit button sends, read from its form in the DOM snapshot; None when it is not a
     plain form submit (a script handler may send anything, and that stays unknown)."""
+    found = form_submission(node, page_url)
+    return (found[0], urlsplit(found[1]).path) if found else None
+
+
+def form_submission(node, page_url: str) -> tuple | None:
+    """(METHOD, absolute URL) of the same submit."""
     tag = str(node.tag_name or "").lower()
     attrs = node.attributes or {}
     kind = str(attrs.get("type") or ("submit" if tag == "button" else "")).lower()
@@ -187,7 +193,7 @@ def form_request(node, page_url: str) -> tuple | None:
     fattrs = form.attributes or {}
     method = str(attrs.get("formmethod") or fattrs.get("method") or "get").upper()
     action = attrs.get("formaction") or fattrs.get("action") or page_url
-    return method, urlsplit(urljoin(page_url, action)).path
+    return method, urljoin(page_url, action)
 
 
 def action_identity(prepared: "PreparedBrowserAction") -> str:
@@ -472,6 +478,9 @@ class GenericBrowserAdapter:
             for key, label in (obs.candidates.get("elements") or {}).items():
                 if key in usable and key not in field_keys and key not in select_keys:
                     node, sig = usable[key]
+                    submits = form_submission(node, url)
+                    if submits and not self._origin_allowed(submits[1]):
+                        continue   # a form sending to another origin is no option: the request would leave first
                     entry = target("elements", key, node, sig)
                     where = urlsplit(entry.destination).path if entry.destination else ""
                     elements[key] = self._scrub(label + (f" → {where}" if where else ""))

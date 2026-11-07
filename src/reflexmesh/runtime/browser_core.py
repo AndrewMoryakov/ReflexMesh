@@ -199,8 +199,9 @@ class BrowserCore:
 
     def __init__(self, *, chrome: str | None, provider_factory, action_provider: str, out_dir: Path | None = None,
                  sandbox: bool = True, headless: bool = True, checks: dict | None = None,
-                 lease_seconds: float = LEASE_SECONDS):
+                 lease_seconds: float = LEASE_SECONDS, final_probe=None):
         self.chrome, self.provider_factory, self.action_provider = chrome, provider_factory, action_provider
+        self.final_probe = final_probe
         self.out_dir = Path(out_dir) if out_dir else None
         self.sandbox, self.headless = sandbox, headless
         self.checks = dict(checks or {})
@@ -215,6 +216,7 @@ class BrowserCore:
         out = chain.out_dir / f"attempt-{seq}" if chain.out_dir else None
         run = BrowserRun(task, chrome=self.chrome, provider_factory=self.provider_factory, action_provider=provider,
                          out_dir=out, sandbox=self.sandbox, headless=self.headless, checks=self.checks, chain=chain)
+        run.final_probe = self.final_probe
         chain.runs.append(run)
         return run
 
@@ -231,6 +233,24 @@ class BrowserCore:
             return run.run()
         finally:
             self.running.pop(chain.chain_id, None)
+
+    def reserve_assist_call(self, attempt_id: str) -> bool:
+        """Metered LLM assistance (section 12): one request of the assisting caller, reserved on the chain's model-call
+        counter before it is sent, as every Jev request is. False when the budget is spent or no assistance with that
+        attempt is running: the caller must not send the request then. The request itself stays the caller's; this
+        only counts it (review of PR #15: the M5 assistant's calls were not counted)."""
+        from reflexmesh.runtime.runner import RuntimeStop
+
+        chain = next((c for c in self.chains.values()
+                      if c.assist is not None and c.assist.attempt_id == attempt_id), None)
+        if chain is None:
+            return False
+        try:
+            chain.assist.gate.reserve_call()
+        except RuntimeStop:
+            return False
+        chain.assist.journal.emit("assist_call_reserved")
+        return True
 
     def resume(self, continuation: dict) -> dict:
         if type(continuation) is not dict:

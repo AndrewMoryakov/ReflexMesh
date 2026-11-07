@@ -1,0 +1,9 @@
+{"seq": 1, "t": 0.001, "kind": "task_accepted", "task_id": "scrape-oscars", "revision": 1, "permissions": ["click", "go_back", "navigate", "scroll", "select_option", "switch_tab", "type_text", "wait"], "origins": ["https://www.scrapethissite.com"], "slots": [], "criteria": [{"id": "oracle", "predicate": "registered_check"}], "limits": {"wall_seconds": 240.0, "max_steps": 40, "max_model_calls": 40}}
+{"seq": 2, "t": 0.002, "kind": "attempt_started", "attempt_id": "c93356c890f14c1cae4350eee644cede", "provider": "jev", "config_id": "openrouter:~typesafe/jev-latest", "requested_model": "~typesafe/jev-latest", "chain_id": "275b72dbeed44f50b61cfc91037e5dcb", "parent_attempt_id": null, "owner_epoch": 0, "session_id": "a53714487f094c17858b3dd6e922f534"}
+{"seq": 3, "t": 0.006, "kind": "proposal", "action": "navigate"}
+{"seq": 4, "t": 0.006, "kind": "dispatch_committed", "action_id": 1, "operation": "navigate", "risk": "write", "bootstrap": true, "gate_seq": 1, "observation_id": 0, "policy_revision": 1, "target_id": "start_url", "destination": "https://www.scrapethissite.com/pages/ajax-javascript/"}
+{"seq": 5, "t": 1796.272, "kind": "driver_returned", "action_id": 1, "ok": false, "error": true}
+{"seq": 6, "t": 1805.634, "kind": "browser_exit_awaited", "processes": 13, "left": 13, "seconds": 2.447}
+{"seq": 7, "t": 1805.634, "kind": "criterion_assessed", "id": "oracle", "predicate": "registered_check", "status": "unknown", "reason": "judged_by_external_oracle", "stage": "registered"}
+{"seq": 8, "t": 1805.634, "kind": "effects_settled", "check_id": "m5.external_oracle", "repeats": "unknown", "applied": 0, "not_applied": 0, "unknown": 1}
+{"seq": 9, "t": 1807.859, "kind": "terminal", "attempt_status": "incomplete", "stop_reason": "deadline", "handoff_reason": null}

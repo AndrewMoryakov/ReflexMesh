@@ -540,7 +540,7 @@ class _DriverFailure:
 
 
 # Providers whose every request is a model call, reserved against `max_model_calls` before it is sent.
-MODEL_PROVIDERS = ("jev", "laya")
+MODEL_PROVIDERS = ("jev", "laya", "chat")
 
 
 class JournalingProvider:
@@ -563,8 +563,11 @@ class JournalingProvider:
         try:
             decision = self.inner.decide(state, questions)
         except Exception as exc:
+            protocol = str(exc).startswith("protocol:")
             self.journal.emit("decision_failed", error=type(exc).__name__, status=getattr(exc, "status", None),
-                              protocol=str(exc).startswith("protocol:"))
+                              protocol=protocol, **({"reason": str(exc)[:160]} if protocol else {}),   # keys only, no values
+                              **({"reply_shape": exc.reply_shape} if hasattr(exc, "reply_shape") else {}),
+                              **({"request_id": exc.request_id, "usage": exc.usage} if hasattr(exc, "request_id") else {}))
             raise
         answers = decision.answers if type(decision.answers) is dict else {}
         chosen = (answers.get("next_action") or {}).get("choice")
@@ -647,6 +650,7 @@ class BrowserRun:
         self.chain = chain             # a TaskChain when run by BrowserCore (handoff in the same session)
         self.retained = False          # the session outlives this attempt, handed to the chain
         self.restart = False           # the continuation asked to begin again from start_url, in the same session
+        self.final_probe = None        # set by an experiment: called with the adapter before the browser may close
         # Registered checks come from the service's configuration, never from the task (V0.6 section 11).
         self.checks = dict(checks or {})
         self._claimed: list = []
@@ -829,6 +833,12 @@ class BrowserRun:
                 self.adapter is not None and not self.adapter.closed and not self.gate.in_flight.value)
 
     def _release_session(self) -> None:
+        if self.final_probe is not None and self.adapter is not None and not self.adapter.closed:
+            # A test oracle's last look at the live browser. What it reads never reaches this attempt or its result.
+            try:
+                self.final_probe(self.adapter)
+            except Exception:
+                pass
         if self.chain is not None and self.controlled is not None:
             self.chain.carry = self.controlled.carry()
         self.retained = self._retainable()
@@ -939,7 +949,7 @@ class BrowserRun:
         if kind == "tabs":
             return "switch_tab", {"tab": key}
         if kind == "history":
-            return "go_back", {}
+            return "go_back", {"to": key}
         return "invalid_proposal"
 
     def assist_step(self, proposal) -> dict:
