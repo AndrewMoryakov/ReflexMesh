@@ -76,6 +76,7 @@ class BrowserCase(unittest.TestCase):
 
     def setUp(self):
         SITE.NOTES.clear()
+        SITE.DRAFTS.clear()
         SITE.META.clear()
         SITE.REQUESTS.clear()
         SITE.CLAIM.clear()

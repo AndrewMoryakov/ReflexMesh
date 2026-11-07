@@ -262,6 +262,8 @@ class GenericBrowserAdapter:
         """A continued session serves the chain's current revision: its slots and its (never wider) origins."""
         self.task = task
         self._allowed = frozenset(task.allowed_origins)
+        if self.backend is not None:
+            self.backend.start_url = task.start_url
 
     def capabilities(self) -> dict:
         return dict(CAPABILITIES)
@@ -289,7 +291,8 @@ class GenericBrowserAdapter:
         if os.path.realpath(actual) != os.path.realpath(self.profile_dir):
             # Cleanup removes the directory we made; a different one in use would be left behind.
             raise RuntimeStop("adapter_contract_unsupported")
-        self._record_session()
+        if self.session is None:   # a restart keeps the facts of the first look, so a new browser would be noticed
+            self._record_session()
         backend.reset(goal)
 
     def close(self) -> None:

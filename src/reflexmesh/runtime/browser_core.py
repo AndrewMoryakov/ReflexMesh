@@ -222,8 +222,9 @@ class BrowserCore:
         self.chains[chain.chain_id] = chain
         return self._attempt(chain, task)
 
-    def _attempt(self, chain: TaskChain, task: BrowserTask) -> dict:
+    def _attempt(self, chain: TaskChain, task: BrowserTask, restart: bool = False) -> dict:
         run = self._run(chain, task, self.action_provider)
+        run.restart = restart
         self.running[chain.chain_id] = run
         try:
             return run.run()
@@ -239,6 +240,9 @@ class BrowserCore:
             return _error("token_invalid")
         operation, mode = continuation.get("operation"), continuation.get("mode")
         if operation not in ("start", "step", "return_to_jev", "stop"):
+            return _error("invalid_continuation")
+        restart = continuation.get("restart", False)
+        if type(restart) is not bool or (restart and operation != "start"):
             return _error("invalid_continuation")
         assisting = chain.assist
         if operation in ("step", "return_to_jev", "stop") and assisting is None:
@@ -287,9 +291,10 @@ class BrowserCore:
             chain.task = task
         if mode == "llm":
             run = self._run(chain, task, "llm")
+            run.restart = restart
             chain.assist = run
             return run.start_assist()
-        return self._attempt(chain, task)
+        return self._attempt(chain, task, restart)
 
     def cancel(self, chain_id: str) -> dict:
         chain = self.chains.get(chain_id)

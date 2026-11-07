@@ -1,0 +1,52 @@
+demo/chain-20261105-165743/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number=record@1 0.99; run Search 0.81; escalate escalate 0.32
+demo/chain-20261105-165743/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    session_restarted forgotten_typed=1 kept_mutations=0; run Order number=order@1 0.95; run Search 0.78; run [slot:record@1] 0.88; run Note=note@1 0.86; run Save note 0.78
+demo/chain-20261105-165833/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number=record@1 0.99; run Search 0.78; refused Order number=record@1 0.37; refused Order number=record@1 0.32; escalate escalate 0.31
+demo/chain-20261105-165833/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    session_restarted forgotten_typed=1 kept_mutations=0; run Order number=order@1 0.95; run Search 0.82; run [slot:record@1] 0.93; run Note=note@1 0.89; run Save note 0.78
+demo/chain-20261105-165924/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=escalation_requested
+    run Order number=record@1 0.99; run Search 0.77; escalate escalate 0.4
+demo/chain-20261105-165924/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    session_restarted forgotten_typed=1 kept_mutations=0; run Order number=order@1 0.95; run Search 0.81; run [slot:record@1] 0.91; run Note=note@1 0.84; run Save note 0.77
+wizard-continue-1/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_progress
+    run Team=team@1 0.8; run Next 0.89; refused Note=team@1 0.92; run Note=team@1 0.7; run Next 0.71; run Save note 0.84; run Note=team@1 0.71; run Save note 0.85; refused Note=team@1 0.6; run Note=team@1 0.82; admission_rejected repeated_mutation; refused Save note 0.51
+wizard-continue-1/chain/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_progress
+    refused Note=team@1 0.17; refused Note=team@1 0.58; run Note=team@1 0.71; admission_rejected repeated_mutation
+wizard-continue-2/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Team=team@1 0.83; run Next 0.88; refused Note=team@1 0.92; refused Note=team@1 0.7; refused Note=team@1 0.67
+wizard-continue-2/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    refused Note=note@1 0.63; run Note=note@1 0.76; run Next 0.81; run Save note 0.94
+wizard-continue-3/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Team=team@1 0.83; run Next 0.88; refused Note=team@1 0.93; refused Note=team@1 0.57; run Note=team@1 0.71; refused Next 0.68; refused Next 0.59; refused Next 0.56
+wizard-continue-3/chain/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    refused Next 0.64; refused Next 0.56; refused Next 0.6
+wizard-continue-4/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Team=team@1 0.81; run Next 0.87; refused Note=team@1 0.89; run Note=team@1 0.7; refused Next 0.66; refused Next 0.53; refused Next 0.52
+wizard-continue-4/chain/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    refused Next 0.64; refused Next 0.64; refused Next 0.62
+wizard-continue-5/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Team=team@1 0.82; run Next 0.84; refused Note=team@1 0.95; refused Note=team@1 0.67; refused Note=team@1 0.64
+wizard-continue-5/chain/attempt-2/trace.jsonl: completed/verified handoff=None
+    run Note=note@1 0.73; run Next 0.82; run Save note 0.94
+wizard-restart-1/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Team=team@1 0.86; run Next 0.87; refused Note=team@1 0.89; refused Note=team@1 0.65; refused Note=team@1 0.57
+wizard-restart-1/chain/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_progress
+    session_restarted forgotten_typed=1 kept_mutations=1; run Next 0.95; admission_rejected repeated_mutation; refused Next 0.65; run Next 0.87
+wizard-restart-2/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Team=team@1 0.83; run Next 0.87; refused Note=team@1 0.92; refused Note=team@1 0.66; refused Note=team@1 0.64
+wizard-restart-2/chain/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_progress
+    session_restarted forgotten_typed=1 kept_mutations=1; run Next 0.95; admission_rejected repeated_mutation; refused Next 0.66; run Next 0.87
+wizard-restart-3/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Team=team@1 0.81; run Next 0.87; refused Note=team@1 0.93; refused Note=team@1 0.65; refused Note=team@1 0.66
+wizard-restart-3/chain/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_progress
+    session_restarted forgotten_typed=1 kept_mutations=1; run Next 0.93; admission_rejected repeated_mutation; refused Next 0.58; run Next 0.89
+wizard-restart-4/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Team=team@1 0.83; run Next 0.87; refused Note=team@1 0.92; refused Note=team@1 0.63; refused Note=team@1 0.6
+wizard-restart-4/chain/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_progress
+    session_restarted forgotten_typed=1 kept_mutations=1; run Next 0.92; admission_rejected repeated_mutation; run Next 0.74
+wizard-restart-5/chain/attempt-1/trace.jsonl: incomplete/needs_handoff handoff=no_confident_action
+    run Team=team@1 0.8; run Next 0.89; refused Note=team@1 0.93; refused Note=team@1 0.62; refused Note=team@1 0.62
+wizard-restart-5/chain/attempt-2/trace.jsonl: incomplete/needs_handoff handoff=no_progress
+    session_restarted forgotten_typed=1 kept_mutations=1; run Next 0.93; admission_rejected repeated_mutation; refused Next 0.58; run Next 0.86
