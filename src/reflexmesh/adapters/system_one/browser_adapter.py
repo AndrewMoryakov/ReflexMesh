@@ -128,6 +128,7 @@ class Target:
     option_text: str | None = None
     tab_id: str | None = None
     request: tuple | None = None   # (METHOD, path) a click sends: a link's href, or a submit button's form
+    field_name: str = ""           # a text field's full accessible name: slot `fields` are matched against it, not `name`
 
 
 @dataclass(frozen=True, slots=True)
@@ -360,6 +361,13 @@ class GenericBrowserAdapter:
         return canonical_origin(url) in self._allowed
 
     @staticmethod
+    def _field_name(node) -> str:
+        """The whole accessible name. `_signature` cuts names to MAX_NAME for identity and display; a slot's `fields`
+        accept up to 200 characters, and matching a cut name would hide a field with a longer name and let a slot fit
+        another field that shares the first MAX_NAME characters (review of PR #14)."""
+        return str(getattr(getattr(node, "ax_node", None), "name", None) or "").strip()
+
+    @staticmethod
     def _signature(node) -> tuple:
         attrs = node.attributes or {}
         ax = getattr(node, "ax_node", None)
@@ -479,7 +487,7 @@ class GenericBrowserAdapter:
             return Target(kind=kind, key=key, operation=KIND_OPERATION[kind], index=int(key.partition(":")[0]),
                           backend_node_id=node.backend_node_id, target_id=node.target_id, frame_id=node.frame_id,
                           signature=sig, role=sig[1] or sig[0], name=sig[2], destination=destination,
-                          request=request, **extra)
+                          request=request, field_name=self._field_name(node) if kind == "text_fields" else "", **extra)
 
         if "click" in granted:
             for key, label in (obs.candidates.get("elements") or {}).items():
@@ -496,7 +504,7 @@ class GenericBrowserAdapter:
             for key, label in (obs.candidates.get("text_fields") or {}).items():
                 if key in usable:
                     node, sig = usable[key]
-                    if not any(slot.fits(sig[2]) for slot in self.task.slots):
+                    if not any(slot.fits(self._field_name(node)) for slot in self.task.slots):
                         without_slot.append(self._scrub(str(sig[2])))   # nothing may go there: no question for the model
                         continue
                     fields[key] = self._scrub(label)
@@ -531,7 +539,7 @@ class GenericBrowserAdapter:
                 slot.reference: (f"{slot.reference}: {slot.value[:200]}" if slot.sensitivity == "normal"
                                  else f"{slot.reference}: (secret value, not shown)")
                 for slot in self.task.slots
-                if any(slot.fits(table[("text_fields", key)].name) for key in fields)}
+                if any(slot.fits(table[("text_fields", key)].field_name) for key in fields)}
         if options:
             candidates["options"] = options
         if tabs:
@@ -580,7 +588,7 @@ class GenericBrowserAdapter:
                                                       if kind != "text_values"},
             "option_list": [{"ref": f"{oid}:{kind}:{key}", "operation": KIND_OPERATION.get(kind, "go_back"),
                              "role": entry.role, "name": entry.name,
-                             **({"slot_refs": [slot.reference for slot in self.task.slots if slot.fits(entry.name)]}
+                             **({"slot_refs": [slot.reference for slot in self.task.slots if slot.fits(entry.field_name)]}
                                 if kind == "text_fields" else {})}
                             for (kind, key), entry in table.items()],
             "fields_without_slot": without_slot,
@@ -695,7 +703,7 @@ class GenericBrowserAdapter:
                 resolved = self._registry.resolve(captured["value"])
             except ValueError:
                 raise RuntimeStop("invalid_action") from None
-            if not next(slot for slot in self.task.slots if slot.reference == captured["value"]).fits(entry.name):
+            if not next(slot for slot in self.task.slots if slot.reference == captured["value"]).fits(entry.field_name):
                 raise RuntimeStop("slot_field_mismatch")
         _, state, nodes, doc = self.backend._run(self._capture())
         if operation == "switch_tab":

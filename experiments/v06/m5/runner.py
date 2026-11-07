@@ -26,8 +26,9 @@ ROOT = Path(__file__).resolve().parents[3]
 MODES = ("J0", "J1", "L")
 ASSIST_SYSTEM = ("You help a small browser model that stopped and asked for help. Choose one next step toward the goal "
                  "from `action_options`. Reply with one JSON object: {\"option_ref\": ..., \"slot_ref\": ...} (slot_ref only "
-                 "to type a value, one of that option's slot_refs), or {\"done\": true} when the small model can go on or "
-                 "nothing offered helps.")
+                 "to type a value, one of that option's slot_refs); for an option without a ref, {\"operation\": \"scroll\", "
+                 "\"direction\": \"down\" or \"up\"} or {\"operation\": \"wait\"}; or {\"done\": true} when the small model "
+                 "can go on or nothing offered helps.")
 
 
 EXTERNAL_CHECK = "m5.external_oracle"
@@ -224,28 +225,36 @@ class Assistant:
         self.calls, self.input_tokens, self.output_tokens, self.steps = 0, 0, 0, 0
         self.cost: float | None = 0.0
 
+    def _count(self, usage: dict) -> None:
+        self.calls += 1
+        self.input_tokens += usage["input_tokens"]
+        self.output_tokens += usage["output_tokens"]
+        self.cost = None if self.cost is None or "cost" not in usage else self.cost + usage["cost"]
+
     def help(self, core, progress: dict) -> dict:
         from systemone_harness.provider import ProviderError
 
         r = progress
         refused = 0
         while r.get("schema_version") == "browser-progress/0.1" and r["assistance_steps_remaining"] > 0 and refused < 2:
+            # Section 12: in the comparison the assistant's requests go through the same model-call counter as Jev's,
+            # reserved before sending (review of PR #15: in the M5 run of 2026-11-06 they were not counted).
+            if not core.reserve_assist_call(r["attempt_id"]):
+                break
             try:
                 reply, usage, _, _, _ = self.client.ask(ASSIST_SYSTEM, {
                     "goal": self.goal, "page": r["observation"]["page"], "text": r["observation"].get("text"),
                     "action_options": r["action_options"], "last_proposal": r.get("last_proposal")})
-            except ProviderError:
+            except ProviderError as exc:
+                if getattr(exc, "usage", None) is not None:   # a reply came and was refused: it was still paid for
+                    self._count(exc.usage)
                 break
-            self.calls += 1
-            self.input_tokens += usage["input_tokens"]
-            self.output_tokens += usage["output_tokens"]
-            self.cost = None if self.cost is None or "cost" not in usage else self.cost + usage["cost"]
-            option = next((o for o in r["action_options"] if o["ref"] == reply.get("option_ref")), None)
-            if reply.get("done") or option is None:
+            self._count(usage)
+            if reply.get("done"):
                 break
-            proposal = {"observation_id": r["observation"]["observation_id"], "operation": option["operation"], "option_ref": option["ref"]}
-            if reply.get("slot_ref"):
-                proposal["slot_ref"] = reply["slot_ref"]
+            proposal = assist_proposal(r, reply)
+            if proposal is None:
+                break
             r = core.resume({"token": r["continuation_token"], "parent_attempt_id": r["attempt_id"], "operation": "step", "proposal": proposal})
             if r.get("schema_version") == "browser-progress/0.1":
                 dispatched = (r.get("last_proposal") or {}).get("dispatched")
@@ -256,6 +265,28 @@ class Assistant:
         if r.get("schema_version") == "browser-progress/0.1":
             r = core.resume({"token": r["continuation_token"], "parent_attempt_id": r["attempt_id"], "operation": "return_to_jev"})
         return r
+
+
+def assist_proposal(progress: dict, reply: dict) -> dict | None:
+    """The assistant's reply as a proposal, or None when it names nothing offered. Scroll and wait are offered without a
+    ref and are named by their operation; looking them up by ref used to pick scroll for any reply without a ref,
+    and to send it without a direction (review of PR #15)."""
+    seen = progress["observation"]["observation_id"]
+    operation = reply.get("operation")
+    unnamed = {o["operation"] for o in progress["action_options"] if o.get("ref") is None}
+    if reply.get("option_ref") is None:
+        if operation == "wait" and "wait" in unnamed:
+            return {"observation_id": seen, "operation": "wait"}
+        if operation == "scroll" and "scroll" in unnamed and reply.get("direction") in ("up", "down"):
+            return {"observation_id": seen, "operation": "scroll", "direction": reply["direction"]}
+        return None
+    option = next((o for o in progress["action_options"] if o.get("ref") is not None and o["ref"] == reply["option_ref"]), None)
+    if option is None:
+        return None
+    proposal = {"observation_id": seen, "operation": option["operation"], "option_ref": option["ref"]}
+    if reply.get("slot_ref"):
+        proposal["slot_ref"] = reply["slot_ref"]
+    return proposal
 
 
 def _resumable(r: dict) -> bool:
@@ -371,7 +402,12 @@ def costs_of(out: Path, row: dict) -> float | None:
     for trace in traces:
         for line in trace.read_text("utf-8").splitlines():
             event = json.loads(line)
-            if event["kind"] != "decision_received":
+            if event["kind"] == "decision_failed" and event.get("protocol"):
+                # A reply refused for its format was still a paid request (review of PR #15). Traces written before
+                # the refusal carried its id have nothing to look up: the run's cost is then unknown, not lower.
+                if "request_id" not in event:
+                    return None
+            elif event["kind"] != "decision_received":
                 continue
             if type((event.get("usage") or {}).get("cost")) in (int, float):
                 total += event["usage"]["cost"]

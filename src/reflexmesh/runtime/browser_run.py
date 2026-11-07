@@ -307,14 +307,14 @@ class BrowserControlledEnvironment:
             self._typed |= carry["typed"]
 
     def forget_page_state(self) -> None:
-        """`restart`: the navigation drops what was typed and the page state the repeat guard knew, so typing the
-        same value or pressing the same button on the fresh page is not a repeat. A submitted form stays
-        remembered: its effect is on the server, and a restart never makes it a new operation (section 9)."""
-        forgot = len(self._typed)
-        self._mutations -= self._typed
-        self._typed.clear()
+        """`restart`: the navigation drops the page states the repeat guard knew, so pressing the same button on
+        the fresh page is not a repeat. Every change stays remembered, typing included: section 9 counts type_text
+        among the actions that may have a server effect (autosave), and a handoff never makes the same operation
+        new. A typing could be forgotten only once its effect is settled `not_applied`, and a registered check
+        settles effects only after the browser stopped (`_settle_registered`): mid-chain nothing can, so there is
+        no such branch. Until 2026-11-07 typed values were forgotten here (review of PR #13)."""
         self._done_in_state.clear()
-        self.journal.emit("session_restarted", forgotten_typed=forgot, kept_mutations=len(self._mutations),
+        self.journal.emit("session_restarted", kept_typed=len(self._typed), kept_mutations=len(self._mutations),
                           browser_pid=(self.inner.session or {}).get("pid"))
 
     def _stop(self, reason: str) -> RuntimeStop:
@@ -568,7 +568,8 @@ class JournalingProvider:
             protocol = str(exc).startswith("protocol:")
             self.journal.emit("decision_failed", error=type(exc).__name__, status=getattr(exc, "status", None),
                               protocol=protocol, **({"reason": str(exc)[:160]} if protocol else {}),   # keys only, no values
-                              **({"reply_shape": exc.reply_shape} if hasattr(exc, "reply_shape") else {}))
+                              **({"reply_shape": exc.reply_shape} if hasattr(exc, "reply_shape") else {}),
+                              **({"request_id": exc.request_id, "usage": exc.usage} if hasattr(exc, "request_id") else {}))
             raise
         answers = decision.answers if type(decision.answers) is dict else {}
         chosen = (answers.get("next_action") or {}).get("choice")
