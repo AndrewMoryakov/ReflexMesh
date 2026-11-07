@@ -126,6 +126,18 @@ def remaining(planned: list[dict], done: list[dict]) -> tuple[list[dict], list[d
     return kept, [run for run in planned if (run["task"]["id"], run["mode"], run["repeat"]) not in finished]
 
 
+def fresh_run_dir(path: Path) -> Path:
+    """The directory of one run, empty. A run repeated after an infrastructure failure finds the earlier chain's
+    traces there; they move to `<name>.earlier-<n>`, kept but apart, since everything that reads a run (its row, its
+    finish, its cost) scans this directory and would mix the two executions (review of PR #15)."""
+    if path.exists() and any(path.iterdir()):
+        n = 1
+        while path.with_name(f"{path.name}.earlier-{n}").exists():
+            n += 1
+        path.rename(path.with_name(f"{path.name}.earlier-{n}"))
+    return path
+
+
 def plan(manifest: dict) -> list[dict]:
     """Every planned run, in order. The modes rotate per repeat, so none always runs first or last."""
     runs = []
@@ -306,7 +318,7 @@ def execute(manifest: dict, run: dict, out: Path, chrome: str, sandbox: bool) ->
     local = task_spec.get("site") == "demo"
     final_states: list = []
     row = {"task": task_spec["id"], "group": task_spec["group"], "mode": mode, "repeat": run["repeat"], "category": "ran"}
-    attempt_dir = out / f"{task_spec['id']}-{mode}-{run['repeat']}"
+    attempt_dir = fresh_run_dir(out / f"{task_spec['id']}-{mode}-{run['repeat']}")
 
     def provider_factory():
         if mode == "L":

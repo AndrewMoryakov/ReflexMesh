@@ -192,6 +192,27 @@ class Runner(unittest.TestCase):
         self.assertIsNone(run_cost([received, {"kind": "decision_failed", "protocol": True}]))   # traces from before: unknown
         self.assertEqual(run_cost([received, {"kind": "decision_failed", "protocol": False}]), 0.25)   # no reply, no cost
 
+    def test_a_repeated_run_reads_only_its_own_chain(self):
+        """Review of #15: an infra-failed run is repeated in the same directory, and a scan of it read the earlier
+        chain too: a provider error there made the repeat infra again, and costs mixed."""
+        import tempfile
+
+        out = Path(tempfile.mkdtemp())
+        run_dir = out / "t-L-1"
+        earlier = run_dir / "chain-old" / "attempt-1"
+        earlier.mkdir(parents=True)
+        (earlier / "trace.jsonl").write_text(json.dumps({"kind": "decision_failed", "protocol": False, "status": 503}) + "\n", "utf-8")
+        self.assertEqual(runner.fresh_run_dir(run_dir), run_dir)
+        self.assertFalse(run_dir.exists() and any(run_dir.iterdir()))
+        self.assertTrue((out / "t-L-1.earlier-1" / "chain-old" / "attempt-1" / "trace.jsonl").exists())   # kept, apart
+        new = run_dir / "chain-new" / "attempt-1"
+        new.mkdir(parents=True)
+        (new / "trace.jsonl").write_text(json.dumps({"kind": "decision_received", "request_id": "a", "usage": {"cost": 0.25}}) + "\n", "utf-8")
+        with mock.patch.dict(os.environ, {"OPENROUTER_API_KEY": "k"}):
+            self.assertEqual(runner.costs_of(out, {"task": "t", "mode": "L", "repeat": 1}), 0.25)
+        runner.fresh_run_dir(run_dir)                                   # a second repeat keeps both earlier chains
+        self.assertTrue((out / "t-L-1.earlier-2" / "chain-new").exists())
+
     def test_a_claim_the_oracle_denies_is_a_false_completion(self):
         s = runner.summarize([{"mode": "J0", "attempt_status": "completed", "oracle_success": False, "false_completion": True}])["J0"]
         self.assertEqual((s["claimed_completed"], s["confirmed_success"], s["false_completion"]), (1, 0, 1))
