@@ -234,6 +234,34 @@ class SameSession(BrowserCase):
         self.assertEqual([o["slot_refs"] for o in typing], [["note@1"]])
         core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "stop"})
 
+    def test_a_field_renamed_after_the_observation_is_stale_even_past_eighty_characters(self):
+        """Review of #14: the check before typing compared the signature, whose name is cut to 80 characters, so a
+        label changed after them kept the slot allowed for the old name. Renamed between observing and typing."""
+        label = "Instructions for the courier who brings this order to the back entrance of the building"
+        data = self.task()
+        data["start_url"] = self.origin + "/long-fields"
+        for slot in data["text_slots"]:
+            if slot["id"] == "note":
+                slot["fields"] = [label + " (morning)"]
+        core = self.core([[{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(data))
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        morning = next(o for o in progress["action_options"] if o["operation"] == "type_text")
+        adapter = core.chains[first["chain_id"]].assist.adapter
+
+        async def rename():
+            cdp = await adapter.backend._session.get_or_create_cdp_session()
+            await cdp.cdp_client.send.Runtime.evaluate(
+                params={"expression": "document.querySelector('label[for=morning]').textContent += ' and later (evening)'"},
+                session_id=cdp.session_id)
+
+        adapter.backend._run(rename())
+        step = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "step",
+                            "proposal": {"observation_id": progress["observation"]["observation_id"], "operation": "type_text",
+                                         "option_ref": morning["ref"], "slot_ref": "note@1"}})
+        self.assertEqual(step["last_proposal"], {"accepted": True, "dispatched": False, "rejected": "stale_target"})
+        core.resume({"token": step["continuation_token"], "parent_attempt_id": step["attempt_id"], "operation": "stop"})
+
     def test_a_slot_chosen_for_a_field_it_does_not_fit_is_refused_before_anything_is_sent(self):
         """Section 7: the pair is checked in code after the choice. The assisted path reaches the gate directly."""
         core = self.core([self.WIZARD_STEP_1 + [{"action": "escalate"}]])
