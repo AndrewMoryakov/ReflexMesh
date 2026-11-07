@@ -37,6 +37,7 @@ BLANK_RETRIES, BLANK_WAIT = 6, 0.5
 PROFILE_PREFIX = "browser-use-user-data-dir-reflexmesh-"
 MAX_ELEMENTS = 200
 MAX_TEXT_CHARS = 8000
+KILLED_CALL_SECONDS = 2.0   # each call into the driver after the watchdog stopped it
 MAX_NAME = 80
 TEXT_INPUT_TYPES_EXCLUDED = {"checkbox", "radio", "button", "submit", "reset", "file", "image", "range", "color",
                              "hidden"}
@@ -253,6 +254,7 @@ class GenericBrowserAdapter:
         self._pending_effect: dict | None = None
         self.effect_report: dict | None = None
         self.closed = False
+        self._killed = False      # set by the watchdog: the driver did not answer and its processes were ended
         # Ownership witness (V0.6 section 11, scope: the session this attempt launched): who the browser is,
         # and who was connected to its debugging port each time we looked.
         self.session: dict | None = None
@@ -307,20 +309,33 @@ class GenericBrowserAdapter:
             return
         self.closed = True
         try:
-            if self.backend is not None:
+            if self.backend is not None and self._killed:
+                # After the watchdog the driver's loop may still be stuck in the call that hung, and its close would
+                # queue behind it (up to the call bound and a 5 s join). The processes are already gone: stop the loop.
+                self.backend._loop.call_soon_threadsafe(self.backend._loop.stop)
+            elif self.backend is not None:
                 self.backend.close()
         finally:
             if self._own_profile:
                 shutil.rmtree(self.profile_dir, ignore_errors=True)
 
     def kill(self) -> None:
-        """Best-effort hard stop used by the watchdog when the driver does not answer."""
+        """Best-effort hard stop used by the watchdog when the driver does not answer.
+
+        Browser Use handles its events one at a time, so its own stop waits behind the call that hangs (a
+        navigation that never loads waited 30 minutes in M5). The caller also ends the browser's processes;
+        here every later call into the driver's loop gets a short bound, so the final look and the close
+        cannot each wait the backend's default of 120 s."""
         backend = self.backend
+        if backend is None:
+            return
+        self._killed = True
+        backend.timeout = KILLED_CALL_SECONDS
         session = getattr(backend, "_session", None)
         if session is None:
             return
-        try:
-            asyncio.run_coroutine_threadsafe(session.kill(), backend._loop).result(5.0)
+        try:   # asked, not awaited: it may wait behind the hung call, and the processes are ended regardless
+            asyncio.run_coroutine_threadsafe(session.kill(), backend._loop)
         except Exception:
             pass
 
@@ -562,8 +577,11 @@ class GenericBrowserAdapter:
         obs.text = self._scrub(obs.text)
         # No observation id here: SystemOneHarness hashes these fields to notice an action repeated on an
         # unchanged state, and a fresh id every step would make every state look new (V0.6 section 8).
+        # The scroll offset is state too: a page whose text does not change as it scrolls (the whole text is read,
+        # new items load only near the bottom) is a different view after each scroll. SystemOneHarness hashes
+        # these fields for its own "same action on the same state" stop, so the offset belongs here as well.
         obs.fields = {"url": url, "title": self._scrub(str(state.title or "")), "controls": len(considered),
-                      "tabs": len(tabs) + 1, "coverage": coverage}
+                      "tabs": len(tabs) + 1, "coverage": coverage, "scroll_y": above}
         self.report = {
             "observation_id": oid, "url": url, "coverage": coverage,
             "text_chars": len(obs.text), "options": {kind: len(values) for kind, values in candidates.items()
@@ -574,7 +592,7 @@ class GenericBrowserAdapter:
                                 if kind == "text_fields" else {})}
                             for (kind, key), entry in table.items()],
             "fields_without_slot": without_slot,
-            "signature": self._page_signature(obs, url)}
+            "signature": self._page_signature(obs, url), "scroll_y": above}
         if self._pending_effect is not None:
             self.effect_report = self._assess_effect(self._pending_effect, nodes)
             self._pending_effect = None
@@ -744,8 +762,15 @@ class GenericBrowserAdapter:
     def state_key(self, prepared: PreparedBrowserAction) -> str:
         """Identity of "this action on this page state", for the repeat check: the same target on
         an unchanged page is a repeat, the same button on a page that moved on is not. The target is
-        named by what it is (role, name, option, destination, slot), never by Browser Use's index."""
-        return f"{action_identity(prepared)}@{self.report.get('signature', '')}"
+        named by what it is (role, name, option, destination, slot), never by Browser Use's index.
+
+        A scroll is keyed by where the window is as well: the signature has no scroll offset, so on a page whose
+        text stays the same (M5 `quotes-scroll`) every second scroll down looked like a repeat. A scroll that did
+        not move the window (the end of the page) keeps its key and is still refused."""
+        key = f"{action_identity(prepared)}@{self.report.get('signature', '')}"
+        if prepared.operation == "scroll":
+            key += f"@y{self.report.get('scroll_y', 0)}"
+        return key
 
     def mutation_key(self, prepared: PreparedBrowserAction) -> str:
         """Identity of "this change on this document", for unknown-effect repeats (V0.6 section 9). A

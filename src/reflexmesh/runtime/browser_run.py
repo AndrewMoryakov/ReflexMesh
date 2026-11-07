@@ -288,7 +288,7 @@ class BrowserControlledEnvironment:
         self.uncertain = False
         self.observed_revision: int | None = None
         self._stale_streak = 0
-        self._last_state: str | None = None
+        self._last_state: tuple | None = None
         self._unchanged = 0
         self._done_in_state: set[str] = set()
         self._mutations: set[str] = set()
@@ -368,7 +368,9 @@ class BrowserControlledEnvironment:
         if self.verifier is not None and self.verifier.page_check(self.inner):
             # Every criterion holds on this page: the runtime verifies now, whatever the model would say next.
             raise self._stop("criteria_met")
-        state = self.inner.report.get("signature")
+        # A window that moved is a new view even when the text did not change (see the adapter's state_key).
+        signature = self.inner.report.get("signature")
+        state = None if signature is None else (signature, self.inner.report.get("scroll_y"))
         self._unchanged = self._unchanged + 1 if state is not None and state == self._last_state else 0
         self._last_state = state
         if self._unchanged >= NO_PROGRESS_LIMIT:
@@ -617,8 +619,13 @@ def _write_whole(path: Path, data: dict) -> None:
 
 
 def processes_using(path: str) -> list[int]:
-    """PIDs whose command line names `path`: the browser we started and its children."""
+    """PIDs whose command line names `path`: the browser we started and its children. Every process is looked at:
+    the ownership verdict reads "nothing else uses this profile" from here, so a filter by process name would make
+    it blind to a program it does not expect."""
     if not Path("/proc/self/cmdline").exists():
+        found = _wmi_processes_using(path)
+        if found is not None:
+            return found
         import psutil
 
         found = []
@@ -638,6 +645,33 @@ def processes_using(path: str) -> list[int]:
             except OSError:
                 continue
     return found
+
+
+def _wmi_processes_using(path: str) -> list[int] | None:
+    """Windows: one WMI query instead of psutil reading every process's command line. With 513 processes on a
+    Windows 11 laptop psutil took 2.1 s per search and an attempt's finish makes four or five; WMI took 0.4 s and
+    found the same processes. LIKE is only the first cut: `_`, `%` and `[` are wildcards there and a quote ends the
+    string, so every character other than an ASCII letter, digit, `-` or `.` becomes `_` (any one character), and
+    the exact path is checked here. None when WMI cannot be asked (no pywin32, a COM error): psutil then."""
+    try:
+        import pythoncom
+        import win32com.client
+    except ImportError:
+        return None
+    pattern = "".join(c if (c.isascii() and c.isalnum()) or c in "-." else "_" for c in path)
+    try:
+        pythoncom.CoInitialize()     # per thread: the watchdog and the attempt's worker both ask
+    except Exception:
+        return None
+    try:
+        rows = win32com.client.GetObject("winmgmts:").ExecQuery(
+            f"SELECT ProcessId, CommandLine FROM Win32_Process WHERE CommandLine LIKE '%{pattern}%'")
+        return [int(row.ProcessId) for row in rows
+                if int(row.ProcessId) != os.getpid() and path in (row.CommandLine or "")]
+    except Exception:
+        return None
+    finally:
+        pythoncom.CoUninitialize()
 
 
 class BrowserRun:
@@ -1046,6 +1080,12 @@ class BrowserRun:
             if terminal_at is not None and time.monotonic() - terminal_at > GRACE_SECONDS and not notes["watchdog_kill"]:
                 notes["watchdog_kill"] = True
                 if self.adapter is not None:
+                    if not self.retained:
+                        # The driver's own stop can wait behind the call that hangs; the processes do not. With them
+                        # gone the hung call fails on the dropped connection and the loop can finish (M5: a first
+                        # navigation held an attempt with a 240 s limit for 30 minutes).
+                        for pid in processes_using(self.adapter.profile_dir):
+                            _kill(pid)
                     self.adapter.kill()
             worker.join(0.05)
             if terminal_at is not None and time.monotonic() - terminal_at > GRACE_SECONDS + KILL_SECONDS:

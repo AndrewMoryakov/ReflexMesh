@@ -364,6 +364,35 @@ class UnknownEffects(unittest.TestCase):
             h2.adapter.report = {**h2.adapter.report, "signature": f"s{n // 2}"}
             h2.env.observe()                                  # a change every second cycle never stops
 
+    def test_a_window_that_moved_is_a_new_state_even_if_the_text_did_not_change(self):
+        """M5 `quotes-scroll`: the page text is read whole and stays the same while scrolling, so the signature
+        alone called every scroll a cycle without progress."""
+        h = Harness(self)
+        for y in (600, 1200, 1800, 2400):
+            h.adapter.report = {**h.adapter.report, "scroll_y": y}       # same signature, the window moved
+            h.env.observe()
+        for _ in range(2):
+            h.env.observe()                                              # the end of the page: nothing moves
+        with self.assertRaises(RuntimeStop) as caught:
+            h.env.observe()
+        self.assertEqual(caught.exception.reason, "no_progress")
+
+    def test_a_scroll_is_keyed_by_where_the_window_is(self):
+        from reflexmesh.adapters.system_one.browser_adapter import GenericBrowserAdapter
+
+        adapter = GenericBrowserAdapter(BrowserTask.from_dict(task_dict()), chrome=None)
+        self.addCleanup(adapter.close)                              # removes the profile it made
+        down = PreparedBrowserAction("scroll", "scroll", "read", 1, "scroll:down", (("direction", "down"),))
+        click = PreparedBrowserAction("click", "click", "write", 1, "1:elements:1", (("element", "1"),),
+                                      Target(kind="elements", key="1", operation="click", role="button", name="Go"))
+        adapter.report = {"signature": "same text", "scroll_y": 0}
+        top_scroll, top_click = adapter.state_key(down), adapter.state_key(click)
+        adapter.report = {"signature": "same text", "scroll_y": 600}
+        self.assertNotEqual(adapter.state_key(down), top_scroll)   # scrolling on from a new position is not a repeat
+        self.assertEqual(adapter.state_key(click), top_click)      # a click on the same page still is, wherever it is
+        adapter.report = {"signature": "same text", "scroll_y": 0}
+        self.assertEqual(adapter.state_key(down), top_scroll)      # a scroll that did not move the window still is
+
 
 class Verification(unittest.TestCase):
     """V0.6 sections 8 and 11 at the control layer: criteria judged on every observation, the reopen of a

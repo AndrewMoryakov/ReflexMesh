@@ -1,5 +1,6 @@
 """The pieces of the browser path that differ between Linux and Windows."""
 
+import os
 import subprocess
 import sys
 import time
@@ -46,6 +47,34 @@ class Processes(unittest.TestCase):
             time.sleep(0.05)
         self.assertFalse(_pid_alive(proc.pid))
         self.assertEqual(processes_using(marker), [])
+
+    @unittest.skipUnless(sys.platform == "win32", "the WMI search is the Windows path")
+    def test_the_wmi_search_finds_what_reading_every_command_line_finds(self):
+        """The fast search must not see less: the ownership verdict reads "nothing else uses this profile" from it.
+        The marker has characters that are wildcards or a string end in WQL, and its digits go into a path that
+        differs from it only where those characters are, which LIKE alone would also match."""
+        import psutil
+        from reflexmesh.runtime.browser_run import _wmi_processes_using
+
+        marker = "reflexmesh_port[ab]%'" + uuid.uuid4().hex
+        decoy = marker.replace("_", "x").replace("[", "y")
+        procs = [subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)", m]) for m in (marker, decoy)]
+        for proc in procs:
+            self.addCleanup(lambda p=proc: (p.kill(), p.wait()))
+        time.sleep(1.0)
+        by_wmi = _wmi_processes_using(marker)
+        if by_wmi is None:
+            self.skipTest("WMI is not available here (pywin32)")
+        every = []
+        for p in psutil.process_iter():
+            try:
+                if p.pid != os.getpid() and any(marker in arg for arg in p.cmdline()):
+                    every.append(p.pid)
+            except psutil.Error:
+                continue
+        self.assertIn(procs[0].pid, by_wmi)
+        self.assertNotIn(procs[1].pid, by_wmi)
+        self.assertEqual(sorted(by_wmi), sorted(every))
 
 
 class InProcessDatagrams(unittest.TestCase):

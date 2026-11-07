@@ -11,6 +11,7 @@ REFLEXMESH_CHROME_NO_SANDBOX=1 starts Chromium without its sandbox, for hosts th
 import importlib.util
 import json
 import os
+import socket
 import subprocess
 import sys
 import tempfile
@@ -426,6 +427,15 @@ class GenericPath(BrowserCase):
         self.assertIn("more_content_above", observed[1]["coverage"]["reasons"])
         self.assertEqual(result["budget"]["dispatches"], 2)
 
+    def test_scrolling_down_again_is_not_a_repeat_while_the_window_moves(self):
+        """M5 `quotes-scroll`: the page signature has no scroll offset, and on a page whose text stays the same
+        the second scroll down was refused as `repeated_action` in every run."""
+        steps = [{"action": "scroll", "direction": "down"}] * 3 + [{"action": "finish"}]
+        result = self.start(self.task(start="/tall"), label_script(steps)).run()
+        trace = self.trace()
+        self.assertEqual([r["reason"] for r in trace if r["kind"] == "admission_rejected"], [])
+        self.assertEqual([a["operation"] for a in result["actions"]], ["navigate", "scroll", "scroll", "scroll"])
+
     def test_a_link_to_another_origin_is_refused_before_any_request(self):
         steps = [{"action": "click", "element": "External portal"}]
         result = self.start(self.task(start="/"), label_script(steps)).run()
@@ -509,6 +519,36 @@ class GenericPath(BrowserCase):
         self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "deadline"))
         self.assertLess(time.monotonic() - began, 3 + 5 + 2 + 6)
         self.assertEqual(SITE.NOTES, {})
+
+    def test_deadline_ends_the_attempt_even_if_the_first_navigation_never_loads(self):
+        """M5: a start page that did not load held an attempt with a 240 s limit for 30 minutes. Browser Use's
+        own stop waits behind the hung navigation, so the watchdog ends the browser's processes itself."""
+        held = []
+        hole = socket.socket()
+        hole.bind(("127.0.0.1", 0))
+        hole.listen(8)
+        self.addCleanup(hole.close)
+        self.addCleanup(lambda: [conn.close() for conn in held])
+
+        def accept():                                     # takes the connection, never answers
+            try:
+                while True:
+                    held.append(hole.accept()[0])
+            except OSError:
+                pass
+
+        threading.Thread(target=accept, daemon=True).start()
+        origin = f"http://127.0.0.1:{hole.getsockname()[1]}"
+        task = BrowserTask.from_dict(task_dict(start_url=origin + "/", allowed_origins=[origin],
+                                               limits={**task_dict()["limits"], "wall_seconds": 5}))
+        began = time.monotonic()
+        result = self.start(task, label_script(HAPPY_PATH)).run()
+        took = time.monotonic() - began
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "deadline"))
+        # Limit, grace, then the finish (about 2 s on Windows). Before the watchdog ended the processes this run
+        # took 43 s there, and an M5 attempt 30 minutes.
+        self.assertLess(took, 5 + 5 + 10, f"the attempt took {took:.1f} s")
+        self.assertEqual(result["cleanup"]["browser_processes_left"], 0)
 
 
 class StandInDecisions(BaseHTTPRequestHandler):
