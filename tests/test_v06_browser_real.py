@@ -77,6 +77,9 @@ class BrowserCase(unittest.TestCase):
 
     def setUp(self):
         SITE.NOTES.clear()
+        SITE.AUTOSAVED.clear()
+        SITE.SUBMISSIONS.clear()
+        SITE.F11_HITS.clear()
         SITE.DRAFTS.clear()
         SITE.META.clear()
         SITE.REQUESTS.clear()
@@ -502,6 +505,14 @@ class GenericPath(BrowserCase):
                          {"frames": True, "cross_origin_frames": False, "open_shadow_dom": True})
         result, _, _ = self.f11_run("same")
         self.assertEqual(result["components"]["capabilities"]["cross_origin_frames"], False)
+
+    def test_typing_does_not_press_enter(self):
+        """F06, Enter: press_key is not offered (declared false), and typing alone must not submit the form it is in."""
+        steps = [{"action": "type_text", "field": "Order number", "value": "^order@1"}, {"action": "wait"}, {"action": "finish"}]
+        self.start(self.task(), label_script(steps)).run()
+        self.assertEqual([(r["method"], r["path"]) for r in SITE.REQUESTS if r["path"] == "/orders"], [("GET", "/orders")])
+        offered = {o["operation"] for r in self.trace() if r["kind"] == "options_built" for o in r["options"]}
+        self.assertNotIn("press_key", offered)
 
     def test_a_link_to_another_origin_is_refused_before_any_request(self):
         steps = [{"action": "click", "element": "External portal"}]
