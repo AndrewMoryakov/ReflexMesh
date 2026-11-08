@@ -92,3 +92,20 @@ About 200 steps times two variants; the OpenRouter key must be topped up before 
 - Steps follow the script's path, not Jev's: like the public benchmark, a step evaluation that carries over to
   whole tasks no better than it does.
 - The sites change; the set is what was recorded on its date.
+
+## The recorded set (2026-11-08)
+
+Recorded in one sitting on the machine and browser named above, from commit `88141f2`, recorder and scripts
+checked by hash on the machine before the run; 0 failed logons. All 24 tasks ran through with no mismatch.
+
+```
+SHA-256 (files in name order, each as name, newline, bytes)   0b31dd655965b9f933b4c9dcc3870077e445ee59acf986089da014d7891f06fa
+files 24, steps 138
+right actions        click 77, type_text 20, finish 24, wait 9, scroll 3, go_back 4, select_option 1
+recorded as auto     wait 9, scroll 3
+target choices       102, of them 20 where the right option's description is shared by another option
+options per target   median 31.5, max 200 (the adapter's limit), above 50 in 34 questions
+```
+
+`set_summary.py` recomputes these. The step files hold the sites' page text and stay outside the repository;
+fewer steps than the 150-200 first aimed at.
