@@ -50,9 +50,9 @@
     "need": "a changed document or frame is stale",
     "tests": [
      "tests.test_v06_browser_handoff.SameSession.test_a_frame_reloaded_after_the_observation_makes_its_target_stale",
-     "tests.test_v06_browser_handoff.SameSession.test_a_field_renamed_after_the_observation_is_stale_even_past_eighty_characters"
-    ],
-    "partial": "a frame reload and a renamed field; a navigation of the whole document between observation and dispatch is not tested on a real browser"
+     "tests.test_v06_browser_handoff.SameSession.test_a_field_renamed_after_the_observation_is_stale_even_past_eighty_characters",
+     "tests.test_v06_browser_handoff.SameSession.test_a_document_navigated_after_the_observation_makes_its_target_stale"
+    ]
    },
    {
     "need": "an ambiguous target is not dispatched",
@@ -81,9 +81,9 @@
    {
     "need": "a new slot version cannot be applied to an old snapshot",
     "tests": [
-     "tests.test_v06_browser_handoff.SameSession.test_a_revision_cannot_change_where_a_kept_slot_may_go"
-    ],
-    "partial": "a revision cannot redirect a kept slot; a new version applied against an observation made before the revision is not tested"
+     "tests.test_v06_browser_handoff.SameSession.test_a_revision_cannot_change_where_a_kept_slot_may_go",
+     "tests.test_v06_browser_handoff.SameSession.test_a_new_slot_version_is_not_applied_to_an_observation_made_before_the_revision"
+    ]
    }
   ]
  },
@@ -157,9 +157,12 @@
    {
     "need": "no new commit after terminal; liveness bounds",
     "tests": [
-     "tests.test_v06_browser_control.Admission.test_no_dispatch_after_an_accepted_cancel"
+     "tests.test_v06_browser_control.Admission.test_no_dispatch_after_an_accepted_cancel",
+     "tests.test_v06_browser_control.Admission.test_no_dispatch_after_the_dispatches_are_sealed",
+     "tests.test_v06_browser_control.Admission.test_deadline_ends_observation_and_dispatch",
+     "tests.test_v06_browser_real.GenericPath.test_a_close_that_hangs_does_not_hold_the_result_past_the_liveness_bound"
     ],
-    "partial": "after cancel only; not after other terminal states, and no bound measured on close"
+    "note": "failed on main: a close that hangs held the result for the whole hang (60 s in the test), up to the deadline; fixed on fix/v0.6-close-liveness, whose test this item now needs"
    }
   ]
  },
