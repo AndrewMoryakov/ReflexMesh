@@ -79,6 +79,7 @@ class BrowserCase(unittest.TestCase):
         SITE.NOTES.clear()
         SITE.AUTOSAVED.clear()
         SITE.SUBMISSIONS.clear()
+        SITE.FX_HITS.clear()
         SITE.F11_HITS.clear()
         SITE.DRAFTS.clear()
         SITE.META.clear()
@@ -627,6 +628,147 @@ class GenericPath(BrowserCase):
         # took 43 s there, and an M5 attempt 30 minutes.
         self.assertLess(took, 5 + 5 + 10, f"the attempt took {took:.1f} s")
         self.assertEqual(result["cleanup"]["browser_processes_left"], 0)
+
+
+class FirstMatch:
+    """A scripted provider for a page where the script's description matches more than one option: it takes the
+    first in the observation's order. Only for proving what happens to such a choice, never as a way to label."""
+
+    model = "script/first"
+
+    def __init__(self, steps, before=None):
+        self.steps, self.before, self.calls = [dict(s) for s in steps], before, 0
+
+    def decide(self, state, questions):
+        import re as _re
+        from systemone_harness.provider import Decision
+        from reflexmesh.adapters.system_one.decision_providers import _choice, answers_for_step
+
+        if self.before is not None:
+            self.before(self.calls, self)
+        step = self.steps[self.calls] if self.calls < len(self.steps) else {"action": "finish"}
+        self.calls += 1
+        if not step.get("first"):
+            answers = answers_for_step(step, questions)
+        else:
+            answers = answers_for_step({"action": step["action"]}, questions)
+            key = f"{step['action']}__element"
+            criteria = questions[key]["criteria"]
+            answers[key] = _choice(criteria, next(k for k, d in criteria.items() if _re.search(step["element"], str(d))))
+        return Decision(answers=answers, usage={"input_tokens": 0, "output_tokens": 0}, model=self.model,
+                        request_id=f"first-{self.calls}", latency_ms=1, raw={})
+
+    def close(self):
+        pass
+
+
+@unittest.skipUnless(AVAILABLE, "set REFLEXMESH_CHROME and install the pinned Browser Use + SystemOneHarness")
+class FChecks(BrowserCase):
+    """Section 16 items the order desk did not cover. Each names its gate and item."""
+
+    WORD = [{"id": "word", "version": 1, "value": "kiwi", "sensitivity": "normal"}]
+
+    def fx_task(self, kind, **changes):
+        return self.task(start=f"/fx/{kind}", text_slots=self.WORD, criteria=[{"id": "seen", "predicate": "page_match",
+                         "args": {"anchor_slot_ref": "word@1", "field_name": "Word", "expected_slot_ref": "word@1"}}], **changes)
+
+    def offered(self):
+        return [{(o["operation"], o["name"]) for o in r["options"]} for r in self.trace() if r["kind"] == "options_built"]
+
+    def test_f01_a_field_a_script_adds_is_offered_once_it_exists_and_gets_the_exact_value(self):
+        """F01, dynamic form: the comment field does not exist until the page's own script adds it."""
+        steps = [{"action": "click", "element": "Add a comment"}, {"action": "type_text", "field": "Comment", "value": "^word@1"},
+                 {"action": "click", "element": "Send comment"}, {"action": "finish"}]
+        result = self.start(self.fx_task("dynamic"), label_script(steps)).run()
+        first, *later = self.offered()
+        self.assertNotIn(("type_text", "Comment"), first)                 # not there before the script ran
+        self.assertTrue(any(("type_text", "Comment") in o for o in later))
+        self.assertEqual([(h["kind"], h["word"]) for h in SITE.FX_HITS], [("dynamic", "kiwi")])
+        self.assertEqual([a.get("request") for a in result["actions"] if a["operation"] == "click"][-1],
+                         {"method": "POST", "path": "/fx/hit/dynamic"})
+
+    def test_f02_a_replaced_twin_is_stale_and_its_identical_twin_is_not_pressed_instead(self):
+        """F02, ambiguous target: two buttons with the same role and name. The chosen one is replaced after the
+        observation; an identity by role and name alone would find the other one. Nothing may be pressed."""
+        def replace_first(call, provider):
+            if call == 0:
+                adapter = self.run_.adapter
+
+                async def clone():
+                    cdp = await adapter.backend._session.get_or_create_cdp_session()
+                    await cdp.cdp_client.send.Runtime.evaluate(
+                        params={"expression": "var b=document.querySelector('button'); b.replaceWith(b.cloneNode(true))"},
+                        session_id=cdp.session_id)
+
+                adapter.backend._run(clone())
+
+        steps = [{"action": "click", "element": r"^button 'Send'", "first": True}, {"action": "finish"}]
+        self.start(self.fx_task("twins"), FirstMatch(steps, before=replace_first)).run()
+        self.assertEqual(SITE.FX_HITS, [])
+        self.assertIn("stale_target", [r.get("reason") for r in self.trace() if r["kind"] == "admission_rejected"])
+
+    def test_f04_a_tab_of_another_origin_opened_by_the_page_is_never_acted_on(self):
+        """F04, a foreign tab: the page itself opens a tab of another origin (localhost, not 127.0.0.1). It is not
+        offered as a tab, and nothing typed or pressed reaches it, whichever tab the driver looks at."""
+        steps = [{"action": "click", "element": "Open partner"}, {"action": "type_text", "field": "Word", "value": "^word@1"},
+                 {"action": "click", "element": "Send word"}, {"action": "finish"}]
+        result = self.start(self.fx_task("popup"), label_script(steps)).run()
+        self.assertEqual(SITE.FX_HITS, [])
+        self.assertNotEqual(result["attempt_status"], "completed")
+        for options in self.offered():
+            self.assertFalse({name for op, name in options if op == "switch_tab"} & {"Partner desk"})
+            self.assertNotIn(("type_text", "Word"), options)
+        self.assertEqual([a for a in result["actions"] if a["operation"] in ("type_text", "switch_tab")], [])
+
+    def test_f05_a_cancel_after_the_commit_keeps_that_action_and_dispatches_nothing_after_it(self):
+        """F05, commit then cancel: the cancel arrives while the committed Save is in the driver. The Save's effect is
+        recorded, the attempt ends cancelled, and the finish that would follow is never reached."""
+        def cancel_inside_save(call, provider):
+            if call == 4:      # the decision for Save note
+                adapter, run = self.run_.adapter, self.run_
+                original = adapter.execute_prepared
+
+                def wrapped(prepared, action_id):
+                    if prepared.operation == "click":
+                        run.cancel()
+                    return original(prepared, action_id)
+
+                adapter.execute_prepared = wrapped
+
+        result = self.start(self.task(), label_script(HAPPY_PATH, before=cancel_inside_save)).run()
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("cancelled", "cancel_requested"))
+        self.assertEqual(SITE.NOTES, {"125": ["Перезвонить завтра"]})       # the committed Save did happen
+        saves = [a for a in result["actions"] if a["operation"] == "click" and (a.get("request") or {}).get("method") == "POST"]
+        self.assertEqual(len(saves), 1)
+        self.assertNotEqual(saves[0]["effect"], "not_dispatched")
+        self.assertEqual(result["actions"][-1]["id"], saves[0]["id"])        # nothing after it
+        self.assertEqual(result["budget"]["dispatches"], 6)
+
+    def test_f08_an_old_success_banner_is_not_evidence_that_the_note_was_saved(self):
+        """F08, an old toast: order 303 shows "Note saved" with the very note text and never saves anything. The
+        criterion reads the order's notes, not the banner, and fails."""
+        steps = [{"action": "type_text", "field": "Order number", "value": "^order@1"}, {"action": "click", "element": "button 'Search'"},
+                 {"action": "click", "element": "Заказ №303"}, {"action": "type_text", "field": "textbox 'Note'", "value": "^note@1"},
+                 {"action": "click", "element": "Save note"}, {"action": "finish"}]
+        slots = [{"id": "order", "version": 1, "value": "303", "sensitivity": "normal"},
+                 {"id": "note", "version": 1, "value": "Перезвонить завтра", "sensitivity": "normal"}]
+        result = self.start(self.task(text_slots=slots), label_script(steps)).run()
+        self.assertEqual(SITE.NOTES, {})
+        rows = {r["id"]: r["status"] for r in result["verification"]}
+        self.assertEqual(rows["note_saved"], "fail")
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("failed", "postcondition_failed"))
+
+    def test_f10_a_target_past_the_observation_limit_is_reported_and_handed_off_not_guessed(self):
+        """F10: 300 links in one screen, more than one observation lists, so scrolling cannot reach the rest. The
+        observation says so, and the attempt hands off rather than acting on something else."""
+        result = self.start(self.fx_task("dense"), label_script([{"action": "escalate"}])).run()
+        observed = next(r for r in self.trace() if r["kind"] == "observed")["coverage"]
+        self.assertEqual(observed["status"], "partial")
+        self.assertIn("control_limit", observed["reasons"])
+        self.assertGreater(observed["controls_not_offered"], 0)
+        self.assertNotIn(("click", "Item 300"), self.offered()[0])
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "needs_handoff"))
+        self.assertEqual(result["budget"]["dispatches"], 1)
 
 
 class StandInDecisions(BaseHTTPRequestHandler):

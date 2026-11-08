@@ -23,8 +23,9 @@
    },
    {
     "need": "a dynamic form (fields that appear or change by script)",
-    "tests": [],
-    "gap": "the demo site has no such form"
+    "tests": [
+     "tests.test_v06_browser_real.FChecks.test_f01_a_field_a_script_adds_is_offered_once_it_exists_and_gets_the_exact_value"
+    ]
    }
   ]
  },
@@ -55,8 +56,9 @@
    },
    {
     "need": "an ambiguous target is not dispatched",
-    "tests": [],
-    "gap": "no test"
+    "tests": [
+     "tests.test_v06_browser_real.FChecks.test_f02_a_replaced_twin_is_stale_and_its_identical_twin_is_not_pressed_instead"
+    ]
    }
   ]
  },
@@ -111,8 +113,9 @@
    },
    {
     "need": "a foreign tab is not acted on",
-    "tests": [],
-    "gap": "no test of a tab of another origin or not owned by the attempt"
+    "tests": [
+     "tests.test_v06_browser_real.FChecks.test_f04_a_tab_of_another_origin_opened_by_the_page_is_never_acted_on"
+    ]
    }
   ]
  },
@@ -128,8 +131,9 @@
    },
    {
     "need": "commit before cancel: the committed action's effect is recorded, nothing after",
-    "tests": [],
-    "gap": "no test with a barrier between commit and cancel"
+    "tests": [
+     "tests.test_v06_browser_real.FChecks.test_f05_a_cancel_after_the_commit_keeps_that_action_and_dispatches_nothing_after_it"
+    ]
    },
    {
     "need": "pending provider",
@@ -220,13 +224,17 @@
    },
    {
     "need": "an old toast",
-    "tests": [],
-    "gap": "no test of a stale message left from an earlier action"
+    "tests": [
+     "tests.test_v06_browser_real.FChecks.test_f08_an_old_success_banner_is_not_evidence_that_the_note_was_saved"
+    ]
    },
    {
     "need": "an unknown scope",
-    "tests": [],
-    "gap": "no test"
+    "tests": [
+     "tests.test_v06_browser_verifier.Probe.test_nearness_without_a_named_container_is_not_a_binding",
+     "tests.test_v06_browser_verifier.Probe.test_a_results_list_has_the_anchor_but_no_field",
+     "tests.test_v06_browser_real.GenericPath.test_a_finish_on_the_results_page_cannot_be_judged"
+    ]
    }
   ]
  },
@@ -267,8 +275,9 @@
    },
    {
     "need": "or a handoff is returned (focus_region is not offered)",
-    "tests": [],
-    "gap": "no test that an unreachable target ends in a handoff rather than a guess"
+    "tests": [
+     "tests.test_v06_browser_real.FChecks.test_f10_a_target_past_the_observation_limit_is_reported_and_handed_off_not_guessed"
+    ]
    }
   ]
  },
