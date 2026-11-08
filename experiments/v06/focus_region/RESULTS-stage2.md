@@ -35,8 +35,8 @@ already there; the public benchmark's format, where the earlier association was 
 
 ## Exploration outside the protocol
 
-Of the 21 held targeted steps in B1, 18 were right, all with their weakest judgment between 0.3 and 0.7 (15 of
-them between 0.5 and 0.7). Lowering the write threshold, fitted on the same steps:
+Of the 21 held targeted steps in B1, 18 were right: 3 with their weakest judgment between 0.3 and 0.5, 15 between
+0.5 and 0.7. Lowering the write threshold, fitted on the same steps:
 
 ```
 write threshold   acted alone right   wrong passed
