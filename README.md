@@ -15,8 +15,8 @@
 
 <p align="center"><b>English</b> | <a href="README.ru.md">Русский</a></p>
 
-**Current development:** [V0.6 Browser Core](docs/specs/V0.6-browser-core.md),
-starting with M1–M2: a generic DOM adapter and real Jev micro-action choices.
+**Current development:** [V0.6 Browser Core](docs/specs/V0.6-browser-core.md), now at the M5
+functional acceptance. It started with M1–M2: a generic DOM adapter and real Jev micro-action choices.
 The selected stack is SystemOneHarness + low-level Browser Use + Jev.
 Read [CURRENT_DIRECTION](docs/CURRENT_DIRECTION.md) and [AGENTS](AGENTS.md)
 before choosing implementation work. The fixture runtime below is existing
@@ -24,8 +24,10 @@ experimental code. The reviewed branch contains `browser-task/0.1`, the generic 
 adapter, `reflexmesh browser run`/`view`, and separate fixture Task API/MCP/Pi code.
 M1/script and M2-mechanics evidence comes from the dated
 [M1–M2 report](docs/research/V0.6-M1-M2-2026-10-11.md) on `e5187be`
-(CLI evidence: `fc765d6`), not a fresh run of the current code. Real Jev on the generic
-path, same-session continuation and generic verification remain pending. See the
+(CLI evidence: `fc765d6`), not a fresh run of the current code. Since then the real Jev runs on the
+generic path, a handoff continues in the same session and the runtime verifies criteria (M2 to M4,
+2026-10-13); the M5 comparison ran on real sites (2026-11-06). Of the functional checks of section 16,
+F06, F07 and F11 are covered and the rest are open, so the default mode is not chosen. See the
 [browser guide](docs/guides/V0.6-browser-run.md) and [MCP/Pi guide](docs/guides/V0.6-mcp-pi.md).
 
 ```sh
@@ -77,7 +79,7 @@ An AI agent that is asked to do something usually has several ways to do it: cal
 | **Task** | The strict JSON input for routing: id, goal, the routes the system is capable of and the routes allowed. |
 | **Capabilities / allowed routes** | Declarations, not probes: capabilities say what could be used, allowed routes say what may be used. Neither checks that an executor is connected. |
 | **Stub** | The default router: picks the first eligible route in a fixed order and never reads the goal. |
-| **Jev / JevRouter** | Jev is a bounded-choice decision model: existing macro routing and an implemented V0.6 micro-action provider whose real-Jev acceptance is pending. JevRouter is the upstream local HTTP routing service. |
+| **Jev / JevRouter** | Jev is a bounded-choice decision model: existing macro routing and an implemented V0.6 micro-action provider, run with the real Jev since 2026-10-13 and compared with an LLM in M5 (2026-11-06); its acceptance is pending. JevRouter is the upstream local HTTP routing service. |
 | **NONE candidate** | A "none of these fits" option the adapter offers Jev, which turns a poor match into an honest refusal. |
 | **Verifier** | Code that checks the goal against evidence, such as server-side state; a run counts as done only when it confirms. |
 | **TextSlot** | A versioned, immutable piece of text (`name@1`) that a task supplies and an action may type, so the model never invents content. |
@@ -109,7 +111,7 @@ Status labels: unlabeled = implemented in this repository; **experimental** = im
 - **Permissions, TextSlots and a verifier.** Seven named permissions, immutable versioned text slots and registered postcondition predicates checked against fixture-server evidence or, for `current_page`, a browser observation; `completed` is assigned by the runtime, never by the harness. → [The execution runtime](#the-execution-runtime-experimental)
 - **A spike and recorded deterministic checks.** The V0.4 spike of SystemOneHarness + Browser Use under runtime veto, cancellation and deadline passed its checks; the historical V0.5 deterministic (U) report records 36 of 36 planned subcases, with [source-provenance and C12 coverage caveats](docs/research/V0.5-U-acceptance.md#static-review-addendum-2026-10-07); the real-browser (B) and live-Jev (J) acceptance subcases are pending. → [Status](#status)
 
-- **`reflexmesh browser run` (V0.6 M1–M2, experimental).** One `browser-task/0.1` on a site the core has no scenario for: options come from the page's own accessibility tree, each is bound to its DOM node and re-checked before dispatch, and every command passes the shared gate. A run ends `incomplete/verification_unknown` until the M4 verifier exists. → [The generic browser path](#the-generic-browser-path-v06-m1m2)
+- **`reflexmesh browser run` (V0.6, experimental).** One `browser-task/0.1` on a site the core has no scenario for: options come from the page's own accessibility tree, each is bound to its DOM node and re-checked before dispatch, and every command passes the shared gate. The runtime checks the task's criteria (M4), and a handoff can continue in the same browser session (M3). `completed` also needs a registered check of the site's effects, which exists only for the demo site, so elsewhere a run ends at best `verification_unknown`. → [The generic browser path](#the-generic-browser-path-v06-m1m2)
 
 - **Fixture MCP/Pi (experimental).** `reflexmesh mcp` serves `reflexmesh_submit`, `reflexmesh_status`, `reflexmesh_cancel` and `reflexmesh_continue`; `integrations/pi` registers the server and supplies a skill. Continuation starts a linked attempt in a fresh browser with the remaining chain budget. This is not generic same-session M3. → [MCP/Pi guide](docs/guides/V0.6-mcp-pi.md)
 
@@ -120,7 +122,7 @@ Status labels: unlabeled = implemented in this repository; **experimental** = im
 ### Not built yet
 
 - **Executors beyond the browser spike** — direct API/MCP tools, CLI/scripts, models and agents as executors, desktop, macros, workflows: **target directions**, not integrations. → [Direction and documents](#direction-and-documents)
-- **The rest of the generic browser core** — M1 and M2 mechanics exist; real-Jev acceptance, same-session handoff (M3), the verifier and mandatory-constraint proofs (M4), and Jev/LLM comparison (M5) remain open. The generic `browser_task`/`browser_resume`/`browser_cancel` MCP interface is not implemented by the existing fixture MCP/Pi. HTTP Task API is later work. → [Status](#status)
+- **The rest of the generic browser core** — M1 to M4 are implemented with dated evidence, and the M5 comparison ran on 30 tasks on 10 real sites (2026-11-06). The functional checks F01 to F05, F08 to F10 and F12 remain open, so the default mode is not chosen. Registered effect checks for real sites do not exist, so `completed` is out of reach there. The generic `browser_task`/`browser_resume`/`browser_cancel` MCP interface is not implemented by the existing fixture MCP/Pi. HTTP Task API is later work. → [Status](#status)
 - **Perception (OCR/accessibility), ClawBridge, Skyvern, Ui.Vision, Cua adapters, a meso-level supervisor, recovery and a durable receipts store** — **planned**; the matching modules in `src/` are empty placeholders.
 - **Capability discovery and self-extension** — a future direction only ([`docs/architecture/FUTURE_SELF_EXTENSION.md`](docs/architecture/FUTURE_SELF_EXTENSION.md)).
 
@@ -136,7 +138,7 @@ The picture shows the target design. Of the tools drawn, only a controlled brows
 2. **The runtime admits an executor.** When a task needs a choice among routes, Jev proposes one from the allowed set. An explicit V0.6 browser.soh request does not need another macro call; Jev then chooses micro-actions. The current CUA / LLM / PERCEPTION routing catalogue is an experimental set for V0.
 3. **A gate owned by code** enforces permissions and limits before anything runs. Choosing a route authorizes nothing by itself.
 4. **An executor acts** — for now, only a controlled browser executor is in scope.
-5. **A verifier checks the goal.** Completion requires accepted criteria and all mandatory runtime constraints; otherwise the runtime stops with a reason or returns handoff. Same-session continuation is specified in V0.6 and not yet implemented.
+5. **A verifier checks the goal.** Completion requires accepted criteria and all mandatory runtime constraints; otherwise the runtime stops with a reason or returns handoff. On the generic browser path a handoff can continue in the same session (V0.6 M3, 2026-10-13); the fixture path still continues in a fresh browser.
 
 ### What runs today
 
@@ -146,7 +148,7 @@ The picture shows the target design. Of the tools drawn, only a controlled brows
 | 2. Router | The stub or the opt-in JevRouter adapter returns a decision; the result is a recommendation. |
 | 3. Gate | In the runtime: the permissions list, limits and cancellation order are enforced by code in one supervised attempt. |
 | 4. Executor | Experimental `browser.soh` (SystemOneHarness + Browser Use), with separate fixture and generic DOM paths using optional pinned dependencies. |
-| 5. Verifier | A read-only fixture verifier; no other verifier exists. |
+| 5. Verifier | A read-only fixture verifier; on the generic path the runtime checks page criteria (`page_match`, `scoped_extract`, `revisit_match`) and registered effect checks (`--checks`; so far only the demo site's `order_desk`). |
 
 ## Quick start
 
@@ -227,8 +229,9 @@ For the step-by-step local checks, the fixture server and the U manifest, see th
 `reflexmesh browser run` executes one `browser-task/0.1` (start URL, allowed origins, permissions, versioned text slots, criteria, finite limits) on a DOM site that has no prepared scenario. It lives beside the fixture path and reuses runtime control components. Install and commands: [guide](docs/guides/V0.6-browser-run.md); what was run and what was not: [M1–M2 report](docs/research/V0.6-M1-M2-2026-10-11.md).
 
 - **Historical evidence (2026-10-11, `e5187be`; CLI artifact: `fc765d6`).** On a local order site with no ReflexMesh markup, a deterministic script finds an order, types a prepared note and saves it on a real Chromium; the server recorded the note once. A node replaced after observation is rejected as stale and not dispatched. Four of the six runtime constraints pass on gate and slot-ledger evidence; ownership and no-uncertain-repeats stay `unknown`.
-- **What is not.** No run used the real Jev service (no key was available); a stand-in decisions server checks only the plumbing. The result is never `completed`: there is no verifier for task criteria yet. Generic same-session continuation, frames, key presses and shadow DOM are not built. A server-side redirect to another origin is detected after the request, not prevented.
-- **Platform.** Linux or WSL (`fork`, `/proc`); Chromium may need `--no-sandbox` on hosts that forbid user namespaces, which the result records.
+- **What was not, on 2026-10-11.** No run used the real Jev service (no key was available); a stand-in decisions server checks only the plumbing. The result is never `completed`: there is no verifier for task criteria yet. Generic same-session continuation, frames, key presses and shadow DOM are not built. A server-side redirect to another origin is detected after the request, not prevented.
+- **Since then (to 2026-11-07).** The real Jev chose actions through OpenRouter ([report](docs/research/V0.6-jev-run-2026-10-13.md)). The runtime checks page criteria ([M4a](docs/research/V0.6-M4a-verifier-2026-10-13.md)), and with a registered check of the site plus browser-session ownership the first `completed` was reached on the demo site ([M4b–M4c](docs/research/V0.6-M4bc-completed-2026-10-13.md)). A handoff continues in the same browser ([M3](docs/research/V0.6-M3-handoff-2026-10-13.md)), also from the CLI through `reflexmesh browser serve` ([session service](docs/research/V0.6-session-service-2026-10-13.md)). The M5 comparison of Jev alone, Jev with LLM assistance and an LLM alone is in the [results](docs/research/V0.6-M5-results-2026-11-06.md). The functional checks F07 (handoff), F06 (no repeat of an uncertain effect) and F11 (frames of the page's own origin and open shadow DOM, declared after probes) are covered ([F06 and F11](docs/research/V0.6-F06-F11-2026-11-07.md)); the other F checks, key presses, `focus_region` and frames of another origin are not. A lost response can still bring the same request to the server twice: the form is sent once, and the runtime only detects the repeat.
+- **Platform.** Linux or WSL (`fork`, `/proc`), and native Windows since 2026-10-13 ([report](docs/research/V0.6-windows-2026-10-13.md)); Chromium may need `--no-sandbox` on hosts that forbid user namespaces, which the result records.
 
 ## Evidence and experiments
 
@@ -241,12 +244,16 @@ Every claim below is tied to a dated report with its commit and environment; the
 | V0.3b refusal | 84 cases × 3 passes × four Jev variants, plus the LLM as reference | Offering a `NONE` candidate raised the correct-refusal rate from 22% (previous adapter) to 96% with no loss on ordinary tasks; implemented in the adapter ([report](docs/research/V0.3b-refusal.md)) | A harder set is an open question (ceiling effect for Jev and the LLM) |
 | V0.4 spike | SystemOneHarness + Browser Use under runtime veto, cancellation and deadline on a fixture site | 18 of 18 deterministic runs and 12 of 12 with Jev passed; a verifier over server state was right where the harness's own `completed` status was wrong in both directions ([report](docs/research/V0.4-spike.md)) | A fixture site, a specific environment, step-by-step mode |
 | V0.5 U acceptance | 36 deterministic subcase rows, 33 distinct test identifiers, with fakes and fault injection | Historical report records 36/36; its source SHA `1887114` is unavailable in GitHub. A separate reproduction on published `fe088e6` is reported ([provenance and coverage note](docs/research/V0.5-U-acceptance.md#static-review-addendum-2026-10-07)) | C12 log redaction covers only the executor-unavailable path. B and J acceptance remain pending; the gate is open |
+| V0.6 M5 comparison | 30 tasks on 10 real sites, 3 repeats: Jev alone (J0), Jev with metered LLM assistance (J1), an LLM alone (L) on the same adapter, judged by an external oracle | Confirmed J0 40, J1 73, L 65 of 90; `completed` 0 of 270, since real sites have no registered check ([report](docs/research/V0.6-M5-results-2026-11-06.md)) | J1 success and the L and J1 costs are lower bounds after three instrument defects found in review; the default mode is not chosen while F checks are open |
+| V0.6 F06 and F11 | Probes on the demo site: forms in frames of the same and of another origin, in open and closed shadow roots; a lost response, an autosave and Enter with a script in the Jev role, LLM assistance and a continuation | A frame of another origin received a slot value before the fix (#17); now its content is not offered. No repeat through the runtime; the same request may still reach the server twice, the form is sent once ([note](docs/research/V0.6-F06-F11-2026-11-07.md)) | Windows 11 and Chrome 142 only; what resends the request is not established |
 
 To re-run the routing studies, see the frozen protocols and datasets under `experiments/v03` and `experiments/v03b` and the run and score scripts `scripts/v03_run.py`, `scripts/v03_score.py`, `scripts/v03b_run.py`, `scripts/v03b_score.py`.
 
 ## Status
 
-Implementation inventory was synchronized by source inspection on 2026-10-12 against
+The V0.6 current-state descriptions in this README were synchronized on 2026-11-08 against `c7e5c02` (PR #18) from
+[STATUS](docs/STATUS.md) and the dated reports; no new run is claimed by that sync.
+Before that, the implementation inventory was synchronized by source inspection on 2026-10-12 against
 PR #10 at [4a8385f](https://github.com/AndrewMoryakov/ReflexMesh/commit/4a8385f08b15ecdbdf96ad262f95c3673f94637e).
 The browser and fixture MCP/Pi implementations are present in that branch. This is
 not a claim that the PR is merged or acceptance passed. This documentation and the
@@ -278,7 +285,7 @@ evidence remains in the [live report](docs/research/V0.2-live-openrouter.md).
 | V0.3 / V0.3b | Routing study; refusal study and the NONE candidate | Done (verdict "useful"); NONE implemented |
 | V0.4 | SystemOneHarness + Browser Use spike | Done |
 | V0.5 | Controlled fixture runtime | Experimental implementation; historical U 36/36 with caveats; acceptance open, B/J pending |
-| V0.6 | Generic Browser Core: SOH + Browser Use + Jev, same-session handoff, verification; then a generic MCP/Pi client path | M1/M2-mechanics code and separate fixture MCP/Pi present; dated script/Chromium evidence retained. Fresh verification, real Jev, M3, M4 and M5 remain pending |
+| V0.6 | Generic Browser Core: SOH + Browser Use + Jev, same-session handoff, verification; then a generic MCP/Pi client path | M1 to M4 implemented with dated evidence: real Jev, same-session handoff, runtime-checked criteria, first `completed` on the demo site. M5 comparison done (2026-11-06). Functional checks: F06, F07 and F11 covered, the rest open, so no default mode. Generic MCP/Pi path pending |
 | V1.0 | First finished browser MVP from Pi/MCP | Planned |
 | V1.1–V2.0 | OCR, desktop, recovery, queue/UI, durable workflows, several executor classes | Preliminary order, not a promise |
 
@@ -420,7 +427,7 @@ The script starts and stops a local demo server itself in a temporary directory.
 |---|---|---|
 | `reflexmesh route [--input FILE\|-] [--provider stub\|jevrouter] [--jev-url URL] [--timeout S] [--allow-demo] [--no-none-candidate]` | Routing only; prints a RoutingDecision JSON | `0` selected, `3` abstained, `4` needs confirmation, `5` adapter or provider error, `2` input error |
 | `reflexmesh run --input FILE --output-dir DIR --routing-provider stub\|jevrouter --action-provider script\|jev [--script FILE] [--chrome FILE] [--jev-url URL] [--timeout S] [--no-limits]` | Executes one bounded browser subtask on a fixture site (experimental, POSIX only) | `0` completed, `3` blocked, `4` incomplete, `5` failed (this includes a write failure for `trace.jsonl`, `evidence.jsonl` or `result.json` after the run: stop reason `output_error`), `130` cancelled, `2` input error or output-directory preparation error (before the attempt starts: the directory cannot be created, is not empty, or `trace.jsonl` cannot be created) |
-| `reflexmesh browser run --input FILE --output-dir DIR --action-provider script\|jev [--script FILE] [--model NAME] [--decisions-url URL] [--chrome FILE] [--no-sandbox]` | Executes one `browser-task/0.1` on a DOM site (V0.6 M1–M2, POSIX only) | `0` completed (unreachable until M4), `3` blocked, `4` incomplete, `5` failed, `130` cancelled, `2` input or output-directory error |
+| `reflexmesh browser run --input FILE --output-dir DIR --action-provider script\|jev [--script FILE] [--model NAME] [--decisions-url URL] [--chrome FILE] [--no-sandbox]` | Executes one `browser-task/0.1` on a DOM site (V0.6; Linux/WSL and, since 2026-10-13, native Windows) | `0` completed (only with a registered check of the site's effects), `3` blocked, `4` incomplete, `5` failed, `130` cancelled, `2` input or output-directory error |
 | `reflexmesh browser view --run-dir DIR [--port N]` | Read-only local page for a browser run: who decided each step, what, confidence, outcome and time spent (loopback, live while the run is going) | `0` |
 | `reflexmesh mcp --state-dir DIR [--chrome FILE] [--jev-url URL]` | Experimental stdio MCP Task API for fixture `execution-task/0.1`; [setup and tools](docs/guides/V0.6-mcp-pi.md) | `0` on normal shutdown; attempt results are returned by tools |
 | `reflexmesh --version`, `--help` | Plain text | |
