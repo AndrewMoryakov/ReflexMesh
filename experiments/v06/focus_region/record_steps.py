@@ -148,6 +148,7 @@ class Recorder(LabelScriptProvider):
     def __init__(self, steps, sink, task_id: str, explore: bool):
         super().__init__(steps)
         self.sink, self.task_id, self.explore = sink, task_id, explore
+        self.auto = {"wait": 0, "scroll": 0}
 
     def _containers(self, questions: dict) -> tuple[dict, int]:
         adapter, nodes = LIVE["adapter"], LIVE["nodes"]
@@ -179,7 +180,19 @@ class Recorder(LabelScriptProvider):
                "containers": containers, "containers_unmapped": unmapped}
         try:
             answers = self._answers(step, questions, containers)
+            self.auto = {"wait": 0, "scroll": 0}
         except ScriptMismatch as exc:
+            fallback = self._fallback(str(exc), state, questions)
+            if fallback is not None:
+                answers, kind = fallback
+                self.calls -= 1            # the script step is tried again on the next observation
+                row["auto"], row["script_step"] = kind, {"action": kind, "auto_for": step}
+                row["gold"] = {k: [a.get("choice")] for k, a in answers.items()
+                               if a.get("type") == "choice" and (k == "next_action" or k.startswith(f"{kind}__"))}
+                self.sink.write(json.dumps(row, ensure_ascii=False) + "\n")
+                self.sink.flush()
+                return Decision(answers=answers, usage={"input_tokens": 0, "output_tokens": 0}, model=self.model,
+                                request_id=f"record-auto-{self.calls}", latency_ms=1, raw={"auto": kind})
             row["mismatch"] = str(exc)
             self.sink.write(json.dumps(row, ensure_ascii=False) + "\n")
             self.sink.flush()
@@ -191,6 +204,23 @@ class Recorder(LabelScriptProvider):
         self.sink.flush()
         return Decision(answers=answers, usage={"input_tokens": 0, "output_tokens": 0}, model=self.model,
                         request_id=f"record-{self.calls}", latency_ms=1, raw={"script_step": self.calls})
+
+    def _fallback(self, message: str, state, questions: dict):
+        """The right action when the script's step cannot be taken yet: wait on a page still loading, scroll down when
+        the target is below the window. Only for "not offered" and "matched 0"; an ambiguous match stays an error."""
+        if "is not offered" not in message and "matched 0 options" not in message:
+            return None
+        offered = (questions.get("next_action") or {}).get("criteria") or {}
+        obs = state.get("observation") if isinstance(state, dict) else None
+        reasons = ((obs or {}).get("coverage") or {}).get("reasons") or [] if isinstance(obs, dict) else []
+        blank = not ({"click", "type_text", "select_option"} & set(offered))
+        if not blank and "more_content_below" in reasons and "scroll" in offered and self.auto["scroll"] < 6:
+            self.auto["scroll"] += 1
+            return answers_for_step({"action": "scroll", "direction": "down"}, questions), "scroll"
+        if "wait" in offered and self.auto["wait"] < 3:
+            self.auto["wait"] += 1
+            return answers_for_step({"action": "wait"}, questions), "wait"
+        return None
 
     @staticmethod
     def _answers(step: dict, questions: dict, containers: dict) -> dict:

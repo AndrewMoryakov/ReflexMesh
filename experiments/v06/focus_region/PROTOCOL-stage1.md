@@ -35,11 +35,24 @@ practice.expandtesting.com, because the adapter was offered no control on it at 
 scroll, wait, finish and escalate). Pages beyond the adapter's 200-option limit, and controls the adapter does
 not offer (demoqa's row icons, a password field without a label), are avoided by starting tasks on the page
 that holds the target.
+A third amendment, still before recording: the recording machine changed, because the first one went to sleep
+twice in the middle of runs. The set is recorded in one sitting on a machine that does not sleep, with the
+headless shell instead of Chrome 142; the draft runs on the first machine are not part of the set.
+A fourth amendment, before recording, decided by the owner: demoqa.com and demoblaze.com are dropped, because on
+the recording machine they render nothing for the adapter (no control on demoqa, no product on demoblaze), with
+the headless shell and with Edge 144 alike, while the other six sites work. The set is 24 tasks, four on each of
+the six sites, made longer (several items into a cart through identical buttons, a checkout, chains with going
+back) to reach about 150 steps with a real choice. On a page whose state does not change after an action
+(books.toscrape's "Add to basket"), an action is followed by a navigation, because three cycles without a new page
+state stop an attempt as no_progress.
 
 ## How steps are recorded
 
-`record_steps.py` runs `BrowserRun` with a scripted provider, on the recording machine (Windows, Chrome; never
-the machine where each Chrome start counts as a failed logon). The script is the label: each step names its
+`record_steps.py` runs `BrowserRun` with a scripted provider, on the recording machine (Windows,
+`chrome-headless-shell` from Playwright, build 1243). The tasks run one by one, and before each one the
+machine's count of failed Windows logons is compared with the count before the first: a full Chrome with a fresh
+profile logs one per start there, and ten in ten minutes lock the account. The headless shell logged none in
+earlier checks; a single new failed logon stops the recording. The script is the label: each step names its
 action by the option's visible description, and where descriptions repeat, by the description `within` a
 container (for example "Add to basket" within "A Light in the Attic"). Where several options lead to the same
 place (a book's cover link and title link), the step says `any`, and every match is recorded as a right answer.
@@ -56,6 +69,12 @@ The provider records, per step:
 
 Each site first gets an exploration run that only dumps what the adapter offers, step by step; the task
 scripts are written from those dumps. Exploration dumps are not part of the set.
+
+When a script's step cannot be taken yet, the recorder takes the action that is right at that moment and records
+it as the answer, marked `auto`, without moving to the next script step: on a page with no control yet (still
+loading) it waits; when the target is below the window and the coverage says `more_content_below`, it scrolls down;
+otherwise, when the target appears late, it waits. At most three waits and six scrolls in a row. A step whose target
+matches several options is never resolved this way: it stops the recording.
 
 When all 24 tasks are recorded, the step file is frozen by its SHA-256 in this file. A later recording on the
 live sites is a new set, not a repair of this one.
