@@ -148,7 +148,10 @@
    },
    {
     "action": "click",
-    "element": "button 'Next'"
+    "element": "button 'Next'",
+    "within": {
+     "element": "Previous"
+    }
    },
    {
     "action": "wait"
