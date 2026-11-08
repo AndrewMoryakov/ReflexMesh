@@ -475,8 +475,11 @@ class GenericPath(BrowserCase):
                 self.assertEqual([r for r in SITE.REQUESTS if "/f11/hit" in r["path"]], [])
                 self.assertIn("frame_content_not_offered", coverage["reasons"])      # said, not hidden
                 self.assertEqual(coverage["frames_not_offered"], 1)
-                # In process its field and button are read and dropped; out of process nothing of it is read.
-                self.assertEqual(coverage["frame_nodes_omitted"] >= 2, kind == "cross-port")
+                # In process its field and button are read and dropped; out of process nothing of it is read. Another
+                # port of the same site is always in process. Another site depends on the build: Chrome 142 and Edge 144
+                # put it out of process, chrome-headless-shell 1243 keeps it in process; the checks above hold either way.
+                if kind == "cross-port":
+                    self.assertGreaterEqual(coverage["frame_nodes_omitted"], 2)
                 self.assertEqual(result["budget"]["dispatches"], 1)                  # the first navigation only
 
     def test_same_origin_frame_content_is_offered_and_the_exact_value_lands_in_it(self):

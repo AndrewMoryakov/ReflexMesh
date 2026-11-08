@@ -325,24 +325,35 @@ class SameSession(BrowserCase):
         self.assertEqual(len(submissions), posts)
         self.assertEqual(len(set(submissions)), 1, submissions)
         self.assertNotIn("", submissions)   # the page's script ran
-        self.assertNotEqual(last.get("attempt_status"), "completed")
+        if posts > 1:                        # a resent request is never settled as completed
+            self.assertNotEqual(last.get("attempt_status"), "completed")
         rows = {r["id"]: r["status"] for r in last.get("verification") or []}
         if rows:
             stopped = (last.get("cleanup") or {}).get("status") != "retained"
             expected = "fail" if posts > 1 and stopped else ("unknown" if posts > 1 else rows["runtime.no_uncertain_repeats"])
             self.assertEqual(rows["runtime.no_uncertain_repeats"], expected)
 
+    def settled_on_the_saved_page(self, result):
+        """The other lawful path: the page reached after going back or restarting already shows the saved note, so
+        the loop stops for verification before any second Save is proposed, and the one POST settles it. Seen with
+        chrome-headless-shell, whose back navigation reloads the page and which does not resend the lost request;
+        Chrome and Edge restore the page without the note, and the second Save is proposed and refused."""
+        return (result.get("attempt_status"), result.get("stop_reason")) == ("completed", "verified") and \
+            self.f06_saves(None)[1] == 1
+
     def test_f06_a_lost_response_is_not_resent_by_going_back_and_saving_again(self):
         core = self.core([self.F06_NOTE + [{"action": "go_back"}, {"action": "click", "element": "Save note"}, {"action": "finish"}]])
         first = core.execute(BrowserTask.from_dict(self.f06_task("301")))
-        self.assertIn("repeated_mutation", self.rejections(first, 1))
+        if not self.settled_on_the_saved_page(first):
+            self.assertIn("repeated_mutation", self.rejections(first, 1))
         self.assert_lost_response_held(core, first)
 
     def test_f06_a_lost_response_is_not_resent_after_a_handoff_with_restart(self):
         core = self.core([self.F06_NOTE + [{"action": "escalate"}], self.F06_NOTE + [{"action": "finish"}]])
         first = core.execute(BrowserTask.from_dict(self.f06_task("301")))
         second = core.resume({**self.resume_token(first), "operation": "start", "mode": "jev", "restart": True})
-        self.assertEqual(self.rejections(first, 2), ["repeated_mutation", "repeated_mutation"])   # the typing and the Save
+        if not self.settled_on_the_saved_page(second):
+            self.assertEqual(self.rejections(first, 2), ["repeated_mutation", "repeated_mutation"])   # the typing and the Save
         self.assert_lost_response_held(core, second)
 
     def test_f06_a_lost_response_is_not_resent_by_llm_assistance(self):
@@ -352,6 +363,9 @@ class SameSession(BrowserCase):
         back = next(o for o in progress["action_options"] if o["operation"] == "go_back")
         progress = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "step",
                                 "proposal": {"observation_id": progress["observation"]["observation_id"], "operation": "go_back", "option_ref": back["ref"]}})
+        if self.settled_on_the_saved_page(progress):
+            self.assert_lost_response_held(core, progress)
+            return
         save = next(o for o in progress["action_options"] if o.get("name") == "Save note")
         step = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "step",
                             "proposal": {"observation_id": progress["observation"]["observation_id"], "operation": "click", "option_ref": save["ref"]}})
