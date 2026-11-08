@@ -516,6 +516,29 @@ class SameSession(BrowserCase):
         core.resume({"token": typed["continuation_token"], "parent_attempt_id": typed["attempt_id"], "operation": "stop"})
         self.assertEqual(SITE.NOTES, {})            # typed, never saved: no Save was proposed
 
+    def test_a_failure_confirmed_earlier_in_the_chain_keeps_a_later_attempt_from_completing(self):
+        """F09, an established fail stays in the chain. Through the API a confirmed constraint failure ends its attempt
+        as failed and closes the chain, so no later attempt follows it. The carry behind that is checked here by
+        recording the failure into an open chain directly: the next attempt, which would otherwise complete (the
+        same steps complete in the M3 test), reports the constraint failed with the earlier evidence and fails."""
+        rev1 = self.task(without_order=True)
+        rev2 = self.task(revision=2)
+        core = self.core([[{"action": "escalate"}], TO_ORDER + SAVE])
+        first = core.execute(BrowserTask.from_dict(rev1))
+        self.assertEqual(first["handoff"]["reason"], "escalation_requested")
+        chain = core.chains[first["chain_id"]]
+        earlier = {"id": "runtime.no_uncertain_repeats", "status": "fail", "observed_at": 1.0,
+                   "evidence_refs": ["runtime:earlier:no_uncertain_repeats"], "reason": "a repeat was confirmed"}
+        with chain.lock:                     # what TaskChain.record keeps from an attempt's failed constraint row
+            chain.failed_constraints[earlier["id"]] = dict(earlier)
+        second = core.resume({**self.resume_token(first), "operation": "start", "mode": "jev", "task": rev2})
+        self.assertIn("verification", second, second)
+        row = next(r for r in second["verification"] if r["id"] == "runtime.no_uncertain_repeats")
+        self.assertEqual((row["status"], row["evidence_refs"]), ("fail", ["runtime:earlier:no_uncertain_repeats"]))
+        self.assertTrue(row["reason"].startswith("Confirmed earlier in this chain"))
+        self.assertNotEqual(second["attempt_status"], "completed")
+        self.assertEqual(second["task_outcome"], "fail")
+
     def test_multistep_form_continues_where_it_stopped_without_restart(self):
         """The missing note arrives at step 2. An ordinary continuation keeps the progress and finishes."""
         core = self.core([self.WIZARD_STEP_1 + [{"action": "escalate"}], self.WIZARD_REST])
