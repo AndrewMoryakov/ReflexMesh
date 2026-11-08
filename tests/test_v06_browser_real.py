@@ -359,7 +359,9 @@ class GenericPath(BrowserCase):
             {"action": "click", "element": "Notify customer"},
             HAPPY_PATH[3], HAPPY_PATH[4], {"action": "finish"}]
         result = self.start(self.task(), label_script(steps)).run()
-        self.assertEqual(SITE.NOTES, {"125": ["Перезвонить завтра"]})
+        why = (result["attempt_status"], result["stop_reason"], [a["operation"] for a in result["actions"]],
+               [(r["kind"], r.get("reason"), r.get("error")) for r in self.trace() if r["kind"] in ("admission_rejected", "decision_failed")])
+        self.assertEqual(SITE.NOTES, {"125": ["Перезвонить завтра"]}, why)
         self.assertEqual(SITE.META, {"125": {"priority": "High", "notify": True}})
         self.assertEqual(len(self.posts()), 1)
         self.assertEqual([a["operation"] for a in result["actions"]],
