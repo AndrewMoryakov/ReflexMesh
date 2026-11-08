@@ -207,6 +207,18 @@ class Admission(unittest.TestCase):
         with self.assertRaises(RuntimeStop):
             h.env.observe()
 
+    def test_no_dispatch_after_the_dispatches_are_sealed(self):
+        """F05: an attempt's terminal transition seals dispatching, whatever its status (cancel and deadline have their
+        own tests). After it, a proposed click commits nothing. A spent step budget is not such a state: the
+        observation spends the step, and that step's own action may still follow; the loop then ends and seals."""
+        h = Harness(self)
+        h.gate.seal_dispatches()
+        before = h.gate.snapshot()["dispatches"]
+        with self.assertRaises(RuntimeStop) as caught:
+            h.env.execute("click", {"element": "1"})
+        self.assertEqual(caught.exception.reason, "dispatches_sealed")
+        self.assertEqual(h.gate.snapshot()["dispatches"], before)
+
     def test_deadline_ends_observation_and_dispatch(self):
         h = Harness(self, wall_seconds=0.05)
         time.sleep(0.1)
