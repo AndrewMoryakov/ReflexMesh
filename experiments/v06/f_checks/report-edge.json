@@ -1,10 +1,10 @@
 {
  "meta": {
-  "commit": "3287e935e969bd6afb2f0f8cec0a17bee9ef0642",
+  "commit": "efadaf03421233402f11dd41e497b49a908de723",
   "python": "3.13.14",
   "platform": "Windows-11-10.0.22631-SP0",
-  "browser": "Edge 144 (msedge.exe)",
-  "started": "2026-11-08T19:41:16",
+  "browser": "Edge 144",
+  "started": "2026-11-08T21:42:16",
   "tests": 58
  },
  "tests": {
