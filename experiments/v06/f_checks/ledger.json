@@ -309,9 +309,10 @@
     "need": "sentinel secrets absent from ordinary logs",
     "tests": [
      "tests.test_v06_browser_real.GenericPath.test_text_slot_payload_is_exact_and_secret_values_stay_out_of_every_record",
-     "tests.test_v06_browser_control.JournalRedaction.test_slot_values_do_not_reach_the_trace"
+     "tests.test_v06_browser_control.JournalRedaction.test_slot_values_do_not_reach_the_trace",
+     "tests.test_v06_browser_real.GenericPath.test_the_command_line_run_keeps_a_secret_value_out_of_its_output_streams"
     ],
-    "partial": "trace, result and provider payload; stdout and stderr of the run are not checked"
+    "note": "failed on main: Browser Use logged every typed value at INFO to stderr; fixed on fix/v0.6-typed-text-log, whose two tests (captured browser_use log, stdout and stderr of `reflexmesh browser run`) this item now needs"
    },
    {
     "need": "route and fixture API compatible",
