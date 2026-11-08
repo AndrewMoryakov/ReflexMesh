@@ -751,8 +751,11 @@ class FChecks(BrowserCase):
                  {"action": "click", "element": "Заказ №303"}, {"action": "type_text", "field": "textbox 'Note'", "value": "^note@1"},
                  {"action": "click", "element": "Save note"}, {"action": "finish"}]
         slots = [{"id": "order", "version": 1, "value": "303", "sensitivity": "normal"},
-                 {"id": "note", "version": 1, "value": "Перезвонить завтра", "sensitivity": "normal"}]
-        result = self.start(self.task(text_slots=slots), label_script(steps)).run()
+                 {"id": "note", "version": 1, "value": "Перезвонить завтра", "sensitivity": "normal"},
+                 {"id": "record", "version": 1, "value": "Заказ №303", "sensitivity": "normal"}]
+        criteria = [{"id": "note_saved", "predicate": "revisit_match",
+                     "args": {"anchor_slot_ref": "record@1", "field_name": "Notes", "expected_slot_ref": "note@1"}}]
+        result = self.start(self.task(text_slots=slots, criteria=criteria), label_script(steps)).run()
         self.assertEqual(SITE.NOTES, {})
         rows = {r["id"]: r["status"] for r in result["verification"]}
         self.assertEqual(rows["note_saved"], "fail")
