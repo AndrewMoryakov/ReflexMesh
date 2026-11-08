@@ -402,6 +402,31 @@ class ImmutableSlotBoundary(unittest.TestCase):
                 self.assertEqual(error.exception.reason, "adapter_contract_unsupported")
                 self.assertEqual(sink.records, [])
 
+    def test_a_driver_session_logging_typed_text_at_info_is_unsupported(self):
+        """Browser Use's type watchdog logs `Typed "<text>"` at INFO on the session's logger when the call carries no
+        sensitive data, which ours never does. Dispatch refuses while that logger would emit it, and goes on once it
+        would not."""
+        async def upstream_style_act(model, session, sensitive_data=None):
+            return SimpleNamespace(error=None, extracted_content="")
+
+        upstream_style_act.__module__ = "browser_use.tools.service"
+        quiet = logging.Logger("isolated-boundary-test", level=logging.WARNING)
+        for level, refused in ((logging.INFO, True), (logging.WARNING, False)):
+            with self.subTest(level=level):
+                adapter, registry, sink = adapter_for()
+                adapter.backend._tools.act = upstream_style_act
+                adapter.backend.logger = logging.Logger("isolated-session-test", level=level)
+                prepared = adapter.prepare("type_text", {"field": "0", "value": "name@1"})
+                with patch.dict(upstream_style_act.__globals__, {"Laminar": None, "logger": quiet}):
+                    if refused:
+                        with self.assertRaises(RuntimeStop) as error:
+                            execute(adapter, prepared)
+                        self.assertEqual(error.exception.reason, "adapter_contract_unsupported")
+                        self.assertEqual(sink.records, [])
+                    else:
+                        self.assertTrue(execute(adapter, prepared).ok)
+                        self.assertEqual(len(sink.records), 1)
+
     @unittest.skipUnless(importlib.util.find_spec("browser_use"), "optional pinned Browser Use not installed")
     def test_optional_real_action_model_and_pinned_wrapper_contract(self):
         from browser_use.tools.service import Tools
