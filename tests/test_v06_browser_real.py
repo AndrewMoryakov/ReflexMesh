@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from reflexmesh.contracts.browser import BrowserTask
 from reflexmesh.runtime.browser_run import BrowserRun
-from v06_samples import task_dict
+from v06_samples import check_every_completion, task_dict
 
 CHROME = os.environ.get("REFLEXMESH_CHROME")
 SANDBOX = os.environ.get("REFLEXMESH_CHROME_NO_SANDBOX") != "1"
@@ -88,6 +88,7 @@ class BrowserCase(unittest.TestCase):
         SITE.IN_FLIGHT[0] = 0
         self.out = tempfile.TemporaryDirectory()
         self.addCleanup(self.out.cleanup)
+        self.addCleanup(check_every_completion())       # F12: every `completed` here is checked for its evidence
 
     def task(self, start="/orders", **changes):
         return BrowserTask.from_dict(task_dict(start_url=self.origin + start, allowed_origins=[self.origin], **changes))
@@ -930,3 +931,8 @@ class RefusedBeforeStart(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def tearDownModule():
+    from v06_samples import COMPLETED_CHECKED
+    print(f"F12: {len(COMPLETED_CHECKED)} completed results checked for evidence so far", file=sys.stderr)

@@ -853,3 +853,8 @@ class SameSession(BrowserCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def tearDownModule():
+    from v06_samples import COMPLETED_CHECKED
+    print(f"F12: {len(COMPLETED_CHECKED)} completed results checked for evidence so far", file=sys.stderr)

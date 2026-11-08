@@ -25,7 +25,7 @@ from reflexmesh.runtime.runner import AttemptGate, RuntimeStop, SkippedAction
 from reflexmesh.text.slots import SlotRegistry
 from reflexmesh.verification.constraints import assess_constraints
 from test_v05_runtime import sample
-from v06_samples import task_dict
+from v06_samples import completed_problems, task_dict
 
 CTX = mp.get_context("fork" if "fork" in mp.get_all_start_methods() else "spawn")   # shared values only
 
@@ -541,3 +541,34 @@ class JournalRedaction(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CompletedEvidenceCheck(unittest.TestCase):
+    """The F12 check the browser tests apply to every completed result must itself catch a bare one."""
+
+    GOOD = {"attempt_status": "completed", "task_outcome": "pass", "attempt_id": "a1", "execution_outcome": "returned",
+            "verification": [{"id": "note_saved", "status": "pass", "evidence_refs": ["browser:a1:7"]},
+                             {"id": "runtime.ownership", "status": "pass", "evidence_refs": ["runtime:a1:owner"]}],
+            "actions": [{"id": 1, "operation": "click", "effect": "applied"}],
+            "budget": {"limits": {"wall_seconds": 120}, "elapsed_seconds": 30.0},
+            "evidence_refs": ["runtime:a1:permissions"]}
+
+    def test_an_evidenced_completed_result_passes(self):
+        self.assertEqual(completed_problems(self.GOOD, {7}), [])
+
+    def test_each_missing_piece_of_evidence_is_caught(self):
+        import copy
+        cases = {
+            "no evidence_refs": lambda r: r["verification"][0].update(evidence_refs=[]),
+            "unknown": lambda r: r["verification"][1].update(status="unknown"),
+            "not in the trace": lambda r: r["verification"][0].update(evidence_refs=["browser:a1:99"]),
+            "effect unknown": lambda r: r["actions"][0].update(effect="unknown"),
+            "past the": lambda r: r["budget"].update(elapsed_seconds=121.0),
+            "task_outcome": lambda r: r.update(task_outcome="unknown"),
+        }
+        for expected, damage in cases.items():
+            with self.subTest(expected):
+                result = copy.deepcopy(self.GOOD)
+                damage(result)
+                self.assertTrue(any(expected in p for p in completed_problems(result, {7})), completed_problems(result, {7}))
+        self.assertEqual(completed_problems({**self.GOOD, "attempt_status": "incomplete", "verification": []}), [])
