@@ -67,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
                      help="router socket I/O timeout; total task time is limits.wall_seconds")
     run.add_argument("--no-limits", action="store_true",
                      help="explicitly disable task time, step and model-call budgets; cancellation remains active")
-    run.add_argument("--faults", metavar="FILE", help="acceptance fault injection (JSON); not supported by this runtime")
+    run.add_argument("--faults", metavar="FILE", help="acceptance fault injection (JSON), validated against the task's limits")
     run.add_argument("--attempt-id", metavar="HEX32", help="attempt ID chosen by a Task API caller")
     run.add_argument("--chain", metavar="FILE", help="link to a parent attempt (JSON); set by the Task API")
     run.add_argument("--control-dir", metavar="DIR", help="cancellation handshake directory; set by the Task API")

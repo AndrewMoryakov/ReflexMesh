@@ -56,13 +56,16 @@ def claim_in_worker(task, gate, events, *, publish=True):
     return owner
 
 
-def owned_http_dispatch(task, gate, events, owner, operation, path, data=None):
+def owned_http_dispatch(task, gate, events, owner, operation, path, data=None, target_id=None):
     # An explicitly synthetic HTTP worker reports to the production gate. It
     # cannot acquire the trusted browser adapter's immutable-slot producer.
     gate.reserve_step()
     events.put(("proposal", {"action": operation}))
     action_id = gate.commit_dispatch()
-    events.put(("dispatch", action_id, {"operation": operation, "ownership": owner.binding}))
+    descriptor = {"operation": operation, "ownership": owner.binding}
+    if target_id is not None:   # a submit's effect is bound to its form's target (the fixture's send-form)
+        descriptor["target_id"] = target_id
+    events.put(("dispatch", action_id, descriptor))
     try:
         browser_request(task, owner, path, data)
         events.put(("driver_return", action_id, True))
@@ -73,7 +76,7 @@ def owned_http_dispatch(task, gate, events, owner, operation, path, data=None):
 def submit_once(task, gate, events, *, publish=True):
     owner = claim_in_worker(task, gate, events, publish=publish)
     values = urllib.parse.urlencode({"name": "secret-text", "email": "owner@example.test"}).encode()
-    owned_http_dispatch(task, gate, events, owner, "submit_form", "/form", values)
+    owned_http_dispatch(task, gate, events, owner, "submit_form", "/form", values, target_id="send-form")
     return WorkerResult("finish")
 
 
