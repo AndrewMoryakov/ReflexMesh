@@ -262,6 +262,136 @@ class SameSession(BrowserCase):
         self.assertEqual(step["last_proposal"], {"accepted": True, "dispatched": False, "rejected": "stale_target"})
         core.resume({"token": step["continuation_token"], "parent_attempt_id": step["attempt_id"], "operation": "stop"})
 
+    def test_a_frame_reloaded_after_the_observation_makes_its_target_stale(self):
+        """F11 and F02: a field inside a same-origin frame, observed; the frame reloads; the typing is refused, not sent
+        into the new document."""
+        data = self.task()
+        data["start_url"] = self.origin + "/f11/same"
+        data["text_slots"] = [{"id": "word", "version": 1, "value": "kiwi", "sensitivity": "normal"}]
+        data["criteria"] = [{"id": "seen", "predicate": "page_match",
+                             "args": {"anchor_slot_ref": "word@1", "field_name": "Word", "expected_slot_ref": "word@1"}}]
+        SITE.F11_HITS.clear()
+        core = self.core([[{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(data))
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        word = next(o for o in progress["action_options"] if o["operation"] == "type_text")
+        adapter = core.chains[first["chain_id"]].assist.adapter
+
+        async def reload_frame():
+            cdp = await adapter.backend._session.get_or_create_cdp_session()
+            await cdp.cdp_client.send.Runtime.evaluate(
+                params={"expression": "new Promise(r => { const f = document.querySelector('iframe'); f.onload = () => r(1); f.contentWindow.location.reload(); })",
+                        "awaitPromise": True}, session_id=cdp.session_id)
+
+        adapter.backend._run(reload_frame())
+        step = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "step",
+                            "proposal": {"observation_id": progress["observation"]["observation_id"], "operation": "type_text",
+                                         "option_ref": word["ref"], "slot_ref": "word@1"}})
+        self.assertEqual(step["last_proposal"], {"accepted": True, "dispatched": False, "rejected": "stale_target"})
+        core.resume({"token": step["continuation_token"], "parent_attempt_id": step["attempt_id"], "operation": "stop"})
+        self.assertEqual(SITE.F11_HITS, [])
+
+    F06_NOTE = [{"action": "type_text", "field": "textbox 'Note'", "value": "^note@1"}, {"action": "click", "element": "Save note"}]
+
+    def f06_task(self, order, **changes):
+        """The verified note task on one order: 301 loses the answer to its note, 302 autosaves its note field."""
+        data = self.task(order=order, **changes)
+        data["start_url"] = self.origin + f"/orders/{order}"
+        for slot in data["text_slots"]:
+            if slot["id"] == "record":
+                slot["value"] = f"Заказ №{order}"
+        data["criteria"][1]["args"]["subject"] = order
+        return data
+
+    def f06_saves(self, core):
+        """Save note clicks the runtime dispatched in the whole chain, and POSTs the site received for the note."""
+        dispatched = sum(1 for t in Path(self.out.name).rglob("trace.jsonl") for line in t.read_text("utf-8").splitlines()
+                         if (e := json.loads(line))["kind"] == "dispatch_committed" and e.get("operation") == "click")
+        return dispatched, sum(1 for r in self.posts() if r["path"] == "/orders/301/note")
+
+    def rejections(self, first, n):
+        trace = (self.attempt_dir(first, n) / "trace.jsonl").read_text("utf-8").splitlines()
+        return [json.loads(line).get("reason") for line in trace if json.loads(line)["kind"] == "admission_rejected"]
+
+    def assert_lost_response_held(self, core, last):
+        """One Save sent by the runtime, and the form sent once: every POST carries the same submission id. The same
+        request may still reach the site more than once (2 or 3 POSTs for one click on Windows with Chrome 142); once
+        the browser has stopped, the registered check reports that as a failed repeat. While the chain holds the
+        session it settles nothing, so the repeats stay unknown."""
+        clicks, posts = self.f06_saves(core)
+        self.assertEqual(clicks, 1)
+        self.assertGreaterEqual(posts, 1)
+        submissions = SITE.SUBMISSIONS.get("301", [])
+        self.assertEqual(len(submissions), posts)
+        self.assertEqual(len(set(submissions)), 1, submissions)
+        self.assertNotIn("", submissions)   # the page's script ran
+        self.assertNotEqual(last.get("attempt_status"), "completed")
+        rows = {r["id"]: r["status"] for r in last.get("verification") or []}
+        if rows:
+            stopped = (last.get("cleanup") or {}).get("status") != "retained"
+            expected = "fail" if posts > 1 and stopped else ("unknown" if posts > 1 else rows["runtime.no_uncertain_repeats"])
+            self.assertEqual(rows["runtime.no_uncertain_repeats"], expected)
+
+    def test_f06_a_lost_response_is_not_resent_by_going_back_and_saving_again(self):
+        core = self.core([self.F06_NOTE + [{"action": "go_back"}, {"action": "click", "element": "Save note"}, {"action": "finish"}]])
+        first = core.execute(BrowserTask.from_dict(self.f06_task("301")))
+        self.assertIn("repeated_mutation", self.rejections(first, 1))
+        self.assert_lost_response_held(core, first)
+
+    def test_f06_a_lost_response_is_not_resent_after_a_handoff_with_restart(self):
+        core = self.core([self.F06_NOTE + [{"action": "escalate"}], self.F06_NOTE + [{"action": "finish"}]])
+        first = core.execute(BrowserTask.from_dict(self.f06_task("301")))
+        second = core.resume({**self.resume_token(first), "operation": "start", "mode": "jev", "restart": True})
+        self.assertEqual(self.rejections(first, 2), ["repeated_mutation", "repeated_mutation"])   # the typing and the Save
+        self.assert_lost_response_held(core, second)
+
+    def test_f06_a_lost_response_is_not_resent_by_llm_assistance(self):
+        core = self.core([self.F06_NOTE + [{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(self.f06_task("301")))
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        back = next(o for o in progress["action_options"] if o["operation"] == "go_back")
+        progress = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "step",
+                                "proposal": {"observation_id": progress["observation"]["observation_id"], "operation": "go_back", "option_ref": back["ref"]}})
+        save = next(o for o in progress["action_options"] if o.get("name") == "Save note")
+        step = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "step",
+                            "proposal": {"observation_id": progress["observation"]["observation_id"], "operation": "click", "option_ref": save["ref"]}})
+        self.assertEqual(step["last_proposal"], {"accepted": True, "dispatched": False, "rejected": "repeated_mutation"})
+        done = core.resume({"token": step["continuation_token"], "parent_attempt_id": step["attempt_id"], "operation": "stop"})
+        self.assert_lost_response_held(core, done)
+
+    def test_f06_a_key_press_proposed_in_assistance_is_refused(self):
+        """F06, Enter: even with the permission, press_key is not a capability and cannot be proposed."""
+        core = self.core([TO_ORDER[:1] + [{"action": "escalate"}]])
+        data = self.task()
+        data["permissions"] = data["permissions"] + ["press_key"]
+        first = core.execute(BrowserTask.from_dict(data))
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        self.assertNotIn("press_key", {o["operation"] for o in progress["action_options"]})
+        field = next(o for o in progress["action_options"] if o["operation"] == "type_text")
+        step = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "step",
+                            "proposal": {"observation_id": progress["observation"]["observation_id"], "operation": "press_key",
+                                         "option_ref": field["ref"]}})
+        self.assertFalse(step["last_proposal"].get("dispatched", False))
+        core.resume({"token": step["continuation_token"], "parent_attempt_id": step["attempt_id"], "operation": "stop"})
+        self.assertEqual([r["path"] for r in SITE.REQUESTS if r["path"] == "/orders"], ["/orders"])   # nothing submitted
+
+    def test_f06_an_autosaving_field_is_not_typed_again_and_nothing_claims_completion(self):
+        """F06, autosave: a script sends the field to the server; no form says so. The same typing is not dispatched
+        again, and although every criterion passes, the registered check sees a POST no submit accounts for and
+        leaves the repeats unknown: no completed."""
+        typing, save = self.F06_NOTE
+        core = self.core([[typing, typing, save, {"action": "finish"}]])
+        done = core.execute(BrowserTask.from_dict(self.f06_task("302")))
+        self.assertIn("repeated_mutation", self.rejections(done, 1))
+        self.assertEqual(len([a for a in done["actions"] if a["operation"] == "type_text"]), 1)
+        # How many autosaves one typing makes is the page's and the driver's business (Browser Use clears the field
+        # first; the page saw '' and the note twice for one dispatch); the runtime's part is one dispatch.
+        self.assertIn("Перезвонить завтра", SITE.AUTOSAVED.get("302", []))
+        self.assertEqual((done["attempt_status"], done["stop_reason"]), ("incomplete", "verification_unknown"))
+        rows = {r["id"]: r["status"] for r in done["verification"]}
+        self.assertEqual((rows["note_saved"], rows["note_saved_once"]), ("pass", "pass"))
+        self.assertEqual(rows["runtime.no_uncertain_repeats"], "unknown")
+
     def test_a_slot_chosen_for_a_field_it_does_not_fit_is_refused_before_anything_is_sent(self):
         """Section 7: the pair is checked in code after the choice. The assisted path reaches the gate directly."""
         core = self.core([self.WIZARD_STEP_1 + [{"action": "escalate"}]])

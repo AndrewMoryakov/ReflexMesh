@@ -17,7 +17,10 @@ Routes:
                        an open shadow root (shadow-open) or a closed one (shadow-closed); POST /f11/hit/<kind> records it
   /leave               redirects to another origin (localhost), for allowed-origins checks
   /orders[?q=...]      search form, and matching orders when q is given
-  /orders/<id>         one order: details, saved notes, a note form with priority and notify
+  /orders/<id>         one order: details, saved notes, a note form with priority and notify; order 301 saves its
+                       note and then closes the connection without an answer (a lost response), and its form puts a
+                       fresh id into each submission it sends; order 302's note field posts itself to
+                       /orders/302/autosave when it loses focus
   /orders/<id>/tracking    a small page, opened by the order page in a new tab
   POST /orders/<id>/note   saves a note (303 back to the order)
   /orders/<id>/wizard/<1|2|3>   the same note in three steps; each step's POST stores a server-side draft
@@ -47,7 +50,13 @@ ORDERS = {
     "124": {"customer": "Ivanov", "status": "Shipped"},
     "125": {"customer": "Petrov", "status": "Processing"},
     "126": {"customer": "Sidorova", "status": "Delivered"},
+    "301": {"customer": "Orlova", "status": "Processing"},
+    "302": {"customer": "Lebedev", "status": "Processing"},
 }
+LOST_RESPONSE = {"301"}     # its note is saved, then the connection closes with no answer (F06)
+AUTOSAVE = {"302"}          # its note field sends itself to the server when it loses focus (F06)
+AUTOSAVED: dict[str, list[str]] = {}
+SUBMISSIONS: dict[str, list[str]] = {}   # per lost-response order, the submission id of every note POST
 NOTES: dict[str, list[str]] = {}
 F11_HITS: list[dict] = []   # what a form in a frame or a shadow root actually sent, by page kind
 META: dict[str, dict] = {}
@@ -150,6 +159,14 @@ def order(oid: str) -> bytes | None:
             '<option>Low</option></select>'
             '<label><input type="checkbox" name="notify"> Notify customer by email</label>'
             '<button type="submit">Save note</button></form>')
+    if oid in LOST_RESPONSE:   # `formdata` fires whenever the form builds a body, form.submit() included: a form
+        # sent twice carries two ids, one request sent twice carries one
+        body += ("<script>document.querySelector('form').addEventListener('formdata', e => e.formData.set("
+                 "'submission', Math.random().toString(36).slice(2, 10)));</script>")
+    if oid in AUTOSAVE:   # a script, not a form: nothing in the DOM says the field writes to the server
+        body += ("<script>document.getElementById('note').addEventListener('change', e => fetch("
+                 f"'/orders/{oid}/autosave', {{method: 'POST', headers: {{'Content-Type': 'application/x-www-form-urlencoded'}},"
+                 " body: 'note=' + encodeURIComponent(e.target.value)}));</script>")
     return page(f"Заказ №{oid}", body)
 
 
@@ -318,6 +335,10 @@ class Handler(BaseHTTPRequestHandler):
             with LOCK:
                 F11_HITS.append({"kind": pieces[2], "word": word})
             return self._send(200, f"<!doctype html><html><body><p>Got {escape(word)}</p></body></html>".encode())
+        if len(pieces) == 3 and pieces[0] == "orders" and pieces[2] == "autosave" and pieces[1] in AUTOSAVE:
+            with LOCK:
+                AUTOSAVED.setdefault(pieces[1], []).append(fields.get("note", [""])[0])
+            return self._send(204, b"")
         if len(pieces) == 3 and pieces[0] == "orders" and pieces[2] == "note" and pieces[1] in ORDERS:
             note = fields.get("note", [""])[0].strip()
             if note:
@@ -325,6 +346,11 @@ class Handler(BaseHTTPRequestHandler):
                     NOTES.setdefault(pieces[1], []).append(note)
                     META[pieces[1]] = {"priority": fields.get("priority", [""])[0],
                                        "notify": "notify" in fields}
+            if pieces[1] in LOST_RESPONSE:
+                with LOCK:
+                    SUBMISSIONS.setdefault(pieces[1], []).append(fields.get("submission", [""])[0])
+                self.close_connection = True   # the write happened; the client never hears of it
+                return None
             return self._send(303, b"", location=f"/orders/{pieces[1]}")
         if len(pieces) == 4 and pieces[0] == "orders" and pieces[2] == "wizard" and pieces[1] in ORDERS:
             oid, step = pieces[1], pieces[3]
