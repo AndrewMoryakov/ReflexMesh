@@ -352,6 +352,33 @@ class GenericPath(BrowserCase):
         self.assertNotIn(secret, blob)
         self.assertIn("secret value, not shown", "\n".join(seen))
 
+    def test_a_close_that_hangs_does_not_hold_the_result_past_the_liveness_bound(self):
+        """F05, close: the driver's close never returns. Section 9: the result comes no later than 8 s after the
+        attempt's end (5 s to collect, 2 s to terminate and reap) instead of waiting for the close or the deadline."""
+        entered = []
+
+        def hang_close(call, provider):
+            if call == 0:
+                backend = self.run_.adapter.backend
+                original = backend.close
+
+                def close():
+                    entered.append(time.monotonic())
+                    time.sleep(60)
+                    return original()
+
+                backend.close = close
+
+        task = self.task(limits={**task_dict()["limits"], "wall_seconds": 90})
+        started = time.monotonic()
+        result = self.start(task, label_script(HAPPY_PATH, before=hang_close)).run()
+        returned = time.monotonic()
+        self.assertTrue(entered, "the close was never reached")
+        self.assertLessEqual(returned - entered[0], 8.25, (round(returned - entered[0], 1), round(returned - started, 1),
+                                                           result["attempt_status"], result["stop_reason"]))
+        self.assertEqual(SITE.NOTES, {"125": ["Перезвонить завтра"]})
+        self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "verification_unknown"))
+
     def test_dropdown_and_checkbox_reach_the_server_with_the_note(self):
         steps = HAPPY_PATH[:3] + [
             {"action": "select_option", "option": "Priority.*High"},
