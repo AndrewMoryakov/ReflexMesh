@@ -9,6 +9,7 @@ import contextlib
 import copy
 import importlib.util
 import io
+import asyncio
 import json
 import sys
 import time
@@ -291,6 +292,49 @@ class SameSession(BrowserCase):
         core.resume({"token": step["continuation_token"], "parent_attempt_id": step["attempt_id"], "operation": "stop"})
         self.assertEqual(SITE.F11_HITS, [])
 
+    def test_a_document_navigated_after_the_observation_makes_its_target_stale(self):
+        """F02: the order page is observed with its Save button; then the whole document is replaced, first by a
+        reload of the same order (the very same button again), then by another order's page (a button of the same
+        name). Each time, the click proposed on the observation before the navigation is refused, and nothing is
+        pressed in the new document."""
+        SITE.NOTES.clear()
+        core = self.core([[{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(self.f06_task("125")))
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        adapter = core.chains[first["chain_id"]].assist.adapter
+
+        async def navigate(expression):
+            cdp = await adapter.backend._session.get_or_create_cdp_session()
+
+            async def evaluate(code):
+                reply = await cdp.cdp_client.send.Runtime.evaluate(
+                    params={"expression": code, "returnByValue": True}, session_id=cdp.session_id)
+                return reply.get("result", {}).get("value")
+
+            await evaluate("window.__observed = 1; " + expression)
+            for _ in range(100):          # the new document: the marker is gone and it has loaded
+                await asyncio.sleep(0.1)
+                try:
+                    if await evaluate("window.__observed === undefined && document.readyState === 'complete'"):
+                        return
+                except Exception:
+                    pass
+            raise AssertionError("the document did not navigate")
+
+        for expression, landing in (("location.reload()", "/orders/125"), ("location.href = '/orders/126'", "/orders/126")):
+            with self.subTest(expression):
+                save = next(o for o in progress["action_options"] if o["operation"] == "click" and "Save note" in o["name"])
+                adapter.backend._run(navigate(expression))
+                self.assertEqual([r["path"] for r in SITE.REQUESTS if r["method"] == "GET"][-1], landing)
+                progress = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"],
+                                        "operation": "step",
+                                        "proposal": {"observation_id": progress["observation"]["observation_id"],
+                                                     "operation": "click", "option_ref": save["ref"]}})
+                self.assertEqual(progress["last_proposal"], {"accepted": True, "dispatched": False, "rejected": "stale_target"})
+        core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "stop"})
+        self.assertEqual([r["path"] for r in SITE.REQUESTS if r["method"] == "POST" and not r["path"].startswith("/__")], [])
+        self.assertEqual(SITE.NOTES, {})
+
     F06_NOTE = [{"action": "type_text", "field": "textbox 'Note'", "value": "^note@1"}, {"action": "click", "element": "Save note"}]
 
     def f06_task(self, order, **changes):
@@ -432,6 +476,45 @@ class SameSession(BrowserCase):
         next(s for s in revised["text_slots"] if s["id"] == "note")["fields"] = ["Order number"]
         refused = core.resume({**self.resume_token(first), "operation": "start", "mode": "jev", "task": revised})
         self.assertEqual((refused["error"]["code"], refused["error"]["reason"]), ("revision_refused", "slot_reference_redirected"))
+
+    def test_a_new_slot_version_is_not_applied_to_an_observation_made_before_the_revision(self):
+        """F03: the note is observed under revision 1 (note@1); the operator stops, revises the note to note@2 and
+        resumes in the same session. Typing note@2 on the observation made before the revision is refused, and so is
+        the old note@1 on the new observation; note@2 on the new observation goes through."""
+        SITE.NOTES.clear()
+        core = self.core([[{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(self.f06_task("125")))
+        before = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        stopped = core.resume({"token": before["continuation_token"], "parent_attempt_id": before["attempt_id"],
+                               "operation": "stop"})
+        revised = self.f06_task("125", revision=2)
+        note = next(s for s in revised["text_slots"] if s["id"] == "note")
+        note.update(version=2, value="Перезвонить в пятницу")
+        for criterion in revised["criteria"]:
+            for key, value in criterion["args"].items():
+                if value == "note@1":
+                    criterion["args"][key] = "note@2"
+                elif type(value) is list:
+                    criterion["args"][key] = ["note@2" if v == "note@1" else v for v in value]
+        after = core.resume({**self.resume_token(stopped), "operation": "start", "mode": "llm", "task": revised})
+        self.assertNotIn("error", after)
+        old_id, new_id = before["observation"]["observation_id"], after["observation"]["observation_id"]
+        self.assertNotEqual(old_id, new_id)
+        field = next(o for o in after["action_options"] if o["operation"] == "type_text" and "Note" in o["name"])
+
+        def propose(progress, observation_id, slot_ref):
+            return core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"],
+                                "operation": "step", "proposal": {"observation_id": observation_id, "operation": "type_text",
+                                                                  "option_ref": field["ref"], "slot_ref": slot_ref}})
+
+        stale = propose(after, old_id, "note@2")
+        self.assertEqual(stale["last_proposal"], {"rejected": "stale_observation"})
+        old = propose(stale, new_id, "note@1")
+        self.assertEqual(old["last_proposal"], {"rejected": "unknown_slot"})
+        typed = propose(old, new_id, "note@2")
+        self.assertEqual(typed["last_proposal"]["dispatched"], True)
+        core.resume({"token": typed["continuation_token"], "parent_attempt_id": typed["attempt_id"], "operation": "stop"})
+        self.assertEqual(SITE.NOTES, {})            # typed, never saved: no Save was proposed
 
     def test_multistep_form_continues_where_it_stopped_without_restart(self):
         """The missing note arrives at step 2. An ordinary continuation keeps the progress and finishes."""
