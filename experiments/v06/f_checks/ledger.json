@@ -254,9 +254,10 @@
    {
     "need": "an established fail stays in the chain",
     "tests": [
-     "tests.test_v06_browser_handoff.SameSession.test_a_second_controller_at_a_handoff_is_a_violation_not_a_transfer"
+     "tests.test_v06_browser_handoff.SameSession.test_a_second_controller_at_a_handoff_is_a_violation_not_a_transfer",
+     "tests.test_v06_browser_handoff.SameSession.test_a_failure_confirmed_earlier_in_the_chain_keeps_a_later_attempt_from_completing"
     ],
-    "partial": "a confirmed constraint failure ends the attempt as failed with no handoff and closes the chain, so no later attempt exists to forget it; the carry in TaskChain.failed_constraints is unreachable through the API and untested"
+    "note": "through the API a confirmed failure closes the chain; the carry behind it is checked by recording a failure into an open chain directly"
    }
   ]
  },
@@ -304,9 +305,11 @@
    {
     "need": "each completed has evidence",
     "tests": [
-     "tests.test_v06_browser_real.GenericPath.test_completed_needs_every_criterion_constraint_and_effect"
+     "tests.test_v06_browser_real.GenericPath.test_completed_needs_every_criterion_constraint_and_effect",
+     "tests.test_v06_browser_control.CompletedEvidenceCheck.test_an_evidenced_completed_result_passes",
+     "tests.test_v06_browser_control.CompletedEvidenceCheck.test_each_missing_piece_of_evidence_is_caught"
     ],
-    "partial": "one completed path; not asserted for every completed result"
+    "note": "every completed result in the browser tests is checked (v06_samples.check_every_completion): every row passes with evidence_refs found in the trace, no unknown effect, within the wall limit"
    },
    {
     "need": "sentinel secrets absent from ordinary logs",
