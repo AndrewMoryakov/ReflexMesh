@@ -242,8 +242,10 @@
    },
    {
     "need": "an established fail stays in the chain",
-    "tests": [],
-    "gap": "no test across a handoff"
+    "tests": [
+     "tests.test_v06_browser_handoff.SameSession.test_a_second_controller_at_a_handoff_is_a_violation_not_a_transfer"
+    ],
+    "partial": "a confirmed constraint failure ends the attempt as failed with no handoff and closes the chain, so no later attempt exists to forget it; the carry in TaskChain.failed_constraints is unreachable through the API and untested"
    }
   ]
  },

@@ -20,6 +20,24 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
+# The outcome of each test is taken from unittest's result object in the child, not parsed from its text output:
+# the driver logs into the same stream and splits the "... ok" lines.
+CHILD = r"""
+import json, sys, unittest
+out, names = sys.argv[1], sys.argv[2:]
+class Result(unittest.TextTestResult):
+    outcomes = {}
+    def addSuccess(self, test): super().addSuccess(test); self.outcomes[test.id()] = "ok"
+    def addFailure(self, test, err): super().addFailure(test, err); self.outcomes[test.id()] = "FAIL"
+    def addError(self, test, err): super().addError(test, err); self.outcomes[test.id()] = "ERROR"
+    def addSkip(self, test, reason): super().addSkip(test, reason); self.outcomes[test.id()] = "skipped: " + reason
+    def addSubTest(self, test, sub, err):
+        super().addSubTest(test, sub, err)
+        if err is not None: self.outcomes[test.id()] = "FAIL"
+suite = unittest.defaultTestLoader.loadTestsFromNames(names)
+unittest.TextTestRunner(verbosity=2, resultclass=Result).run(suite)
+json.dump(Result.outcomes, open(out, "w"), indent=1)
+"""
 LINE = re.compile(r"^(test\w+) \(([\w.]+)\)(?:\n.*?)? \.\.\. (ok|FAIL|ERROR|skipped.*|expected failure|unexpected success)$", re.M)
 
 
@@ -40,10 +58,11 @@ def main() -> int:
     outcomes: dict[str, list[str]] = {t: [] for t in tests}
     for n in range(1, args.passes + 1):
         t0 = time.monotonic()
-        proc = subprocess.run([sys.executable, "-m", "unittest", "-v", *tests], cwd=ROOT, capture_output=True, text=True,
-                              env={**os.environ, "PYTHONIOENCODING": "utf-8"})
-        (args.out / f"pass{n}.log").write_text(proc.stderr, "utf-8")
-        seen = {f"{m.group(2)}": m.group(3) for m in LINE.finditer(proc.stderr)}
+        result_file = args.out / f"pass{n}.json"
+        proc = subprocess.run([sys.executable, "-c", CHILD, str(result_file), *tests], cwd=ROOT, capture_output=True,
+                              text=True, env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+        (args.out / f"pass{n}.log").write_text(proc.stdout + proc.stderr, "utf-8")
+        seen = json.loads(result_file.read_text("utf-8")) if result_file.exists() else {}
         for t in tests:
             outcomes[t].append(seen.get(t, "missing"))
         print(f"pass {n}: {sum(v == 'ok' for v in seen.values())}/{len(tests)} ok in {time.monotonic() - t0:.0f} s", flush=True)
