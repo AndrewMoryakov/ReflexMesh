@@ -130,6 +130,14 @@ def container_chain(node) -> list[dict]:
     return chain
 
 
+def within_depth(chain: list[dict], pattern) -> int | None:
+    """How far up the chain the first container matching `pattern` is, or None."""
+    for depth, e in enumerate(chain):
+        if pattern.search(" ".join(str(e.get(k) or "") for k in ("name", "aria_label", "heading", "text"))):
+            return depth
+    return None
+
+
 def chain_text(chain: list[dict]) -> str:
     return " | ".join(" ".join(str(e.get(k) or "") for k in ("name", "aria_label", "heading", "text")) for e in chain)
 
@@ -177,7 +185,7 @@ class Recorder(LabelScriptProvider):
             self.sink.flush()
             raise ProviderError(f"script: {exc} at step {self.calls}") from None
         action = step.get("action")
-        row["gold"] = {k: a.get("choice") for k, a in answers.items()
+        row["gold"] = {k: (a.pop("equivalent", None) or [a.get("choice")]) for k, a in answers.items()
                        if a.get("type") == "choice" and (k == "next_action" or k.startswith(f"{action}__"))}
         self.sink.write(json.dumps(row, ensure_ascii=False) + "\n")
         self.sink.flush()
@@ -187,23 +195,30 @@ class Recorder(LabelScriptProvider):
     @staticmethod
     def _answers(step: dict, questions: dict, containers: dict) -> dict:
         within = step.get("within") or {}
-        if not within:
+        if not within and not step.get("any"):
             return answers_for_step(step, questions)
-        plain = {k: v for k, v in step.items() if k != "within" and k not in within}
+        plain = {k: v for k, v in step.items() if k not in ("within", "any") and k not in within}
+        if step.get("any"):
+            plain = {k: v for k, v in plain.items() if k in ("action",)}
         answers = answers_for_step(plain, questions)
         action = step["action"]
         for key, question in questions.items():
             parameter = key.split("__", 1)[1] if "__" in key else key
-            if not key.startswith(f"{action}__") or parameter not in within:
+            if not key.startswith(f"{action}__") or parameter not in step or parameter == "action":
                 continue
             criteria = question.get("criteria") or {}
             label = re.compile(str(step[parameter]), re.IGNORECASE)
-            inside = re.compile(str(within[parameter]), re.IGNORECASE)
-            matches = [ref for ref, d in criteria.items()
-                       if label.search(str(d)) and inside.search(chain_text(containers.get(ref) or []))]
-            if len(matches) != 1:
-                raise ScriptMismatch(f"{parameter!r} within {within[parameter]!r} matched {len(matches)} options")
+            inside = re.compile(str(within.get(parameter, "")), re.IGNORECASE)
+            matches = [ref for ref, d in criteria.items() if label.search(str(d))]
+            if parameter in within:
+                # the nearest container wins: a book's own card matches its title before the list around all books
+                depth = {ref: within_depth(containers.get(ref) or [], inside) for ref in matches}
+                found = [d for d in depth.values() if d is not None]
+                matches = [ref for ref in matches if found and depth[ref] == min(found)]
+            if not matches or (len(matches) > 1 and not step.get("any")):
+                raise ScriptMismatch(f"{parameter!r} within {within.get(parameter)!r} matched {len(matches)} options")
             answers[key] = _choice(criteria, matches[0])
+            answers[key]["equivalent"] = matches
         return answers
 
 

@@ -14,24 +14,36 @@ gutenberg.org), and no M5 trace is used. All answered 200 from the recording mac
 ```
 site                          kind                           what it adds
 books.toscrape.com            practice catalogue             20 identical "Add to basket" per page, category menu, paging
-practicesoftwaretesting.com   practice shop (SPA)            filters, search, product cards, cart, forms
+practice.expandtesting.com    practice pages                 a table with Edit and Delete in every row, cards with identical "Try it out", login form
 demoqa.com                    practice forms                 date widget, autocomplete, tables; ads present
-todomvc.com (React)           practice app                   dynamic list, an identical delete control per row
+demoblaze.com                 practice shop                  product cards, categories, paging, a cart
 uitestingplayground.com       practice traps                 dynamic ids, overlapped and delayed elements
 saucedemo.com                 practice shop, public login    identical "Add to cart" per card; public demo credentials as normal slots
-news.ycombinator.com          real, read only                dense list, identical "hide" and "comments" per row
+news.ycombinator.com          real, read only                dense list, identical "hide" and "comments" per row;
+                                                             the list of a past day (front?day=), not the live front page
 docs.python.org               real, read only                deep navigation, search, long pages
 ```
 
 Three tasks per site, 24 in all, aimed at about 150-200 steps. On the two real sites only reading: search,
 open, page through; no account, no form that writes. On practice sites only their demo data.
 
+Amended on 2026-11-08 after the exploration runs, before any task recording: todomvc.com was replaced by
+demoblaze.com, because a todo is added only with Enter and `press_key` is not offered, so nothing but links could
+be done there; Hacker News is recorded on a past day's list, because the live front page changes between runs.
+A second amendment after the draft runs, still before recording: practicesoftwaretesting.com was replaced by
+practice.expandtesting.com, because the adapter was offered no control on it at all, even after waiting (only
+scroll, wait, finish and escalate). Pages beyond the adapter's 200-option limit, and controls the adapter does
+not offer (demoqa's row icons, a password field without a label), are avoided by starting tasks on the page
+that holds the target.
+
 ## How steps are recorded
 
 `record_steps.py` runs `BrowserRun` with a scripted provider, on the recording machine (Windows, Chrome; never
 the machine where each Chrome start counts as a failed logon). The script is the label: each step names its
 action by the option's visible description, and where descriptions repeat, by the description `within` a
-container (for example "Add to basket" within "A Light in the Attic"). The provider records, per step:
+container (for example "Add to basket" within "A Light in the Attic"). Where several options lead to the same
+place (a book's cover link and title link), the step says `any`, and every match is recorded as a right answer.
+The provider records, per step:
 
 - the request as SystemOneHarness sent it (`state`, `questions`), unchanged;
 - the right answer: the option key per question and the script step that chose it (`action`, description,
