@@ -76,26 +76,31 @@ def main() -> int:
     args = ap.parse_args()
     rows = [json.loads(l) for f in sorted(glob.glob(str(args.steps / "*.steps.jsonl")))
             for l in open(f, encoding="utf-8") if l.strip()]
-    ids = [(r["task_id"], r["step"]) for r in rows]
-    targeted = {(r["task_id"], r["step"]) for r in rows
+    ids = list(range(len(rows)))      # (task_id, step) is not unique: an auto step keeps the script's step number
+    targeted = {i for i, r in enumerate(rows)
                 if any("__" in k and not k.endswith(("__value", "__direction")) for k in r["gold"])}
     dup = set()
-    for r in rows:
+    for seq, r in enumerate(rows):
         for k, keys in r["gold"].items():
             if "__" in k and not k.endswith(("__value", "__direction")):
                 crit = r["questions"][k]["criteria"]
                 labels = [str(crit[x]).split(" →")[0] for x in keys]
                 if any(sum(1 for d in crit.values() if str(d).split(" →")[0] == lab) > 1 for lab in labels):
-                    dup.add((r["task_id"], r["step"]))
+                    dup.add(seq)
     runs = {}
     for path in sorted(args.results.glob("*.jsonl")):
+        lines = [json.loads(line) for line in path.read_text("utf-8").splitlines() if line.strip()]
         res = {}
-        for line in path.read_text("utf-8").splitlines():
-            d = json.loads(line)
-            if d.get("http") == 200 or (d["task_id"], d["step"]) not in res:
-                res[(d["task_id"], d["step"])] = d
-        by = {(r["task_id"], r["step"]): r for r in rows}
-        runs[path.stem] = {i: judge(by[i], res.get(i)) for i in ids}
+        if all("seq" in d for d in lines):
+            for d in lines:
+                if d.get("http") == 200 or d["seq"] not in res:
+                    res[d["seq"]] = d
+        else:
+            # replies written before `seq` existed: one per row, in row order; checked, not assumed
+            if len(lines) != len(rows) or any((d["task_id"], d["step"]) != (r["task_id"], r["step"]) for d, r in zip(lines, rows)):
+                raise SystemExit(f"{path.name}: replies without seq do not line up with the rows")
+            res = dict(enumerate(lines))
+        runs[path.stem] = {i: judge(rows[i], res.get(i)) for i in ids}
     subsets = {"all": ids, "targeted": [i for i in ids if i in targeted], "repeated_label": [i for i in ids if i in dup]}
     summary = {}
     print(f"steps: all {len(ids)}, targeted {len(subsets['targeted'])}, repeated_label {len(subsets['repeated_label'])}")

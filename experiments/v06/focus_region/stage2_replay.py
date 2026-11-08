@@ -122,6 +122,8 @@ def main() -> int:
     args = ap.parse_args()
     rows = [json.loads(l) for f in sorted(glob.glob(str(args.steps / "*.steps.jsonl")))
             for l in open(f, encoding="utf-8") if l.strip()]
+    for seq, r in enumerate(rows):
+        r["seq"] = seq             # (task_id, step) is not unique: an auto step keeps the script's step number
     args.out.mkdir(parents=True, exist_ok=True)
     if args.dry:
         with (args.out / "variant-a-labels.txt").open("w", encoding="utf-8") as f:
@@ -139,13 +141,13 @@ def main() -> int:
         path = args.out / f"{run}.jsonl"
         done = set()
         if path.exists():
-            done = {(d["task_id"], d["step"]) for d in map(json.loads, path.read_text("utf-8").splitlines()) if d.get("http") == 200}
-        todo = [r for r in rows if (r["task_id"], r["step"]) not in done]
+            done = {d["seq"] for d in map(json.loads, path.read_text("utf-8").splitlines()) if d.get("http") == 200}
+        todo = [r for r in rows if r["seq"] not in done]
 
         def one(r):
             questions = variant_a(r, run.startswith("A2")) if run.startswith("A") else r["questions"]
             status, reply, ms = post(key, {"model": MODEL, "state": r["state"], "questions": questions})
-            out = {"task_id": r["task_id"], "step": r["step"], "run": run, "http": status, "latency_ms": ms}
+            out = {"seq": r["seq"], "task_id": r["task_id"], "step": r["step"], "run": run, "http": status, "latency_ms": ms}
             if status == 200 and isinstance(reply, dict):
                 out["answers"] = reply.get("answers")
                 out["usage"] = reply.get("usage")
