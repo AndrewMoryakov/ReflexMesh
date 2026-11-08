@@ -693,6 +693,9 @@ class BrowserRun:
         self.attempt_id = attempt_id or uuid.uuid4().hex
         self.out_dir = Path(out_dir) if out_dir else None
         self._cancel = threading.Event()
+        # Set by the worker when its loop has ended, before it closes the provider and the session: from here the
+        # supervisor's liveness bound runs (section 9), so a close that hangs cannot hold the result.
+        self._ending = threading.Event()
         self.adapter: GenericBrowserAdapter | None = None
         self.config_id: str | None = None
         self.requested_model: str | None = None
@@ -864,7 +867,8 @@ class BrowserRun:
                                                     out.get("reason") in ("no_progress", "stale_loop"))
         return (self.chain is not None and handoff and not getattr(self, "_no_transfer", False) and
                 not self.chain.closed and controlled is not None and not controlled.uncertain and
-                self.adapter is not None and not self.adapter.closed and not self.gate.in_flight.value)
+                self.adapter is not None and not self.adapter.closed and not getattr(self.adapter, "_killed", False) and
+                not self.gate.in_flight.value)
 
     def _release_session(self) -> None:
         if self.final_probe is not None and self.adapter is not None and not self.adapter.closed:
@@ -923,6 +927,7 @@ class BrowserRun:
         except BaseException as exc:  # the loop's failure is the attempt's; the message may hold page text
             self.outcome = {"kind": "failed", "reason": "worker_exception", "detail": type(exc).__name__}
         finally:
+            self._ending.set()
             try:
                 self.provider.close()
             finally:
@@ -1075,7 +1080,7 @@ class BrowserRun:
                 self.gate.stop("cancel_requested")
             elif self.gate.deadline_expired():
                 self.gate.stop("deadline")
-            if self.gate.terminal.value and terminal_at is None:
+            if (self.gate.terminal.value or self._ending.is_set()) and terminal_at is None:
                 terminal_at = time.monotonic()
             if terminal_at is not None and time.monotonic() - terminal_at > GRACE_SECONDS and not notes["watchdog_kill"]:
                 notes["watchdog_kill"] = True
