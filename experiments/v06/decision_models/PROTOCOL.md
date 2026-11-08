@@ -71,3 +71,14 @@ Primary measure: steps passed and correct, and passed and wrong, at the ReflexMe
 
 Whether a better step score here carries over to whole tasks in ReflexMesh: that needs the adapter, the F
 checks and a new comparison with its own frozen manifest, not a repeat of M5.
+
+## Stage 0 of the focus-region spec (added 2026-11-08, before its first call)
+
+The causal test of `docs/specs/V0.6-focus-region.md`, section 6. Same 300 main-sample steps, Jev 1.14
+(`~typesafe/jev-latest`) only, every target question cut to K options with `stage0_prune.py` (the gold
+operation's question keeps all gold keys; others random, seeded by K, step id and question; `state.elements`
+cut to the kept elements; order and numbering kept), K = 15 and K = 40. Compared with the Jev 1.14 full-list run
+of the main sample, paired over the same steps (`stage0_compare.py`): step success and the gate outcomes, with
+a 95% bootstrap interval. Gold-informed on purpose; random neighbours are easier than similar ones, so the
+result is an upper bound of what shortening can give. Read: does a shorter list raise "acted alone and rightly"
+without raising "wrong action passed"?
