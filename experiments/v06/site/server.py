@@ -12,6 +12,9 @@ Routes:
   /catalog             260 buttons, to see how a dense page is reported
   /tall                a short text on a tall page: scrolling moves the window, the text stays the same
   /long-fields         two fields whose labels share their first 87 characters
+  /f11/<kind>          one small form inside a same-origin frame (same), a frame of another site (cross: localhost,
+                       out of process), a frame of another origin on the same site (cross-port?port=N: in process),
+                       an open shadow root (shadow-open) or a closed one (shadow-closed); POST /f11/hit/<kind> records it
   /leave               redirects to another origin (localhost), for allowed-origins checks
   /orders[?q=...]      search form, and matching orders when q is given
   /orders/<id>         one order: details, saved notes, a note form with priority and notify
@@ -46,6 +49,7 @@ ORDERS = {
     "126": {"customer": "Sidorova", "status": "Delivered"},
 }
 NOTES: dict[str, list[str]] = {}
+F11_HITS: list[dict] = []   # what a form in a frame or a shadow root actually sent, by page kind
 META: dict[str, dict] = {}
 REQUESTS: list[dict] = []
 DRAFTS: dict[str, dict] = {}   # the wizard's progress per order: it lives on the server, not on the page
@@ -90,6 +94,27 @@ def long_fields() -> bytes:
     inputs = "".join(f'<p><label for="{key}">{LONG_LABEL} ({when})</label><input id="{key}" name="{key}" type="text"></p>'
                      for key, when in (("morning", "morning"), ("evening", "evening")))
     return page("Delivery", f'<form method="get" action="/long-fields">{inputs}<button type="submit">Send</button></form>')
+
+
+def f11_form(kind: str) -> str:
+    """The same small form wherever it sits, so a probe compares placements, not forms."""
+    return (f'<form method="post" action="/f11/hit/{kind}"><label for="word">Word</label>'
+            '<input id="word" name="word" type="text"><button type="submit">Send word</button></form>')
+
+
+def f11(kind: str, port: int, other_port: str = "") -> bytes | None:
+    """F11 probes: the form in a frame of the same origin, of another site (localhost, not 127.0.0.1), of another
+    origin on the same site (127.0.0.1 on `other_port`, which Chrome keeps in process), or in a shadow root."""
+    if kind in ("same", "cross", "cross-port"):
+        src = {"same": f"/f11/inner/{kind}", "cross": f"http://localhost:{port}/f11/inner/{kind}",
+               "cross-port": f"http://127.0.0.1:{other_port}/f11/inner/{kind}"}[kind]
+        return page(f"F11 {kind}", f'<p>Outside the frame.</p><iframe title="Inner form" src="{src}" width="640" height="220"></iframe>')
+    if kind in ("shadow-open", "shadow-closed"):
+        mode = kind.split("-")[1]
+        script = ("<script>customElements.define('f11-box', class extends HTMLElement { constructor() { super();"
+                  f" this.attachShadow({{mode: '{mode}'}}).innerHTML = {json.dumps(f11_form(kind))}; }} }});</script>")
+        return page(f"F11 {kind}", f"<p>Outside the shadow root.</p><f11-box></f11-box>{script}")
+    return None
 
 
 def orders(query: str) -> bytes:
@@ -226,6 +251,13 @@ class Handler(BaseHTTPRequestHandler):
                                         '<form method="get" action="/orders"><button type="submit">Back to orders</button></form>'))
         if parts.path == "/long-fields":
             return self._send(200, long_fields())
+        if parts.path.startswith("/f11/inner/"):
+            kind = parts.path.rsplit("/", 1)[1]
+            return self._send(200, f"<!doctype html><html><head><title>Inner {escape(kind)}</title></head><body>{f11_form(kind)}</body></html>".encode())
+        if parts.path.startswith("/f11/"):
+            body = f11(parts.path.split("/")[2], self.server.server_port, parse_qs(parts.query).get("port", [""])[0])
+            if body is not None:
+                return self._send(200, body)
         if parts.path == "/orders":
             return self._send(200, orders(parse_qs(parts.query).get("q", [""])[0].strip()))
         if parts.path.startswith("/orders/"):
@@ -281,6 +313,11 @@ class Handler(BaseHTTPRequestHandler):
                 CLAIM.clear()
             return self._json(200, {"released": True})
         fields = parse_qs(raw.decode("utf-8", "replace"))
+        if len(pieces) == 3 and pieces[:2] == ["f11", "hit"]:
+            word = fields.get("word", [""])[0]
+            with LOCK:
+                F11_HITS.append({"kind": pieces[2], "word": word})
+            return self._send(200, f"<!doctype html><html><body><p>Got {escape(word)}</p></body></html>".encode())
         if len(pieces) == 3 and pieces[0] == "orders" and pieces[2] == "note" and pieces[1] in ORDERS:
             note = fields.get("note", [""])[0].strip()
             if note:
