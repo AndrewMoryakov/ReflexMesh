@@ -15,6 +15,7 @@ import glob
 import json
 import os
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -111,6 +112,16 @@ def post(key: str, body: dict) -> tuple[int, dict | str, int]:
     return last
 
 
+def recorded_cost(out: Path) -> float:
+    """What the replies already written under `out` cost, whichever run wrote them."""
+    total = 0.0
+    for path in out.glob("*.jsonl"):
+        for line in path.read_text("utf-8").splitlines():
+            if line.strip():
+                total += float(((json.loads(line).get("usage") or {}).get("cost")) or 0.0)
+    return total
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--steps", required=True, type=Path)
@@ -136,7 +147,9 @@ def main() -> int:
         print("dry run written")
         return 0
     key = sys.stdin.readline().strip().lstrip("﻿")
-    spent = 0.0
+    # The cap is for the stage in all, so what earlier invocations already recorded counts toward it.
+    state = {"spent": recorded_cost(args.out), "skipped": 0}
+    lock = threading.Lock()
     for run in [x.strip() for x in args.runs.split(",") if x.strip()]:
         path = args.out / f"{run}.jsonl"
         done = set()
@@ -145,6 +158,10 @@ def main() -> int:
         todo = [r for r in rows if r["seq"] not in done]
 
         def one(r):
+            with lock:               # checked before each request, not after the pass: the cap stops the sending
+                if state["spent"] >= args.budget:
+                    state["skipped"] += 1
+                    return None
             questions = variant_a(r, run.startswith("A2")) if run.startswith("A") else r["questions"]
             status, reply, ms = post(key, {"model": MODEL, "state": r["state"], "questions": questions})
             out = {"seq": r["seq"], "task_id": r["task_id"], "step": r["step"], "run": run, "http": status, "latency_ms": ms}
@@ -154,15 +171,21 @@ def main() -> int:
                 out["served_model"] = reply.get("model")
             else:
                 out["error"] = reply if isinstance(reply, str) else json.dumps(reply)[:500]
+            with lock:
+                state["spent"] += float(((out.get("usage") or {}).get("cost")) or 0.0)
             return out
 
         with path.open("a", encoding="utf-8") as f, cf.ThreadPoolExecutor(args.workers) as pool:
             for out in pool.map(one, todo):
-                spent += float(((out.get("usage") or {}).get("cost")) or 0.0)
+                if out is None:
+                    continue
                 f.write(json.dumps(out, ensure_ascii=False) + "\n")
                 f.flush()
-        print(f"{run}: {len(todo)} sent, spent so far {spent:.4f}", flush=True)
-        if spent > args.budget:
+        sent = len(todo) - state["skipped"]
+        print(f"{run}: {sent} sent, {state['skipped']} not sent for the budget, spent so far {state['spent']:.4f}", flush=True)
+        state["skipped"] = 0
+        if state["spent"] >= args.budget:
+            # With several workers, requests already in flight when the cap was reached still finish and are paid.
             print("budget reached, stopping", flush=True)
             break
     return 0

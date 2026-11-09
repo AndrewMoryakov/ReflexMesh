@@ -14,6 +14,27 @@ from pathlib import Path
 
 WRITE = {"click", "type_text", "select_option", "go_back"}
 READ = {"scroll", "wait", "switch_tab"}
+CONTROL = ("finish", "escalate")
+
+
+def refused(row: dict, answers: dict) -> str | None:
+    """Why the live path would refuse this answer (ValidatingProvider._validate in decision_providers.py): the action
+    was not offered, or the chosen action's required choice question has no answer naming something offered. A refused
+    answer does no action, so it is an error here, never a gate passage."""
+    questions = row["questions"]
+    chosen = (answers.get("next_action") or {}).get("choice")
+    if type(chosen) is not str or chosen not in ((questions.get("next_action") or {}).get("criteria") or {}):
+        return "action not offered"
+    if chosen in CONTROL:
+        return None
+    for key, question in questions.items():
+        if not key.startswith(f"{chosen}__") or key.endswith("__stated") or question.get("type") != "choice":
+            continue
+        answer = answers.get(key)
+        value = answer.get("choice") if isinstance(answer, dict) else None
+        if type(value) is not str or value not in (question.get("criteria") or {}):
+            return f"{key} missing or not offered"
+    return None
 
 
 def num(x):
@@ -38,6 +59,9 @@ def judge(row: dict, res: dict | None) -> dict:
     if not res or res.get("http") != 200 or not isinstance(res.get("answers"), dict):
         return {"ok": False, "gate": "error"}
     a = res["answers"]
+    why = refused(row, a)
+    if why:
+        return {"ok": False, "gate": "error", "why": why}
     na = a.get("next_action") or {}
     act = na.get("choice")
     conf = num(na.get("confidence"))
