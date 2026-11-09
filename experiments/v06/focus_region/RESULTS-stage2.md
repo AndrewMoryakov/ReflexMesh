@@ -54,3 +54,20 @@ to be checked on other steps before any change.
 - Whether the set is representative: practice sites, a scripted path, 138 steps; Jev scores 93% here against 51%
   on the public benchmark's steps.
 - Effects on whole tasks, other models, and mechanism B.
+
+## After the review of #20
+
+Codex found two faults in the tools that produced these numbers. Both are fixed in the tools; the recorded numbers
+above do not change.
+
+- The replay checked its budget after each whole pass, so a pass that crossed the cap was still sent in full. That is
+  what happened here: B1 and A1 cost $0.023 and $0.029, A2 started at $0.052 and finished at $0.081, $0.0014 (1.8%)
+  over the $0.08 cap. The replay now checks before each request, counts what earlier invocations recorded, and with
+  several workers overshoots by at most the requests already in flight. Under the fixed replay A2 would have stopped
+  at about step 131 of 138 (an estimate from the costs above, not a run), so A2 would have scored its last steps as
+  not sent. The replies kept here were all paid for and are scored as recorded.
+- The scorer counted an answer that named an action but left out its required target or value as passing the gate
+  (`passed_wrong` when the action was right), where the live path refuses it and nothing is done. It now scores such
+  an answer, and one naming an action or target that was not offered, as an error. Rescoring the recorded replies
+  with the fixed scorer gives a summary file identical to the earlier one (same SHA-256), so none of the 414 replies
+  was incomplete and no figure above moves.

@@ -44,6 +44,8 @@ against B1 is the noise floor; a difference smaller than it is not read as an ef
 ## Budget
 
 About 0.35 M input tokens per pass at $0.042 per million; the replay stops after $0.08 in all.
+The cap is checked before each request and counts every reply already recorded in the output folder; with several workers
+it can be exceeded by the requests in flight at that moment.
 
 ## Not established by this stage
 
