@@ -1,0 +1,520 @@
+{
+ "meta": {
+  "commit": "2ec9d4bd2e2c644101e03f9ce75036c61c184619",
+  "python": "3.13.14",
+  "platform": "Windows-11-10.0.22631-SP0",
+  "browser": "Edge 144",
+  "started": "2026-11-09T00:39:05",
+  "tests": 66
+ },
+ "tests": {
+  "tests.test_v06_browser_control.Admission.test_deadline_ends_observation_and_dispatch": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_control.Admission.test_no_dispatch_after_an_accepted_cancel": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_control.Admission.test_no_dispatch_after_the_dispatches_are_sealed": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_control.Admission.test_permission_revoked_after_the_option_was_offered": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_control.Admission.test_policy_changed_since_the_observation_forces_a_new_observation": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_control.Admission.test_stale_target_is_never_dispatched": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_control.Admission.test_step_and_call_budgets_are_enforced": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_control.CompletedEvidenceCheck.test_an_evidenced_completed_result_passes": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_control.CompletedEvidenceCheck.test_each_missing_piece_of_evidence_is_caught": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_control.EssentialState.test_an_action_is_named_by_its_target_not_its_index": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_control.EssentialState.test_renumbering_and_new_marks_do_not_change_the_essential_text": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_control.GateVocabulary.test_revocation_stops_an_operation_and_bumps_the_revision": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_control.JournalRedaction.test_slot_values_do_not_reach_the_trace": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_control.UnknownEffects.test_constraint_rows_from_the_journal_pass_only_with_evidence": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_a_document_navigated_after_the_observation_makes_its_target_stale": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_a_failure_confirmed_earlier_in_the_chain_keeps_a_later_attempt_from_completing": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_a_field_renamed_after_the_observation_is_stale_even_past_eighty_characters": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_a_frame_reloaded_after_the_observation_makes_its_target_stale": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_a_missing_value_is_supplied_by_a_new_revision_in_the_same_session": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_a_new_slot_version_is_not_applied_to_an_observation_made_before_the_revision": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_a_refused_continuation_closes_the_session_it_cannot_use": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_a_resumed_attempt_stops_at_the_chain_limit_not_a_fresh_one": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_a_revision_cannot_change_where_a_kept_slot_may_go": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_a_second_controller_at_a_handoff_is_a_violation_not_a_transfer": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_a_slot_chosen_for_a_field_it_does_not_fit_is_refused_before_anything_is_sent": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_an_expired_lease_closes_the_browser_and_kills_the_token": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_f06_a_key_press_proposed_in_assistance_is_refused": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_f06_a_lost_response_is_not_resent_after_a_handoff_with_restart": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_f06_a_lost_response_is_not_resent_by_going_back_and_saving_again": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_f06_a_lost_response_is_not_resent_by_llm_assistance": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_handoff.SameSession.test_f06_an_autosaving_field_is_not_typed_again_and_nothing_claims_completion": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_providers.Validation.test_a_target_or_value_that_was_not_offered_is_a_protocol_error": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_providers.Validation.test_an_operation_that_was_not_offered_is_a_protocol_error": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.FChecks.test_f01_a_field_a_script_adds_is_offered_once_it_exists_and_gets_the_exact_value": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.FChecks.test_f02_a_replaced_twin_is_stale_and_its_identical_twin_is_not_pressed_instead": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.FChecks.test_f04_a_tab_of_another_origin_opened_by_the_page_is_never_acted_on": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.FChecks.test_f05_a_cancel_after_the_commit_keeps_that_action_and_dispatches_nothing_after_it": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.FChecks.test_f08_an_old_success_banner_is_not_evidence_that_the_note_was_saved": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.FChecks.test_f10_a_target_past_the_observation_limit_is_reported_and_handed_off_not_guessed": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_a_close_that_hangs_does_not_hold_the_result_past_the_liveness_bound": [
+   "missing",
+   "missing",
+   "missing"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_a_dense_page_is_reported_partial_and_scrolling_reaches_more": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_a_finish_before_saving_is_a_confirmed_failure": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_a_finish_on_the_results_page_cannot_be_judged": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_a_node_replaced_after_observation_is_stale_and_not_dispatched": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_a_second_tab_is_offered_and_can_be_switched_to": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_an_unregistered_check_is_refused_whatever_the_task_says": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_cancel_during_a_pending_decision_dispatches_nothing_new": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_completed_needs_every_criterion_constraint_and_effect": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_deadline_ends_the_attempt_even_if_the_decision_provider_hangs": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_deadline_ends_the_attempt_even_if_the_first_navigation_never_loads": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_declared_capabilities_are_the_probed_ones": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_dropdown_and_checkbox_reach_the_server_with_the_note": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_frame_content_of_another_origin_is_not_offered_and_nothing_reaches_it": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_no_reflexmesh_markup_or_site_ids_are_used": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_open_shadow_root_content_is_offered_and_the_exact_value_lands_in_it": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_same_origin_frame_content_is_offered_and_the_exact_value_lands_in_it": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_scrolling_down_again_is_not_a_repeat_while_the_window_moves": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_text_slot_payload_is_exact_and_secret_values_stay_out_of_every_record": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_the_command_line_run_keeps_a_secret_value_out_of_its_output_streams": [
+   "missing",
+   "missing",
+   "missing"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_typing_does_not_press_enter": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.GenericPath.test_unknown_site_scenario_runs_through_gate_and_leaves_the_right_evidence": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_real.RefusedBeforeStart.test_requested_constraint_is_blocked_not_ignored": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_verifier.Probe.test_a_results_list_has_the_anchor_but_no_field": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_verifier.Probe.test_each_card_binds_its_own_notes": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_verifier.Probe.test_nearness_without_a_named_container_is_not_a_binding": [
+   "ok",
+   "ok",
+   "ok"
+  ],
+  "tests.test_v06_browser_verifier.Probe.test_two_anchors_are_ambiguous": [
+   "ok",
+   "ok",
+   "ok"
+  ]
+ },
+ "gates": {
+  "F01": [
+   {
+    "need": "search and typing without target ids",
+    "status": "pass"
+   },
+   {
+    "need": "select and checkbox",
+    "status": "pass"
+   },
+   {
+    "need": "a second tab",
+    "status": "pass"
+   },
+   {
+    "need": "a dynamic form (fields that appear or change by script)",
+    "status": "pass"
+   }
+  ],
+  "F02": [
+   {
+    "need": "renumbering does not change identity",
+    "status": "pass"
+   },
+   {
+    "need": "a node replaced (same id) is stale",
+    "status": "pass"
+   },
+   {
+    "need": "a changed document or frame is stale",
+    "status": "pass"
+   },
+   {
+    "need": "an ambiguous target is not dispatched",
+    "status": "pass"
+   }
+  ],
+  "F03": [
+   {
+    "need": "exact payload",
+    "status": "pass"
+   },
+   {
+    "need": "an unknown or substituted slot is refused",
+    "status": "pass"
+   },
+   {
+    "need": "a new slot version cannot be applied to an old snapshot",
+    "status": "pass"
+   }
+  ],
+  "F04": [
+   {
+    "need": "policy revoked after the choice",
+    "status": "pass"
+   },
+   {
+    "need": "an unsupported required constraint",
+    "status": "pass"
+   },
+   {
+    "need": "an unknown option",
+    "status": "pass"
+   },
+   {
+    "need": "a foreign tab is not acted on",
+    "status": "pass"
+   }
+  ],
+  "F05": [
+   {
+    "need": "cancel before commit: nothing dispatched",
+    "status": "pass"
+   },
+   {
+    "need": "commit before cancel: the committed action's effect is recorded, nothing after",
+    "status": "pass"
+   },
+   {
+    "need": "pending provider",
+    "status": "pass"
+   },
+   {
+    "need": "hung driver",
+    "status": "pass"
+   },
+   {
+    "need": "deadline and budgets",
+    "status": "pass"
+   },
+   {
+    "need": "no new commit after terminal; liveness bounds",
+    "status": "fail"
+   }
+  ],
+  "F06": [
+   {
+    "need": "lost response, autosave, Enter through Jev, LLM and resume",
+    "status": "pass"
+   }
+  ],
+  "F07": [
+   {
+    "need": "same session, new attempt and epoch, shared budget",
+    "status": "pass"
+   },
+   {
+    "need": "an old token or owner acts on nothing",
+    "status": "pass"
+   }
+  ],
+  "F08": [
+   {
+    "need": "a false finish",
+    "status": "pass"
+   },
+   {
+    "need": "another card",
+    "status": "pass"
+   },
+   {
+    "need": "a missing plugin (check)",
+    "status": "pass"
+   },
+   {
+    "need": "an old toast",
+    "status": "pass"
+   },
+   {
+    "need": "an unknown scope",
+    "status": "pass"
+   }
+  ],
+  "F09": [
+   {
+    "need": "all six constraints covered; unknown blocks success",
+    "status": "pass"
+   },
+   {
+    "need": "an established fail stays in the chain",
+    "status": "pass"
+   }
+  ],
+  "F10": [
+   {
+    "need": "partial coverage is explicit",
+    "status": "pass"
+   },
+   {
+    "need": "an element beyond the window is reached by scroll",
+    "status": "pass"
+   },
+   {
+    "need": "or a handoff is returned (focus_region is not offered)",
+    "status": "pass"
+   }
+  ],
+  "F11": [
+   {
+    "need": "probes for frames, cross-origin frames, open shadow DOM; capability equals evidence",
+    "status": "pass"
+   }
+  ],
+  "F12": [
+   {
+    "need": "each completed has evidence",
+    "status": "pass"
+   },
+   {
+    "need": "sentinel secrets absent from ordinary logs",
+    "status": "fail"
+   },
+   {
+    "need": "route and fixture API compatible",
+    "status": "gap"
+   }
+  ]
+ }
+}

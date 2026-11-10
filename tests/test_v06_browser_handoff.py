@@ -9,6 +9,7 @@ import contextlib
 import copy
 import importlib.util
 import io
+import asyncio
 import json
 import sys
 import time
@@ -291,6 +292,49 @@ class SameSession(BrowserCase):
         core.resume({"token": step["continuation_token"], "parent_attempt_id": step["attempt_id"], "operation": "stop"})
         self.assertEqual(SITE.F11_HITS, [])
 
+    def test_a_document_navigated_after_the_observation_makes_its_target_stale(self):
+        """F02: the order page is observed with its Save button; then the whole document is replaced, first by a
+        reload of the same order (the very same button again), then by another order's page (a button of the same
+        name). Each time, the click proposed on the observation before the navigation is refused, and nothing is
+        pressed in the new document."""
+        SITE.NOTES.clear()
+        core = self.core([[{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(self.f06_task("125")))
+        progress = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        adapter = core.chains[first["chain_id"]].assist.adapter
+
+        async def navigate(expression):
+            cdp = await adapter.backend._session.get_or_create_cdp_session()
+
+            async def evaluate(code):
+                reply = await cdp.cdp_client.send.Runtime.evaluate(
+                    params={"expression": code, "returnByValue": True}, session_id=cdp.session_id)
+                return reply.get("result", {}).get("value")
+
+            await evaluate("window.__observed = 1; " + expression)
+            for _ in range(100):          # the new document: the marker is gone and it has loaded
+                await asyncio.sleep(0.1)
+                try:
+                    if await evaluate("window.__observed === undefined && document.readyState === 'complete'"):
+                        return
+                except Exception:
+                    pass
+            raise AssertionError("the document did not navigate")
+
+        for expression, landing in (("location.reload()", "/orders/125"), ("location.href = '/orders/126'", "/orders/126")):
+            with self.subTest(expression):
+                save = next(o for o in progress["action_options"] if o["operation"] == "click" and "Save note" in o["name"])
+                adapter.backend._run(navigate(expression))
+                self.assertEqual([r["path"] for r in SITE.REQUESTS if r["method"] == "GET"][-1], landing)
+                progress = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"],
+                                        "operation": "step",
+                                        "proposal": {"observation_id": progress["observation"]["observation_id"],
+                                                     "operation": "click", "option_ref": save["ref"]}})
+                self.assertEqual(progress["last_proposal"], {"accepted": True, "dispatched": False, "rejected": "stale_target"})
+        core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "stop"})
+        self.assertEqual([r["path"] for r in SITE.REQUESTS if r["method"] == "POST" and not r["path"].startswith("/__")], [])
+        self.assertEqual(SITE.NOTES, {})
+
     F06_NOTE = [{"action": "type_text", "field": "textbox 'Note'", "value": "^note@1"}, {"action": "click", "element": "Save note"}]
 
     def f06_task(self, order, **changes):
@@ -325,24 +369,35 @@ class SameSession(BrowserCase):
         self.assertEqual(len(submissions), posts)
         self.assertEqual(len(set(submissions)), 1, submissions)
         self.assertNotIn("", submissions)   # the page's script ran
-        self.assertNotEqual(last.get("attempt_status"), "completed")
+        if posts > 1:                        # a resent request is never settled as completed
+            self.assertNotEqual(last.get("attempt_status"), "completed")
         rows = {r["id"]: r["status"] for r in last.get("verification") or []}
         if rows:
             stopped = (last.get("cleanup") or {}).get("status") != "retained"
             expected = "fail" if posts > 1 and stopped else ("unknown" if posts > 1 else rows["runtime.no_uncertain_repeats"])
             self.assertEqual(rows["runtime.no_uncertain_repeats"], expected)
 
+    def settled_on_the_saved_page(self, result):
+        """The other lawful path: the page reached after going back or restarting already shows the saved note, so
+        the loop stops for verification before any second Save is proposed, and the one POST settles it. Seen with
+        chrome-headless-shell, whose back navigation reloads the page and which does not resend the lost request;
+        Chrome and Edge restore the page without the note, and the second Save is proposed and refused."""
+        return (result.get("attempt_status"), result.get("stop_reason")) == ("completed", "verified") and \
+            self.f06_saves(None)[1] == 1
+
     def test_f06_a_lost_response_is_not_resent_by_going_back_and_saving_again(self):
         core = self.core([self.F06_NOTE + [{"action": "go_back"}, {"action": "click", "element": "Save note"}, {"action": "finish"}]])
         first = core.execute(BrowserTask.from_dict(self.f06_task("301")))
-        self.assertIn("repeated_mutation", self.rejections(first, 1))
+        if not self.settled_on_the_saved_page(first):
+            self.assertIn("repeated_mutation", self.rejections(first, 1))
         self.assert_lost_response_held(core, first)
 
     def test_f06_a_lost_response_is_not_resent_after_a_handoff_with_restart(self):
         core = self.core([self.F06_NOTE + [{"action": "escalate"}], self.F06_NOTE + [{"action": "finish"}]])
         first = core.execute(BrowserTask.from_dict(self.f06_task("301")))
         second = core.resume({**self.resume_token(first), "operation": "start", "mode": "jev", "restart": True})
-        self.assertEqual(self.rejections(first, 2), ["repeated_mutation", "repeated_mutation"])   # the typing and the Save
+        if not self.settled_on_the_saved_page(second):
+            self.assertEqual(self.rejections(first, 2), ["repeated_mutation", "repeated_mutation"])   # the typing and the Save
         self.assert_lost_response_held(core, second)
 
     def test_f06_a_lost_response_is_not_resent_by_llm_assistance(self):
@@ -352,6 +407,9 @@ class SameSession(BrowserCase):
         back = next(o for o in progress["action_options"] if o["operation"] == "go_back")
         progress = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "step",
                                 "proposal": {"observation_id": progress["observation"]["observation_id"], "operation": "go_back", "option_ref": back["ref"]}})
+        if self.settled_on_the_saved_page(progress):
+            self.assert_lost_response_held(core, progress)
+            return
         save = next(o for o in progress["action_options"] if o.get("name") == "Save note")
         step = core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"], "operation": "step",
                             "proposal": {"observation_id": progress["observation"]["observation_id"], "operation": "click", "option_ref": save["ref"]}})
@@ -418,6 +476,68 @@ class SameSession(BrowserCase):
         next(s for s in revised["text_slots"] if s["id"] == "note")["fields"] = ["Order number"]
         refused = core.resume({**self.resume_token(first), "operation": "start", "mode": "jev", "task": revised})
         self.assertEqual((refused["error"]["code"], refused["error"]["reason"]), ("revision_refused", "slot_reference_redirected"))
+
+    def test_a_new_slot_version_is_not_applied_to_an_observation_made_before_the_revision(self):
+        """F03: the note is observed under revision 1 (note@1); the operator stops, revises the note to note@2 and
+        resumes in the same session. Typing note@2 on the observation made before the revision is refused, and so is
+        the old note@1 on the new observation; note@2 on the new observation goes through."""
+        SITE.NOTES.clear()
+        core = self.core([[{"action": "escalate"}]])
+        first = core.execute(BrowserTask.from_dict(self.f06_task("125")))
+        before = core.resume({**self.resume_token(first), "operation": "start", "mode": "llm"})
+        stopped = core.resume({"token": before["continuation_token"], "parent_attempt_id": before["attempt_id"],
+                               "operation": "stop"})
+        revised = self.f06_task("125", revision=2)
+        note = next(s for s in revised["text_slots"] if s["id"] == "note")
+        note.update(version=2, value="Перезвонить в пятницу")
+        for criterion in revised["criteria"]:
+            for key, value in criterion["args"].items():
+                if value == "note@1":
+                    criterion["args"][key] = "note@2"
+                elif type(value) is list:
+                    criterion["args"][key] = ["note@2" if v == "note@1" else v for v in value]
+        after = core.resume({**self.resume_token(stopped), "operation": "start", "mode": "llm", "task": revised})
+        self.assertNotIn("error", after)
+        old_id, new_id = before["observation"]["observation_id"], after["observation"]["observation_id"]
+        self.assertNotEqual(old_id, new_id)
+        field = next(o for o in after["action_options"] if o["operation"] == "type_text" and "Note" in o["name"])
+
+        def propose(progress, observation_id, slot_ref):
+            return core.resume({"token": progress["continuation_token"], "parent_attempt_id": progress["attempt_id"],
+                                "operation": "step", "proposal": {"observation_id": observation_id, "operation": "type_text",
+                                                                  "option_ref": field["ref"], "slot_ref": slot_ref}})
+
+        stale = propose(after, old_id, "note@2")
+        self.assertEqual(stale["last_proposal"], {"rejected": "stale_observation"})
+        old = propose(stale, new_id, "note@1")
+        self.assertEqual(old["last_proposal"], {"rejected": "unknown_slot"})
+        typed = propose(old, new_id, "note@2")
+        self.assertEqual(typed["last_proposal"]["dispatched"], True)
+        core.resume({"token": typed["continuation_token"], "parent_attempt_id": typed["attempt_id"], "operation": "stop"})
+        self.assertEqual(SITE.NOTES, {})            # typed, never saved: no Save was proposed
+
+    def test_a_failure_confirmed_earlier_in_the_chain_keeps_a_later_attempt_from_completing(self):
+        """F09, an established fail stays in the chain. Through the API a confirmed constraint failure ends its attempt
+        as failed and closes the chain, so no later attempt follows it. The carry behind that is checked here by
+        recording the failure into an open chain directly: the next attempt, which would otherwise complete (the
+        same steps complete in the M3 test), reports the constraint failed with the earlier evidence and fails."""
+        rev1 = self.task(without_order=True)
+        rev2 = self.task(revision=2)
+        core = self.core([[{"action": "escalate"}], TO_ORDER + SAVE])
+        first = core.execute(BrowserTask.from_dict(rev1))
+        self.assertEqual(first["handoff"]["reason"], "escalation_requested")
+        chain = core.chains[first["chain_id"]]
+        earlier = {"id": "runtime.no_uncertain_repeats", "status": "fail", "observed_at": 1.0,
+                   "evidence_refs": ["runtime:earlier:no_uncertain_repeats"], "reason": "a repeat was confirmed"}
+        with chain.lock:                     # what TaskChain.record keeps from an attempt's failed constraint row
+            chain.failed_constraints[earlier["id"]] = dict(earlier)
+        second = core.resume({**self.resume_token(first), "operation": "start", "mode": "jev", "task": rev2})
+        self.assertIn("verification", second, second)
+        row = next(r for r in second["verification"] if r["id"] == "runtime.no_uncertain_repeats")
+        self.assertEqual((row["status"], row["evidence_refs"]), ("fail", ["runtime:earlier:no_uncertain_repeats"]))
+        self.assertTrue(row["reason"].startswith("Confirmed earlier in this chain"))
+        self.assertNotEqual(second["attempt_status"], "completed")
+        self.assertEqual(second["task_outcome"], "fail")
 
     def test_multistep_form_continues_where_it_stopped_without_restart(self):
         """The missing note arrives at step 2. An ordinary continuation keeps the progress and finishes."""
@@ -758,3 +878,8 @@ class SameSession(BrowserCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def tearDownModule():
+    from v06_samples import COMPLETED_CHECKED
+    print(f"F12: {len(COMPLETED_CHECKED)} completed results checked for evidence so far", file=sys.stderr)

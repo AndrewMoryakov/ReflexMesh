@@ -25,7 +25,7 @@ from reflexmesh.runtime.runner import AttemptGate, RuntimeStop, SkippedAction
 from reflexmesh.text.slots import SlotRegistry
 from reflexmesh.verification.constraints import assess_constraints
 from test_v05_runtime import sample
-from v06_samples import task_dict
+from v06_samples import completed_problems, task_dict
 
 CTX = mp.get_context("fork" if "fork" in mp.get_all_start_methods() else "spawn")   # shared values only
 
@@ -206,6 +206,18 @@ class Admission(unittest.TestCase):
         self.assertEqual(h.gate.snapshot()["dispatches"], before)
         with self.assertRaises(RuntimeStop):
             h.env.observe()
+
+    def test_no_dispatch_after_the_dispatches_are_sealed(self):
+        """F05: an attempt's terminal transition seals dispatching, whatever its status (cancel and deadline have their
+        own tests). After it, a proposed click commits nothing. A spent step budget is not such a state: the
+        observation spends the step, and that step's own action may still follow; the loop then ends and seals."""
+        h = Harness(self)
+        h.gate.seal_dispatches()
+        before = h.gate.snapshot()["dispatches"]
+        with self.assertRaises(RuntimeStop) as caught:
+            h.env.execute("click", {"element": "1"})
+        self.assertEqual(caught.exception.reason, "dispatches_sealed")
+        self.assertEqual(h.gate.snapshot()["dispatches"], before)
 
     def test_deadline_ends_observation_and_dispatch(self):
         h = Harness(self, wall_seconds=0.05)
@@ -529,3 +541,34 @@ class JournalRedaction(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CompletedEvidenceCheck(unittest.TestCase):
+    """The F12 check the browser tests apply to every completed result must itself catch a bare one."""
+
+    GOOD = {"attempt_status": "completed", "task_outcome": "pass", "attempt_id": "a1", "execution_outcome": "returned",
+            "verification": [{"id": "note_saved", "status": "pass", "evidence_refs": ["browser:a1:7"]},
+                             {"id": "runtime.ownership", "status": "pass", "evidence_refs": ["runtime:a1:owner"]}],
+            "actions": [{"id": 1, "operation": "click", "effect": "applied"}],
+            "budget": {"limits": {"wall_seconds": 120}, "elapsed_seconds": 30.0},
+            "evidence_refs": ["runtime:a1:permissions"]}
+
+    def test_an_evidenced_completed_result_passes(self):
+        self.assertEqual(completed_problems(self.GOOD, {7}), [])
+
+    def test_each_missing_piece_of_evidence_is_caught(self):
+        import copy
+        cases = {
+            "no evidence_refs": lambda r: r["verification"][0].update(evidence_refs=[]),
+            "unknown": lambda r: r["verification"][1].update(status="unknown"),
+            "not in the trace": lambda r: r["verification"][0].update(evidence_refs=["browser:a1:99"]),
+            "effect unknown": lambda r: r["actions"][0].update(effect="unknown"),
+            "past the": lambda r: r["budget"].update(elapsed_seconds=121.0),
+            "task_outcome": lambda r: r.update(task_outcome="unknown"),
+        }
+        for expected, damage in cases.items():
+            with self.subTest(expected):
+                result = copy.deepcopy(self.GOOD)
+                damage(result)
+                self.assertTrue(any(expected in p for p in completed_problems(result, {7})), completed_problems(result, {7}))
+        self.assertEqual(completed_problems({**self.GOOD, "attempt_status": "incomplete", "verification": []}), [])

@@ -15,12 +15,16 @@ Routes:
   /f11/<kind>          one small form inside a same-origin frame (same), a frame of another site (cross: localhost,
                        out of process), a frame of another origin on the same site (cross-port?port=N: in process),
                        an open shadow root (shadow-open) or a closed one (shadow-closed); POST /f11/hit/<kind> records it
+  /fx/<kind>           F-check pages: dynamic (a comment field added by script), twins (two forms with identical
+                       buttons), popup (a button that opens a tab of another origin), dense (300 links in one screen,
+                       more than one observation lists); POST /fx/hit/<kind> records what reached it
   /leave               redirects to another origin (localhost), for allowed-origins checks
   /orders[?q=...]      search form, and matching orders when q is given
   /orders/<id>         one order: details, saved notes, a note form with priority and notify; order 301 saves its
                        note and then closes the connection without an answer (a lost response), and its form puts a
                        fresh id into each submission it sends; order 302's note field posts itself to
                        /orders/302/autosave when it loses focus
+                       order 303 shows a "Note saved" banner with the note and never saves anything
   /orders/<id>/tracking    a small page, opened by the order page in a new tab
   POST /orders/<id>/note   saves a note (303 back to the order)
   /orders/<id>/wizard/<1|2|3>   the same note in three steps; each step's POST stores a server-side draft
@@ -52,10 +56,13 @@ ORDERS = {
     "126": {"customer": "Sidorova", "status": "Delivered"},
     "301": {"customer": "Orlova", "status": "Processing"},
     "302": {"customer": "Lebedev", "status": "Processing"},
+    "303": {"customer": "Petrova", "status": "Processing"},
 }
 LOST_RESPONSE = {"301"}     # its note is saved, then the connection closes with no answer (F06)
 AUTOSAVE = {"302"}          # its note field sends itself to the server when it loses focus (F06)
 AUTOSAVED: dict[str, list[str]] = {}
+OLD_TOAST = {"303"}         # shows a success banner for a note it never saved (F08)
+FX_HITS: list[dict] = []    # what reached POST /fx/hit/<kind>
 SUBMISSIONS: dict[str, list[str]] = {}   # per lost-response order, the submission id of every note POST
 NOTES: dict[str, list[str]] = {}
 F11_HITS: list[dict] = []   # what a form in a frame or a shadow root actually sent, by page kind
@@ -126,6 +133,31 @@ def f11(kind: str, port: int, other_port: str = "") -> bytes | None:
     return None
 
 
+def fx(kind: str, port: int) -> bytes | None:
+    """Pages for the F checks that the order desk does not cover."""
+    hit = f'<form method="post" action="/fx/hit/{kind}">'
+    if kind == "dynamic":    # F01: the field exists only after a script adds it
+        script = ("<script>document.getElementById('more').addEventListener('click', () => {"
+                  " document.getElementById('slot').innerHTML = '<label for=\"word\">Comment</label>"
+                  "<input id=\"word\" name=\"word\" type=\"text\"><button type=\"submit\">Send comment</button>'; });</script>")
+        return page("Feedback", hit + '<button type="button" id="more">Add a comment</button><div id="slot"></div></form>' + script)
+    if kind == "twins":      # F02: two forms whose buttons have the same role and name
+        forms = "".join(f'{hit}<input type="hidden" name="word" value="{w}"><button type="submit">Send</button></form>'
+                        for w in ("first", "second"))
+        return page("Twins", forms)
+    if kind == "popup":      # F04: a tab of another origin, opened by the page itself
+        script = (f"<script>document.getElementById('open').addEventListener('click', () => "
+                  f"window.open('http://localhost:{port}/fx/partner', '_blank'));</script>")
+        return page("Partner", '<button type="button" id="open">Open partner</button>' + script)
+    if kind == "partner":
+        return page("Partner desk", hit.replace("/fx/hit/partner", "/fx/hit/popup") +
+                    '<label for="word">Word</label><input id="word" name="word" type="text"><button type="submit">Send word</button></form>')
+    if kind == "dense":      # F10: more links in one screen than one observation lists
+        links = "".join(f'<a href="/fx/dense?n={n}" style="font-size:6px;margin:1px">Item {n}</a>' for n in range(1, 301))
+        return page("Dense", f'<div style="display:flex;flex-wrap:wrap;width:1000px">{links}</div>')
+    return None
+
+
 def orders(query: str) -> bytes:
     form = ('<form method="get" action="/orders"><label for="q">Order number</label>'
             f'<input id="q" name="q" type="text" value="{escape(query)}">'
@@ -163,6 +195,8 @@ def order(oid: str) -> bytes | None:
         # sent twice carries two ids, one request sent twice carries one
         body += ("<script>document.querySelector('form').addEventListener('formdata', e => e.formData.set("
                  "'submission', Math.random().toString(36).slice(2, 10)));</script>")
+    if oid in OLD_TOAST:
+        body = f'<p role="status">Note saved: Перезвонить завтра</p>' + body
     if oid in AUTOSAVE:   # a script, not a form: nothing in the DOM says the field writes to the server
         body += ("<script>document.getElementById('note').addEventListener('change', e => fetch("
                  f"'/orders/{oid}/autosave', {{method: 'POST', headers: {{'Content-Type': 'application/x-www-form-urlencoded'}},"
@@ -275,6 +309,10 @@ class Handler(BaseHTTPRequestHandler):
             body = f11(parts.path.split("/")[2], self.server.server_port, parse_qs(parts.query).get("port", [""])[0])
             if body is not None:
                 return self._send(200, body)
+        if parts.path.startswith("/fx/"):
+            body = fx(parts.path.split("/")[2], self.server.server_port)
+            if body is not None:
+                return self._send(200, body)
         if parts.path == "/orders":
             return self._send(200, orders(parse_qs(parts.query).get("q", [""])[0].strip()))
         if parts.path.startswith("/orders/"):
@@ -335,13 +373,17 @@ class Handler(BaseHTTPRequestHandler):
             with LOCK:
                 F11_HITS.append({"kind": pieces[2], "word": word})
             return self._send(200, f"<!doctype html><html><body><p>Got {escape(word)}</p></body></html>".encode())
+        if len(pieces) == 3 and pieces[:2] == ["fx", "hit"]:
+            with LOCK:
+                FX_HITS.append({"kind": pieces[2], "word": fields.get("word", [""])[0], "host": self.headers.get("Host")})
+            return self._send(200, page("Received", "<p>Received.</p>"))
         if len(pieces) == 3 and pieces[0] == "orders" and pieces[2] == "autosave" and pieces[1] in AUTOSAVE:
             with LOCK:
                 AUTOSAVED.setdefault(pieces[1], []).append(fields.get("note", [""])[0])
             return self._send(204, b"")
         if len(pieces) == 3 and pieces[0] == "orders" and pieces[2] == "note" and pieces[1] in ORDERS:
             note = fields.get("note", [""])[0].strip()
-            if note:
+            if note and pieces[1] not in OLD_TOAST:   # 303 answers as if saved and keeps nothing
                 with LOCK:
                     NOTES.setdefault(pieces[1], []).append(note)
                     META[pieces[1]] = {"priority": fields.get("priority", [""])[0],
