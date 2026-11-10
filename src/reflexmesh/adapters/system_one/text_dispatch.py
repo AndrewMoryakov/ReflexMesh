@@ -24,6 +24,13 @@ def _unsupported():
     return RuntimeStop("adapter_contract_unsupported")
 
 
+def _quiet_driver_logs() -> None:
+    """Raise Browser Use's loggers to WARNING: below it they carry typed text."""
+    driver = logging.getLogger("browser_use")
+    if driver.getEffectiveLevel() < logging.WARNING:
+        driver.setLevel(logging.WARNING)
+
+
 def _input_model(model):
     """The `input` action's payload object.
 
@@ -78,6 +85,13 @@ async def _dispatch_text(backend, command: PreparedTextCommand, action_id: int, 
             logger = namespace.get("logger")
             if ("Laminar" not in namespace or namespace["Laminar"] is not None or
                     not isinstance(logger, logging.Logger) or logger.isEnabledFor(logging.DEBUG)):
+                raise _unsupported()
+            # Its type watchdog then logs `Typed "<text>"` at INFO on the session's logger, since we never pass
+            # sensitive_data (its placeholder rewriting would change the value). Browser Use enables INFO for its
+            # loggers on import, so they go to WARNING here; a session logger still at INFO refuses the dispatch.
+            _quiet_driver_logs()
+            driver_logger = getattr(session, "logger", None)
+            if not isinstance(driver_logger, logging.Logger) or driver_logger.isEnabledFor(logging.INFO):
                 raise _unsupported()
         inspect.signature(act).bind(object(), session, sensitive_data=None)
         model = model_factory(input={"index": command.index, "text": command._value, "clear": True})
