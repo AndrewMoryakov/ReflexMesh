@@ -1,0 +1,10 @@
+[
+ {"task": {"task_id": "x-books", "goal": "explore", "start_url": "https://books.toscrape.com/", "allowed_origins": ["https://books.toscrape.com"]}},
+ {"task": {"task_id": "x-toolshop", "goal": "explore", "start_url": "https://practicesoftwaretesting.com/", "allowed_origins": ["https://practicesoftwaretesting.com"]}},
+ {"task": {"task_id": "x-demoqa", "goal": "explore", "start_url": "https://demoqa.com/automation-practice-form", "allowed_origins": ["https://demoqa.com"]}},
+ {"task": {"task_id": "x-todomvc", "goal": "explore", "start_url": "https://todomvc.com/examples/react/dist/", "allowed_origins": ["https://todomvc.com"]}},
+ {"task": {"task_id": "x-playground", "goal": "explore", "start_url": "http://uitestingplayground.com/", "allowed_origins": ["http://uitestingplayground.com"]}},
+ {"task": {"task_id": "x-saucedemo", "goal": "explore", "start_url": "https://www.saucedemo.com/", "allowed_origins": ["https://www.saucedemo.com"]}},
+ {"task": {"task_id": "x-hn", "goal": "explore", "start_url": "https://news.ycombinator.com/", "allowed_origins": ["https://news.ycombinator.com"]}},
+ {"task": {"task_id": "x-pydocs", "goal": "explore", "start_url": "https://docs.python.org/3/", "allowed_origins": ["https://docs.python.org"]}}
+]
