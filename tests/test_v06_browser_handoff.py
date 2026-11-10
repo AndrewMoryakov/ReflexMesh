@@ -613,17 +613,23 @@ class SameSession(BrowserCase):
     def test_an_expired_lease_closes_the_browser_and_kills_the_token(self):
         import psutil
 
-        core = self.core([[{"action": "escalate"}]], lease=1.0)
+        # 3 s, not 1: the lease runs from the token's issue, and a slow return under load once let a 1 s lease close
+        # the chain before the session could be read here.
+        core = self.core([[{"action": "escalate"}]], lease=3.0)
         first = core.execute(BrowserTask.from_dict(self.task(without_order=True)))
         chain = core.chains[first["chain_id"]]
         pid = chain.session.session["pid"]
         self.assertTrue(psutil.pid_exists(pid))
-        time.sleep(2.5)
+        # Closing stops the browser first and releases the site's claim after it, so both are
+        # awaited with a bound rather than read after a fixed pause (a slow browser stop once outlasted 2.5 s).
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline and (not chain.closed or SITE.CLAIM):
+            time.sleep(0.1)
         self.assertTrue(chain.closed)
+        self.assertEqual(SITE.CLAIM, {})
         self.assertFalse(psutil.pid_exists(pid) and psutil.Process(pid).status() != psutil.STATUS_ZOMBIE)
         refused = core.resume({**self.resume_token(first), "operation": "start", "mode": "jev"})
         self.assertIn(refused["error"]["code"], ("chain_closed", "session_closed", "token_expired"))
-        self.assertEqual(SITE.CLAIM, {})
 
     def test_a_refused_continuation_closes_the_session_it_cannot_use(self):
         import psutil
