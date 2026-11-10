@@ -1,0 +1,1037 @@
+[
+ {
+  "task": {
+   "task_id": "books-mystery",
+   "goal": "In the Mystery category, add 'Sharp Objects' to the basket, then open the Classics category and add 'The Secret Garden'.",
+   "start_url": "https://books.toscrape.com/",
+   "allowed_origins": [
+    "https://books.toscrape.com"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "link 'Mystery'"
+   },
+   {
+    "action": "click",
+    "element": "button 'Add to basket'",
+    "within": {
+     "element": "Sharp Objects"
+    }
+   },
+   {
+    "action": "click",
+    "element": "link 'Classics'"
+   },
+   {
+    "action": "click",
+    "element": "button 'Add to basket'",
+    "within": {
+     "element": "The Secret Garden"
+    }
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "books-page2",
+   "goal": "On this catalogue page add 'In Her Wake' to the basket, then go to the next page and add 'Slow States of Collapse: Poems'.",
+   "start_url": "https://books.toscrape.com/catalogue/page-2.html",
+   "allowed_origins": [
+    "https://books.toscrape.com"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "button 'Add to basket'",
+    "within": {
+     "element": "In Her Wake"
+    }
+   },
+   {
+    "action": "click",
+    "element": "link 'next'"
+   },
+   {
+    "action": "click",
+    "element": "button 'Add to basket'",
+    "within": {
+     "element": "Slow States of Collapse"
+    }
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "books-travel",
+   "goal": "Open the Travel category, add 'It's Only the Himalayas' to the basket, then open the Poetry category and add 'Shakespeare's Sonnets'.",
+   "start_url": "https://books.toscrape.com/",
+   "allowed_origins": [
+    "https://books.toscrape.com"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "link 'Travel'"
+   },
+   {
+    "action": "click",
+    "element": "button 'Add to basket'",
+    "within": {
+     "element": "Himalayas"
+    }
+   },
+   {
+    "action": "click",
+    "element": "link 'Poetry'"
+   },
+   {
+    "action": "click",
+    "element": "button 'Add to basket'",
+    "within": {
+     "element": "Shakespeare's Sonnets"
+    }
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "books-open-book",
+   "goal": "Open the Fantasy category, open the book 'Unicorn Tracks' and add it to the basket from its page, then go back to Home.",
+   "start_url": "https://books.toscrape.com/",
+   "allowed_origins": [
+    "https://books.toscrape.com"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "link 'Fantasy'"
+   },
+   {
+    "action": "click",
+    "element": "Unicorn Tracks",
+    "any": true
+   },
+   {
+    "action": "click",
+    "element": "button 'Add to basket'",
+    "any": true
+   },
+   {
+    "action": "click",
+    "element": "link 'Home'"
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "sauce-checkout",
+   "goal": "Log in, add 'Sauce Labs Bike Light' and 'Sauce Labs Onesie' to the cart, then check out with the prepared name and postal code and finish the order.",
+   "start_url": "https://www.saucedemo.com/",
+   "allowed_origins": [
+    "https://www.saucedemo.com"
+   ],
+   "text_slots": [
+    {
+     "id": "user",
+     "version": 1,
+     "value": "standard_user",
+     "sensitivity": "normal",
+     "fields": [
+      "Username"
+     ]
+    },
+    {
+     "id": "password",
+     "version": 1,
+     "value": "secret_sauce",
+     "sensitivity": "normal",
+     "fields": [
+      "Password"
+     ]
+    },
+    {
+     "id": "first",
+     "version": 1,
+     "value": "Ada",
+     "sensitivity": "normal",
+     "fields": [
+      "First Name"
+     ]
+    },
+    {
+     "id": "last",
+     "version": 1,
+     "value": "Lovelace",
+     "sensitivity": "normal",
+     "fields": [
+      "Last Name"
+     ]
+    },
+    {
+     "id": "zip",
+     "version": 1,
+     "value": "10115",
+     "sensitivity": "normal",
+     "fields": [
+      "Zip/Postal Code"
+     ]
+    }
+   ]
+  },
+  "steps": [
+   {
+    "action": "type_text",
+    "field": "Username",
+    "value": "^user@1"
+   },
+   {
+    "action": "type_text",
+    "field": "Password",
+    "value": "^password@1"
+   },
+   {
+    "action": "click",
+    "element": "button 'Login'"
+   },
+   {
+    "action": "click",
+    "element": "Add to cart",
+    "within": {
+     "element": "Bike Light"
+    }
+   },
+   {
+    "action": "click",
+    "element": "Add to cart",
+    "within": {
+     "element": "Onesie"
+    }
+   },
+   {
+    "action": "click",
+    "element": "^button 'Cart,"
+   },
+   {
+    "action": "click",
+    "element": "button 'Checkout'"
+   },
+   {
+    "action": "type_text",
+    "field": "First Name",
+    "value": "^first@1"
+   },
+   {
+    "action": "type_text",
+    "field": "Last Name",
+    "value": "^last@1"
+   },
+   {
+    "action": "type_text",
+    "field": "Zip",
+    "value": "^zip@1"
+   },
+   {
+    "action": "click",
+    "element": "Continue"
+   },
+   {
+    "action": "click",
+    "element": "button 'Finish'"
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "sauce-products",
+   "goal": "Log in, open 'Sauce Labs Fleece Jacket' and add it to the cart, go back to the products, open 'Sauce Labs Backpack' and add it too.",
+   "start_url": "https://www.saucedemo.com/",
+   "allowed_origins": [
+    "https://www.saucedemo.com"
+   ],
+   "text_slots": [
+    {
+     "id": "user",
+     "version": 1,
+     "value": "standard_user",
+     "sensitivity": "normal",
+     "fields": [
+      "Username"
+     ]
+    },
+    {
+     "id": "password",
+     "version": 1,
+     "value": "secret_sauce",
+     "sensitivity": "normal",
+     "fields": [
+      "Password"
+     ]
+    }
+   ]
+  },
+  "steps": [
+   {
+    "action": "type_text",
+    "field": "Username",
+    "value": "^user@1"
+   },
+   {
+    "action": "type_text",
+    "field": "Password",
+    "value": "^password@1"
+   },
+   {
+    "action": "click",
+    "element": "button 'Login'"
+   },
+   {
+    "action": "click",
+    "element": "Fleece Jacket",
+    "any": true
+   },
+   {
+    "action": "click",
+    "element": "Add to cart"
+   },
+   {
+    "action": "click",
+    "element": "Back to products"
+   },
+   {
+    "action": "click",
+    "element": "Backpack",
+    "any": true
+   },
+   {
+    "action": "click",
+    "element": "Add to cart"
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "sauce-remove",
+   "goal": "Log in, add 'Sauce Labs Backpack' to the cart, open 'Sauce Labs Bolt T-Shirt' and add it from its page, then open the cart and remove the Bolt T-Shirt.",
+   "start_url": "https://www.saucedemo.com/",
+   "allowed_origins": [
+    "https://www.saucedemo.com"
+   ],
+   "text_slots": [
+    {
+     "id": "user",
+     "version": 1,
+     "value": "standard_user",
+     "sensitivity": "normal",
+     "fields": [
+      "Username"
+     ]
+    },
+    {
+     "id": "password",
+     "version": 1,
+     "value": "secret_sauce",
+     "sensitivity": "normal",
+     "fields": [
+      "Password"
+     ]
+    }
+   ]
+  },
+  "steps": [
+   {
+    "action": "type_text",
+    "field": "Username",
+    "value": "^user@1"
+   },
+   {
+    "action": "type_text",
+    "field": "Password",
+    "value": "^password@1"
+   },
+   {
+    "action": "click",
+    "element": "button 'Login'"
+   },
+   {
+    "action": "click",
+    "element": "Add to cart",
+    "within": {
+     "element": "Backpack"
+    }
+   },
+   {
+    "action": "click",
+    "element": "Bolt T-Shirt",
+    "any": true
+   },
+   {
+    "action": "click",
+    "element": "Add to cart"
+   },
+   {
+    "action": "click",
+    "element": "^button 'Cart,"
+   },
+   {
+    "action": "click",
+    "element": "Remove",
+    "within": {
+     "element": "Bolt T-Shirt"
+    }
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "sauce-sort",
+   "goal": "Log in, sort the products by price from low to high and add the cheapest one, 'Sauce Labs Onesie', to the cart.",
+   "start_url": "https://www.saucedemo.com/",
+   "allowed_origins": [
+    "https://www.saucedemo.com"
+   ],
+   "text_slots": [
+    {
+     "id": "user",
+     "version": 1,
+     "value": "standard_user",
+     "sensitivity": "normal",
+     "fields": [
+      "Username"
+     ]
+    },
+    {
+     "id": "password",
+     "version": 1,
+     "value": "secret_sauce",
+     "sensitivity": "normal",
+     "fields": [
+      "Password"
+     ]
+    }
+   ]
+  },
+  "steps": [
+   {
+    "action": "type_text",
+    "field": "Username",
+    "value": "^user@1"
+   },
+   {
+    "action": "type_text",
+    "field": "Password",
+    "value": "^password@1"
+   },
+   {
+    "action": "click",
+    "element": "button 'Login'"
+   },
+   {
+    "action": "select_option",
+    "option": "low to high"
+   },
+   {
+    "action": "click",
+    "element": "Add to cart",
+    "within": {
+     "element": "Onesie"
+    }
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "play-dynamic-click",
+   "goal": "Open 'Dynamic ID' and press its button, go back to Home, then open 'Click' and press its button.",
+   "start_url": "http://uitestingplayground.com/",
+   "allowed_origins": [
+    "http://uitestingplayground.com"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "link 'Dynamic ID'"
+   },
+   {
+    "action": "click",
+    "element": "Button with Dynamic ID"
+   },
+   {
+    "action": "click",
+    "element": "link 'Home'"
+   },
+   {
+    "action": "click",
+    "element": "link 'Click'"
+   },
+   {
+    "action": "click",
+    "element": "Button That Ignores DOM Click"
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "play-text-input",
+   "goal": "Open 'Text Input', set the button's name to the prepared text and press the button.",
+   "start_url": "http://uitestingplayground.com/",
+   "allowed_origins": [
+    "http://uitestingplayground.com"
+   ],
+   "text_slots": [
+    {
+     "id": "name",
+     "version": 1,
+     "value": "ReflexMesh",
+     "sensitivity": "normal"
+    }
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "link 'Text Input'"
+   },
+   {
+    "action": "type_text",
+    "field": "New Button Name",
+    "value": "^name@1"
+   },
+   {
+    "action": "click",
+    "element": "button"
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "play-load-delay",
+   "goal": "Open 'Load Delay' and press the button that appears after the page loads, then go to Home and open 'Visibility' and press 'Hide'.",
+   "start_url": "http://uitestingplayground.com/",
+   "allowed_origins": [
+    "http://uitestingplayground.com"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "link 'Load Delay'"
+   },
+   {
+    "action": "click",
+    "element": "Button Appearing After Delay"
+   },
+   {
+    "action": "click",
+    "element": "link 'Home'"
+   },
+   {
+    "action": "click",
+    "element": "link 'Visibility'"
+   },
+   {
+    "action": "click",
+    "element": "button 'Hide'"
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "play-progress",
+   "goal": "Open 'Progress Bar' and press 'Start', then go back to Home and open 'Scrollbars'.",
+   "start_url": "http://uitestingplayground.com/",
+   "allowed_origins": [
+    "http://uitestingplayground.com"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "link 'Progress Bar'"
+   },
+   {
+    "action": "click",
+    "element": "button 'Start'"
+   },
+   {
+    "action": "click",
+    "element": "link 'Home'"
+   },
+   {
+    "action": "click",
+    "element": "link 'Scrollbars'"
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "expand-login",
+   "goal": "Log in on the test login page with the prepared user name and password, then log out.",
+   "start_url": "https://practice.expandtesting.com/login",
+   "allowed_origins": [
+    "https://practice.expandtesting.com"
+   ],
+   "text_slots": [
+    {
+     "id": "user",
+     "version": 1,
+     "value": "practice",
+     "sensitivity": "normal",
+     "fields": [
+      "Username"
+     ]
+    },
+    {
+     "id": "password",
+     "version": 1,
+     "value": "SuperSecretPassword!",
+     "sensitivity": "normal",
+     "fields": [
+      "Password"
+     ]
+    }
+   ]
+  },
+  "steps": [
+   {
+    "action": "type_text",
+    "field": "Username",
+    "value": "^user@1"
+   },
+   {
+    "action": "type_text",
+    "field": "Password",
+    "value": "^password@1"
+   },
+   {
+    "action": "click",
+    "element": "button 'Login'"
+   },
+   {
+    "action": "click",
+    "element": "Logout",
+    "any": true
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "expand-delete",
+   "goal": "In a data table on this page, delete the row of Jason Doe.",
+   "start_url": "https://practice.expandtesting.com/tables",
+   "allowed_origins": [
+    "https://practice.expandtesting.com"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "link 'Delete'",
+    "within": {
+     "element": "Jason"
+    },
+    "any": true
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "expand-register",
+   "goal": "Open the test register page with its 'Try it out' link and register with the prepared user name and password.",
+   "start_url": "https://practice.expandtesting.com/",
+   "allowed_origins": [
+    "https://practice.expandtesting.com"
+   ],
+   "text_slots": [
+    {
+     "id": "user",
+     "version": 1,
+     "value": "reflexmesh-stage1",
+     "sensitivity": "normal"
+    },
+    {
+     "id": "password",
+     "version": 1,
+     "value": "Stage1-Pass-2026",
+     "sensitivity": "normal"
+    }
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "link 'Try it out'",
+    "within": {
+     "element": "Test Register Page"
+    }
+   },
+   {
+    "action": "type_text",
+    "field": "^textbox 'Username",
+    "value": "^user@1"
+   },
+   {
+    "action": "type_text",
+    "field": "^textbox 'Password",
+    "value": "^password@1"
+   },
+   {
+    "action": "type_text",
+    "field": "Confirm Password",
+    "value": "^password@1"
+   },
+   {
+    "action": "click",
+    "element": "button 'Register'"
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "expand-inputs",
+   "goal": "Open 'Web inputs', fill in the number and the text, and display the inputs.",
+   "start_url": "https://practice.expandtesting.com/",
+   "allowed_origins": [
+    "https://practice.expandtesting.com"
+   ],
+   "text_slots": [
+    {
+     "id": "number",
+     "version": 1,
+     "value": "42",
+     "sensitivity": "normal",
+     "fields": [
+      "Input: Number"
+     ]
+    },
+    {
+     "id": "text",
+     "version": 1,
+     "value": "ReflexMesh",
+     "sensitivity": "normal",
+     "fields": [
+      "Input: Text"
+     ]
+    }
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "link 'Web inputs'"
+   },
+   {
+    "action": "type_text",
+    "field": "Number",
+    "value": "^number@1"
+   },
+   {
+    "action": "type_text",
+    "field": "Text",
+    "value": "^text@1"
+   },
+   {
+    "action": "click",
+    "element": "Display Inputs"
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "hn-comments",
+   "goal": "Open the comments of the story ranked 1, go back, then open the comments of the story ranked 3.",
+   "start_url": "https://news.ycombinator.com/front?day=2026-11-01",
+   "allowed_origins": [
+    "https://news.ycombinator.com"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "^link '\\d+.{1,4}comments",
+    "within": {
+     "element": "roansh"
+    }
+   },
+   {
+    "action": "go_back"
+   },
+   {
+    "action": "click",
+    "element": "^link '\\d+.{1,4}comments",
+    "within": {
+     "element": "luu"
+    }
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "hn-p2",
+   "goal": "Open the comments of the story ranked 31, go back, then open the comments of the story ranked 32.",
+   "start_url": "https://news.ycombinator.com/front?day=2026-11-01&p=2",
+   "allowed_origins": [
+    "https://news.ycombinator.com"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "^link '\\d+.{1,4}comment",
+    "within": {
+     "element": "gjvc"
+    }
+   },
+   {
+    "action": "go_back"
+   },
+   {
+    "action": "click",
+    "element": "^link '\\d+.{1,4}comment",
+    "within": {
+     "element": "Zariel"
+    }
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "hn-users",
+   "goal": "Open the profile of the user who posted the story ranked 2, go back, then the profile of the user who posted the story ranked 3.",
+   "start_url": "https://news.ycombinator.com/front?day=2026-11-01",
+   "allowed_origins": [
+    "https://news.ycombinator.com"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "link 'Anon84'"
+   },
+   {
+    "action": "go_back"
+   },
+   {
+    "action": "click",
+    "element": "link 'luu'"
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "hn-more-comments",
+   "goal": "Open the comments of the story ranked 4, go back, then open the comments of the story ranked 5.",
+   "start_url": "https://news.ycombinator.com/front?day=2026-11-01",
+   "allowed_origins": [
+    "https://news.ycombinator.com"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "^link '\\d+.{1,4}comments",
+    "within": {
+     "element": "entryleveljobsc"
+    }
+   },
+   {
+    "action": "go_back"
+   },
+   {
+    "action": "click",
+    "element": "^link '\\d+.{1,4}comments",
+    "within": {
+     "element": "croes"
+    }
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "py-control-flow",
+   "goal": "Open the tutorial chapter 'More Control Flow Tools', then the next chapter.",
+   "start_url": "https://docs.python.org/3/",
+   "allowed_origins": [
+    "https://docs.python.org"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "link 'Tutorial'"
+   },
+   {
+    "action": "click",
+    "element": "More Control Flow Tools",
+    "any": true
+   },
+   {
+    "action": "click",
+    "element": "link 'next'",
+    "any": true
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "py-re",
+   "goal": "Open the Library Reference, then the chapter 'Text Processing Services', then the page about the 're' module.",
+   "start_url": "https://docs.python.org/3/",
+   "allowed_origins": [
+    "https://docs.python.org"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "Library reference",
+    "any": true
+   },
+   {
+    "action": "click",
+    "element": "Text Processing Services",
+    "any": true
+   },
+   {
+    "action": "click",
+    "element": "^link 're ",
+    "any": true
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "py-search",
+   "goal": "Use the search box to search the documentation for the prepared text.",
+   "start_url": "https://docs.python.org/3/",
+   "allowed_origins": [
+    "https://docs.python.org"
+   ],
+   "text_slots": [
+    {
+     "id": "query",
+     "version": 1,
+     "value": "asyncio.gather",
+     "sensitivity": "normal"
+    }
+   ]
+  },
+  "steps": [
+   {
+    "action": "type_text",
+    "field": "Quick search",
+    "value": "^query@1",
+    "any": true
+   },
+   {
+    "action": "click",
+    "element": "button 'Go'",
+    "any": true
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ },
+ {
+  "task": {
+   "task_id": "py-builtins",
+   "goal": "Open the Library Reference, then the Python built-ins reference, then the page on built-in functions.",
+   "start_url": "https://docs.python.org/3/",
+   "allowed_origins": [
+    "https://docs.python.org"
+   ]
+  },
+  "steps": [
+   {
+    "action": "click",
+    "element": "Library reference",
+    "any": true
+   },
+   {
+    "action": "click",
+    "element": "Python built-ins reference",
+    "any": true
+   },
+   {
+    "action": "click",
+    "element": "Built-in Functions",
+    "any": true
+   },
+   {
+    "action": "finish"
+   }
+  ]
+ }
+]

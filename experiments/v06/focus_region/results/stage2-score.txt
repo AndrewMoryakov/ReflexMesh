@@ -1,0 +1,37 @@
+steps: all 138, targeted 102, repeated_label 20
+
+[all] n=138
+run     right  alone right  wrong passed    held  error
+A1      81.2%        61.6%          9.4%   29.0%   0.0%
+A2      81.2%        64.5%          9.4%   26.1%   0.0%
+B1      79.7%        63.8%          9.4%   26.8%   0.0%
+   A1 - B1 passed_right   -2.2 pts [ -5.8,  +0.7]
+   A1 - B1 passed_wrong   +0.0 pts [ -2.2,  +2.2]
+   A1 - B1 right          +1.4 pts [ -1.4,  +4.3]
+   A2 - B1 passed_right   +0.7 pts [ -2.9,  +4.3]
+   A2 - B1 passed_wrong   +0.0 pts [ -2.9,  +2.9]
+   A2 - B1 right          +1.4 pts [ -2.2,  +5.1]
+
+[targeted] n=102
+run     right  alone right  wrong passed    held  error
+A1      93.1%        73.5%          3.9%   22.5%   0.0%
+A2      93.1%        76.5%          3.9%   19.6%   0.0%
+B1      93.1%        75.5%          3.9%   20.6%   0.0%
+   A1 - B1 passed_right   -2.0 pts [ -5.9,  +2.0]
+   A1 - B1 passed_wrong   +0.0 pts [ +0.0,  +0.0]
+   A1 - B1 right          +0.0 pts [ -2.9,  +2.9]
+   A2 - B1 passed_right   +1.0 pts [ -2.9,  +5.9]
+   A2 - B1 passed_wrong   +0.0 pts [ -2.9,  +2.9]
+   A2 - B1 right          +0.0 pts [ -3.9,  +3.9]
+
+[repeated_label] n=20
+run     right  alone right  wrong passed    held  error
+A1      95.0%        70.0%          5.0%   25.0%   0.0%
+A2      95.0%        70.0%          5.0%   25.0%   0.0%
+B1      95.0%        70.0%          5.0%   25.0%   0.0%
+   A1 - B1 passed_right   +0.0 pts [ +0.0,  +0.0]
+   A1 - B1 passed_wrong   +0.0 pts [ +0.0,  +0.0]
+   A1 - B1 right          +0.0 pts [ +0.0,  +0.0]
+   A2 - B1 passed_right   +0.0 pts [ +0.0,  +0.0]
+   A2 - B1 passed_wrong   +0.0 pts [ +0.0,  +0.0]
+   A2 - B1 right          +0.0 pts [ +0.0,  +0.0]

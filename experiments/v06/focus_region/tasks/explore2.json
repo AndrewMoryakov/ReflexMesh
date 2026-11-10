@@ -1,0 +1,10 @@
+[
+ {"task": {"task_id": "x2-expand-home", "goal": "explore", "start_url": "https://practice.expandtesting.com/", "allowed_origins": ["https://practice.expandtesting.com"]}},
+ {"task": {"task_id": "x2-expand-login", "goal": "explore", "start_url": "https://practice.expandtesting.com/login", "allowed_origins": ["https://practice.expandtesting.com"]}},
+ {"task": {"task_id": "x2-expand-tables", "goal": "explore", "start_url": "https://practice.expandtesting.com/tables", "allowed_origins": ["https://practice.expandtesting.com"]}},
+ {"task": {"task_id": "x2-hn-p2", "goal": "explore", "start_url": "https://news.ycombinator.com/front?day=2026-11-01&p=2", "allowed_origins": ["https://news.ycombinator.com"]}},
+ {"task": {"task_id": "x2-books-p2", "goal": "explore", "start_url": "https://books.toscrape.com/catalogue/page-2.html", "allowed_origins": ["https://books.toscrape.com"]}},
+ {"task": {"task_id": "x2-demoqa-radio", "goal": "explore", "start_url": "https://demoqa.com/radio-button", "allowed_origins": ["https://demoqa.com"]}},
+ {"task": {"task_id": "x2-demoqa-textbox", "goal": "explore", "start_url": "https://demoqa.com/text-box", "allowed_origins": ["https://demoqa.com"]}},
+ {"task": {"task_id": "x2-play-loaddelay", "goal": "explore", "start_url": "http://uitestingplayground.com/loaddelay", "allowed_origins": ["http://uitestingplayground.com"]}}
+]
