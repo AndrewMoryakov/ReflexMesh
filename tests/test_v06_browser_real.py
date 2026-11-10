@@ -9,7 +9,9 @@ REFLEXMESH_CHROME_NO_SANDBOX=1 starts Chromium without its sandbox, for hosts th
 """
 
 import importlib.util
+import io
 import json
+import logging
 import os
 import socket
 import subprocess
@@ -343,8 +345,20 @@ class GenericPath(BrowserCase):
         slots = [{"id": "order", "version": 1, "value": "125", "sensitivity": "normal"},
                  {"id": "note", "version": 1, "value": secret, "sensitivity": "secret"}]
         seen: list[str] = []
+        # Browser Use enables INFO for its loggers on import only if the root logger has no handler yet, which
+        # depends on the test runner. Set it here, as a plain `reflexmesh browser run` has it.
+        import browser_use  # noqa: F401
+        driver_log = logging.getLogger("browser_use")
+        self.addCleanup(driver_log.setLevel, driver_log.level)
+        driver_log.setLevel(logging.INFO)
+        logs = io.StringIO()
+        handler = logging.StreamHandler(logs)        # Browser Use's loggers do not propagate to the root
+        for name in ("browser_use", "bubus"):
+            logging.getLogger(name).addHandler(handler)
+            self.addCleanup(logging.getLogger(name).removeHandler, handler)
         result = self.start(self.task(text_slots=slots), label_script(HAPPY_PATH, record=seen)).run()
         self.assertEqual(SITE.NOTES, {"125": [secret]})  # typed exactly
+        self.assertNotIn(secret, logs.getvalue())
         self.assertEqual({r["id"]: r["status"] for r in result["verification"]}["runtime.immutable_slots"], "pass")
         self.assertTrue(seen)
         blob = "\n".join(seen) + json.dumps(result, ensure_ascii=False) + \
@@ -378,6 +392,27 @@ class GenericPath(BrowserCase):
                                                            result["attempt_status"], result["stop_reason"]))
         self.assertEqual(SITE.NOTES, {"125": ["Перезвонить завтра"]})
         self.assertEqual((result["attempt_status"], result["stop_reason"]), ("incomplete", "verification_unknown"))
+
+    def test_the_command_line_run_keeps_a_secret_value_out_of_its_output_streams(self):
+        """`reflexmesh browser run` as an operator starts it: stdout is the result, stderr is whatever the driver
+        logs. The service and the MCP host keep stderr, so a secret slot value must not be in either."""
+        secret = "S3NTINEL-9f2a-do-not-log"
+        data = task_dict(start_url=self.origin + "/orders", allowed_origins=[self.origin],
+                         text_slots=[{"id": "order", "version": 1, "value": "125", "sensitivity": "normal"},
+                                     {"id": "note", "version": 1, "value": secret, "sensitivity": "secret"}])
+        directory = Path(self.out.name)
+        (directory / "task.json").write_text(json.dumps(data, ensure_ascii=False), "utf-8")
+        (directory / "script.json").write_text(json.dumps(HAPPY_PATH, ensure_ascii=False), "utf-8")
+        command = [sys.executable, "-m", "reflexmesh", "browser", "run", "--input", str(directory / "task.json"),
+                   "--output-dir", str(directory / "cli"), "--action-provider", "script",
+                   "--script", str(directory / "script.json"), "--chrome", CHROME]
+        if not SANDBOX:
+            command.append("--no-sandbox")
+        process = subprocess.run(command, capture_output=True, timeout=300, cwd=ROOT,
+                                 env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+        self.assertEqual(SITE.NOTES, {"125": [secret]})            # the value was typed
+        self.assertEqual(json.loads(process.stdout)["attempt_status"], "incomplete")
+        self.assertNotIn(secret.encode(), process.stdout + process.stderr)
 
     def test_dropdown_and_checkbox_reach_the_server_with_the_note(self):
         steps = HAPPY_PATH[:3] + [

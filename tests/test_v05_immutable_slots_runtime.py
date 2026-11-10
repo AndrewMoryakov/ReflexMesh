@@ -681,7 +681,7 @@ class ImmutableSlotArtifacts(unittest.TestCase):
                 output = Path(directory) / "result"
                 stdout = io.StringIO()
 
-                def strategy_factory(task, args, entries):
+                def strategy_factory(task, args, entries, faults=None):
                     return lambda gate, events: execute_text(task, gate, events, mismatched_command=mismatch)
 
                 with (finite_watchdog(),
@@ -718,7 +718,7 @@ class ImmutableSlotArtifacts(unittest.TestCase):
     def test_output_failure_clears_unstored_refs_without_erasing_confirmed_mismatch(self):
         stdout = io.StringIO()
 
-        def strategy_factory(task, args, entries):
+        def strategy_factory(task, args, entries, faults=None):
             return lambda gate, events: execute_text(task, gate, events, mismatched_command=True)
 
         with tempfile.TemporaryDirectory() as directory:
