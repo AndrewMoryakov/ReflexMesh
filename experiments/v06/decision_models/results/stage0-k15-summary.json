@@ -1,0 +1,31 @@
+{
+ "sample": "main",
+ "steps": 300,
+ "models": {
+  "~typesafe/jev-latest": {
+   "sent": 300,
+   "valid": 300,
+   "errors": {},
+   "step_success": 0.5666666666666667,
+   "op_accuracy": 0.7,
+   "element_accuracy": 0.7591240875912408,
+   "passed_right": 0.4266666666666667,
+   "passed_wrong": 0.09666666666666666,
+   "held": 0.36666666666666664,
+   "ungated_wrong": 0.11,
+   "coverage_at_95": 0.04,
+   "ece_operation": 0.051100000000000034,
+   "latency_ms_p50": 1058,
+   "latency_ms_p95": 1211,
+   "input_tokens_mean": 3789.25,
+   "cost_usd": 0.04774455,
+   "step_success_by_source": {
+    "mind2web": 0.6720430107526881,
+    "weblinx": 0.39473684210526316
+   },
+   "served_models": [
+    "typesafe/jev-1.14-20261014"
+   ]
+  }
+ }
+}

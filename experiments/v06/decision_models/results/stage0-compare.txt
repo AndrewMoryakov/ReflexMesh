@@ -1,0 +1,14 @@
+list              step_ok   passed_right   passed_wrong           held  ungated_wrong
+full                51.0%          39.0%          11.3%          38.7%          11.0%
+results-k15          56.7%          42.7%           9.7%          36.7%          11.0%
+   step_ok         +5.7 pts  [ +2.7,  +8.7]
+   passed_right    +3.7 pts  [ +0.3,  +7.0]
+   passed_wrong    -1.7 pts  [ -4.3,  +1.0]
+   held            -2.0 pts  [ -6.0,  +2.3]
+   ungated_wrong   +0.0 pts  [ -1.3,  +1.3]
+results-k40          53.7%          38.7%           9.7%          41.0%          10.7%
+   step_ok         +2.7 pts  [ +0.7,  +4.7]
+   passed_right    -0.3 pts  [ -2.7,  +1.7]
+   passed_wrong    -1.7 pts  [ -4.0,  +0.7]
+   held            +2.3 pts  [ -1.0,  +5.7]
+   ungated_wrong   -0.3 pts  [ -1.3,  +0.7]

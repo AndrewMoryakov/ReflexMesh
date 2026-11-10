@@ -1,0 +1,13 @@
+risk budget (Jev 1.14 passed_wrong at 0.7/0.5): 0.113
+baseten/elephant-1                       threshold 0.52  passed_right 0.283  passed_wrong 0.113
+baseten/joey-1                           threshold 0.19  passed_right 0.063  passed_wrong 0.107
+baseten/mammoth-1                        threshold 0.61  passed_right 0.423  passed_wrong 0.113
+jaredpalmer/kev-4b                       threshold 0.17  passed_right 0.087  passed_wrong 0.107
+morph/reflex                             threshold 0.79  passed_right 0.360  passed_wrong 0.107
+nace-ai/drex-max                         threshold 0.75  passed_right 0.403  passed_wrong 0.107
+nace-ai/drex-v1.5                        threshold 0.58  passed_right 0.180  passed_wrong 0.113
+nace-ai/drex-v2.0                        threshold 0.50  passed_right 0.230  passed_wrong 0.107
+perplexity/pplx-decider-flash-v1.2       threshold 0.53  passed_right 0.243  passed_wrong 0.113
+perplexity/pplx-decider-v1.2             threshold 0.58  passed_right 0.370  passed_wrong 0.103
+typesafe/jev-1.13                        threshold 0.64  passed_right 0.340  passed_wrong 0.110
+~typesafe/jev-latest                     threshold 0.69  passed_right 0.390  passed_wrong 0.110
