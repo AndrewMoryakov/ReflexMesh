@@ -1,0 +1,676 @@
+{
+  "kind": "frozen",
+  "note": "M5-H: the 30 tasks of the section 17 comparison, run again in one window with four arms: J0, J1 (the helper as fixed after M5, no retries), J1R (J1 plus one new request after a malformed helper reply) and LR (L plus one new request after a malformed reply). Protocol: docs/research/V0.6-M5H-protocol-2026-11-10.md. Goals, thresholds, models and budgets are not changed after this; a change is a new experiment. The tasks are not new: they are the set whose results motivated the fixes, so an improvement here is an upper bound, not an independent confirmation.",
+  "checked_on": "2026-11-05",
+  "repeats": 3,
+  "jev_model": "~typesafe/jev-latest",
+  "llm_model": "qwen/qwen3.8-flash",
+  "threshold": 0.7,
+  "l_confidence": "not stated: an LLM's own confidence is not calibrated like Jev's, so the threshold does not apply to its choice; every other gate check does",
+  "safety": "No task writes anything lasting to a third party. Forms go to search pages or to pages built to echo practice input. No sign-up, no login, no purchase.",
+  "tasks": [
+    {
+      "id": "wiki-everest",
+      "site": "en.wikipedia.org",
+      "group": "search_and_navigation",
+      "start_url": "https://en.wikipedia.org/wiki/Main_Page",
+      "allowed_origins": [
+        "https://en.wikipedia.org"
+      ],
+      "goal": "Use the site's search to open the article about Mount Everest.",
+      "text_slots": [
+        {
+          "id": "query",
+          "version": 1,
+          "value": "Mount Everest",
+          "sensitivity": "normal"
+        }
+      ],
+      "oracle": {
+        "final_url": "/wiki/Mount_Everest$",
+        "contains": [
+          "8,848.86 m"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "wiki-lovelace",
+      "site": "en.wikipedia.org",
+      "group": "search_and_navigation",
+      "start_url": "https://en.wikipedia.org/wiki/Main_Page",
+      "allowed_origins": [
+        "https://en.wikipedia.org"
+      ],
+      "goal": "Use the site's search to open the article about Ada Lovelace.",
+      "text_slots": [
+        {
+          "id": "query",
+          "version": 1,
+          "value": "Ada Lovelace",
+          "sensitivity": "normal"
+        }
+      ],
+      "oracle": {
+        "final_url": "/wiki/Ada_Lovelace$",
+        "contains": [
+          "10 December 1815"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "wiki-help-tab",
+      "site": "en.wikipedia.org",
+      "group": "tabs",
+      "start_url": "https://en.wikipedia.org/wiki/Special:Search",
+      "allowed_origins": [
+        "https://en.wikipedia.org"
+      ],
+      "goal": "Open the Help link of the search page, which opens in a new tab, and stay on that tab.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "/wiki/Help:Searching$",
+        "contains": [
+          "Help:Searching"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "arxiv-resnet",
+      "site": "arxiv.org",
+      "group": "search_and_navigation",
+      "start_url": "https://arxiv.org/search/",
+      "allowed_origins": [
+        "https://arxiv.org"
+      ],
+      "goal": "Search by title for the paper named in the search value and open its abstract page.",
+      "text_slots": [
+        {
+          "id": "title",
+          "version": 1,
+          "value": "Deep Residual Learning for Image Recognition",
+          "sensitivity": "normal"
+        }
+      ],
+      "oracle": {
+        "final_url": "/abs/1512\\.03385",
+        "contains": [
+          "Kaiming He"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "arxiv-bert",
+      "site": "arxiv.org",
+      "group": "forms",
+      "start_url": "https://arxiv.org/search/advanced",
+      "allowed_origins": [
+        "https://arxiv.org"
+      ],
+      "goal": "In the advanced search, search the Title field for the given title, then open the abstract page of the paper with exactly that title, not a similar one.",
+      "text_slots": [
+        {
+          "id": "title",
+          "version": 1,
+          "value": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+          "sensitivity": "normal"
+        }
+      ],
+      "oracle": {
+        "final_url": "/abs/1810\\.04805",
+        "contains": [
+          "Jacob Devlin"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "arxiv-bibtex",
+      "site": "arxiv.org",
+      "group": "dynamic_dom",
+      "start_url": "https://arxiv.org/abs/1706.03762",
+      "allowed_origins": [
+        "https://arxiv.org"
+      ],
+      "goal": "Show the BibTeX citation of this paper.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "/abs/1706\\.03762",
+        "contains": [
+          "@misc{vaswani2023attentionneed"
+        ],
+        "where": "textarea"
+      }
+    },
+    {
+      "id": "pypi-history",
+      "site": "pypi.org",
+      "group": "search_and_navigation",
+      "start_url": "https://pypi.org/project/flask/",
+      "allowed_origins": [
+        "https://pypi.org"
+      ],
+      "goal": "Open the release history of this project.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "#history$",
+        "contains": [
+          "1.0.4",
+          "Jul 5, 2019"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "pypi-psf-tab",
+      "site": "pypi.org",
+      "group": "tabs",
+      "start_url": "https://pypi.org/project/flask/",
+      "allowed_origins": [
+        "https://pypi.org",
+        "https://www.python.org"
+      ],
+      "goal": "Open the Python Software Foundation link, which opens in a new tab, and stay on that tab.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "python\\.org/psf",
+        "contains": [
+          "Python Software Foundation"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "pypi-guide-tab",
+      "site": "pypi.org",
+      "group": "tabs",
+      "start_url": "https://pypi.org/project/flask/",
+      "allowed_origins": [
+        "https://pypi.org",
+        "https://packaging.python.org"
+      ],
+      "goal": "Open the Packaging user guide link, which opens in a new tab, and stay on that tab.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "packaging\\.python\\.org",
+        "contains": [
+          "Python Packaging User Guide"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "w3-tryit-tab",
+      "site": "w3schools.com",
+      "group": "tabs",
+      "start_url": "https://www.w3schools.com/html/html_iframe.asp",
+      "allowed_origins": [
+        "https://www.w3schools.com"
+      ],
+      "goal": "Open the first Try it Yourself example, which opens in a new tab, and stay on that tab.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "tryit\\.asp\\?filename=tryhtml_iframe_height_width",
+        "contains": [
+          "W3Schools Tryit Editor"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "w3-form-frame",
+      "site": "w3schools.com",
+      "group": "frames_and_shadow_dom",
+      "start_url": "https://www.w3schools.com/html/tryit.asp?filename=tryhtml_form_submit",
+      "allowed_origins": [
+        "https://www.w3schools.com"
+      ],
+      "goal": "In the result frame of this editor, type the given first name and submit the form.",
+      "text_slots": [
+        {
+          "id": "name",
+          "version": 1,
+          "value": "Ada",
+          "sensitivity": "normal"
+        }
+      ],
+      "oracle": {
+        "final_url": "tryhtml_form_submit",
+        "contains": [
+          "fname=Ada"
+        ],
+        "where": "frame"
+      }
+    },
+    {
+      "id": "w3-select-frame",
+      "site": "w3schools.com",
+      "group": "frames_and_shadow_dom",
+      "start_url": "https://www.w3schools.com/tags/tryit.asp?filename=tryhtml_select",
+      "allowed_origins": [
+        "https://www.w3schools.com"
+      ],
+      "goal": "In the result frame of this editor, choose Audi in the list and submit the form.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "tryhtml_select",
+        "contains": [
+          "cars=audi"
+        ],
+        "where": "frame"
+      }
+    },
+    {
+      "id": "internet-loading",
+      "site": "the-internet.herokuapp.com",
+      "group": "dynamic_dom",
+      "start_url": "https://the-internet.herokuapp.com/dynamic_loading/1",
+      "allowed_origins": [
+        "https://the-internet.herokuapp.com"
+      ],
+      "goal": "Press Start and wait for the hidden text to appear.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "/dynamic_loading/1$",
+        "contains": [
+          "Hello World!"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "internet-controls",
+      "site": "the-internet.herokuapp.com",
+      "group": "dynamic_dom",
+      "start_url": "https://the-internet.herokuapp.com/dynamic_controls",
+      "allowed_origins": [
+        "https://the-internet.herokuapp.com"
+      ],
+      "goal": "Enable the text box.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "/dynamic_controls$",
+        "contains": [
+          "It's enabled!"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "internet-window",
+      "site": "the-internet.herokuapp.com",
+      "group": "tabs",
+      "start_url": "https://the-internet.herokuapp.com/windows",
+      "allowed_origins": [
+        "https://the-internet.herokuapp.com"
+      ],
+      "goal": "Open the new window from the link and stay on it.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "/windows/new$",
+        "contains": [
+          "New Window"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "scrape-hockey",
+      "site": "scrapethissite.com",
+      "group": "forms",
+      "start_url": "https://www.scrapethissite.com/pages/forms/",
+      "allowed_origins": [
+        "https://www.scrapethissite.com"
+      ],
+      "goal": "Search the teams for the given name.",
+      "text_slots": [
+        {
+          "id": "team",
+          "version": 1,
+          "value": "Rangers",
+          "sensitivity": "normal"
+        }
+      ],
+      "oracle": {
+        "final_url": "q=Rangers",
+        "contains": [
+          "New York Rangers 1990 36"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "scrape-oscars",
+      "site": "scrapethissite.com",
+      "group": "dynamic_dom",
+      "start_url": "https://www.scrapethissite.com/pages/ajax-javascript/",
+      "allowed_origins": [
+        "https://www.scrapethissite.com"
+      ],
+      "goal": "Show the films of the year 2015.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "#2015$",
+        "contains": [
+          "Spotlight"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "scrape-turtles",
+      "site": "scrapethissite.com",
+      "group": "frames_and_shadow_dom",
+      "start_url": "https://www.scrapethissite.com/pages/frames/",
+      "allowed_origins": [
+        "https://www.scrapethissite.com"
+      ],
+      "goal": "In the embedded list of turtles, open the details of the Carettochelyidae family.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "/pages/frames/",
+        "contains": [
+          "Pig-nosed turtle"
+        ],
+        "where": "frame"
+      }
+    },
+    {
+      "id": "quotes-next",
+      "site": "quotes.toscrape.com",
+      "group": "dynamic_dom",
+      "start_url": "https://quotes.toscrape.com/js/",
+      "allowed_origins": [
+        "https://quotes.toscrape.com"
+      ],
+      "goal": "Go to the next page of quotes.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "/js/page/2/$",
+        "contains": [
+          "Marilyn Monroe"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "quotes-scroll",
+      "site": "quotes.toscrape.com",
+      "group": "dynamic_dom",
+      "start_url": "https://quotes.toscrape.com/scroll",
+      "allowed_origins": [
+        "https://quotes.toscrape.com"
+      ],
+      "goal": "Scroll until the quote about troubles of more than one kind is on the page.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "/scroll$",
+        "contains": [
+          "I have heard there are troubles of more than one kind"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "quotes-filter",
+      "site": "quotes.toscrape.com",
+      "group": "forms",
+      "start_url": "https://quotes.toscrape.com/search.aspx",
+      "allowed_origins": [
+        "https://quotes.toscrape.com"
+      ],
+      "goal": "Search for the quotes of Albert Einstein with the tag inspirational.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "/filter\\.aspx$",
+        "contains": [
+          "There are only two ways to live your life"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "selenium-form",
+      "site": "selenium.dev",
+      "group": "forms",
+      "start_url": "https://www.selenium.dev/selenium/web/web-form.html",
+      "allowed_origins": [
+        "https://www.selenium.dev"
+      ],
+      "goal": "Fill in the Text input with the given text, choose Two in the dropdown, and submit the form.",
+      "text_slots": [
+        {
+          "id": "text",
+          "version": 1,
+          "value": "ReflexMesh test",
+          "sensitivity": "normal"
+        }
+      ],
+      "oracle": {
+        "final_url": "my-text=ReflexMesh\\+test.*my-select=2",
+        "contains": [
+          "Received!"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "selenium-window",
+      "site": "selenium.dev",
+      "group": "tabs",
+      "start_url": "https://www.selenium.dev/selenium/web/xhtmlTest.html",
+      "allowed_origins": [
+        "https://www.selenium.dev"
+      ],
+      "goal": "Open the link that creates a new anonymous window and stay on that window.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "/iframes\\.html$",
+        "contains": [
+          "This page has iframes"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "selenium-shadow",
+      "site": "selenium.dev",
+      "group": "frames_and_shadow_dom",
+      "start_url": "https://www.selenium.dev/selenium/web/shadowRootPage.html",
+      "allowed_origins": [
+        "https://www.selenium.dev"
+      ],
+      "goal": "Tick the checkbox on this page.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "/shadowRootPage\\.html$",
+        "contains": [],
+        "where": "shadow_checked"
+      }
+    },
+    {
+      "id": "testpages-form",
+      "site": "testpages.eviltester.com",
+      "group": "forms",
+      "start_url": "https://testpages.eviltester.com/styled/basic-html-form-test.html",
+      "allowed_origins": [
+        "https://testpages.eviltester.com"
+      ],
+      "goal": "Fill in the username and the comments with the given values and submit the form.",
+      "text_slots": [
+        {
+          "id": "user",
+          "version": 1,
+          "value": "reflexmesh",
+          "sensitivity": "normal"
+        },
+        {
+          "id": "comment",
+          "version": 1,
+          "value": "Hello from ReflexMesh",
+          "sensitivity": "normal"
+        }
+      ],
+      "oracle": {
+        "final_url": "/forms/html-form/submit",
+        "contains": [
+          "Hello from ReflexMesh",
+          "reflexmesh"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "testpages-frame",
+      "site": "testpages.eviltester.com",
+      "group": "frames_and_shadow_dom",
+      "start_url": "https://testpages.eviltester.com/styled/iframes-test.html",
+      "allowed_origins": [
+        "https://testpages.eviltester.com"
+      ],
+      "goal": "In the Increment Number frame, press Add Amount once.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "/embedded-pages/iframes/",
+        "contains": [
+          "numField=5"
+        ],
+        "where": "frame_value"
+      }
+    },
+    {
+      "id": "testpages-shadow",
+      "site": "testpages.eviltester.com",
+      "group": "frames_and_shadow_dom",
+      "start_url": "https://testpages.eviltester.com/pages/web-components/shadow-widget/",
+      "allowed_origins": [
+        "https://testpages.eviltester.com"
+      ],
+      "goal": "Press Increase on the counter twice, so it shows 2.",
+      "text_slots": [],
+      "oracle": {
+        "final_url": "/shadow-widget/",
+        "contains": [
+          "Counter Widget 2"
+        ],
+        "where": "shadow_text"
+      }
+    },
+    {
+      "id": "gutenberg-moby",
+      "site": "gutenberg.org",
+      "group": "search_and_navigation",
+      "start_url": "https://www.gutenberg.org/ebooks/search/",
+      "allowed_origins": [
+        "https://www.gutenberg.org"
+      ],
+      "goal": "Search for the given book and open its page.",
+      "text_slots": [
+        {
+          "id": "query",
+          "version": 1,
+          "value": "Moby Dick",
+          "sensitivity": "normal"
+        }
+      ],
+      "oracle": {
+        "final_url": "/ebooks/2701$",
+        "contains": [
+          "Herman Melville"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "gutenberg-pride",
+      "site": "gutenberg.org",
+      "group": "search_and_navigation",
+      "start_url": "https://www.gutenberg.org/ebooks/search/",
+      "allowed_origins": [
+        "https://www.gutenberg.org"
+      ],
+      "goal": "Search for the given book and open its page.",
+      "text_slots": [
+        {
+          "id": "query",
+          "version": 1,
+          "value": "Pride and Prejudice",
+          "sensitivity": "normal"
+        }
+      ],
+      "oracle": {
+        "final_url": "/ebooks/1342$",
+        "contains": [
+          "Austen, Jane",
+          "Jun 1, 1998"
+        ],
+        "where": "page"
+      }
+    },
+    {
+      "id": "gutenberg-advanced",
+      "site": "gutenberg.org",
+      "group": "forms",
+      "start_url": "https://www.gutenberg.org/ebooks/",
+      "allowed_origins": [
+        "https://www.gutenberg.org"
+      ],
+      "goal": "Use the advanced search with the given author and title.",
+      "text_slots": [
+        {
+          "id": "author",
+          "version": 1,
+          "value": "Melville",
+          "sensitivity": "normal"
+        },
+        {
+          "id": "title",
+          "version": 1,
+          "value": "Bartleby",
+          "sensitivity": "normal"
+        }
+      ],
+      "oracle": {
+        "final_url": "/ebooks/results/",
+        "contains": [
+          "1 books found",
+          "11231"
+        ],
+        "where": "page"
+      }
+    }
+  ],
+  "limits": {
+    "wall_seconds": 240,
+    "max_steps": 40,
+    "max_model_calls": 40,
+    "max_action_retries": 0,
+    "max_handoffs": 3
+  },
+  "permissions": [
+    "navigate",
+    "click",
+    "type_text",
+    "select_option",
+    "scroll",
+    "go_back",
+    "switch_tab",
+    "wait"
+  ],
+  "min_key_remaining": 0.02,
+  "initial_state": "A fresh browser profile and the task's start_url for every run: every attempt is cold, there is no warm condition. The state of the third-party site itself is not under our control.",
+  "claim": "claimed_finish: the last decision of the run was `finish`. false_claim: claimed_finish and the oracle says no. `completed` needs a registered source for effects and repeats, which these sites do not have, so here it stays unreachable and false_completion stays 0: that column says nothing on these sites.",
+  "runtime_verifier": "Deliberately inert on these sites: the criterion is a registered check that answers unknown. Success is the runner's oracle, read from the live browser after the attempt ended, and it never reaches the control loop.",
+  "model_note": "The requested Qwen3.8 Next Flash does not exist on OpenRouter; qwen/qwen3.8-flash is the closest.",
+  "frozen_on": "2026-11-10",
+  "modes": [
+    "J0",
+    "J1",
+    "J1R",
+    "LR"
+  ],
+  "format_retries": 1
+}
