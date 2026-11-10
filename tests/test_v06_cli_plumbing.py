@@ -191,11 +191,16 @@ class RunFlags(unittest.TestCase):
             self.assertEqual((result["attempt_status"], result["stop_reason"]), ("cancelled", "cancel_requested"))
             self.assertEqual(code, 130)
 
-    def test_a_fault_file_is_refused_not_silently_ignored(self):
+    def test_a_valid_fault_file_is_accepted_and_the_run_goes_on(self):
+        """Fault injection is wired since the PR10 review corrections: a valid file is validated and passed on, so the
+        run ends as it does without one (blocked: nobody listens on the fixture), not as an input error."""
+        plain_code, plain, _ = run_cli()
         code, result, stderr = run_cli("--faults", "@faults.json", files={"faults.json": {"hang_close": True}})
-        self.assertEqual(code, 2)
-        self.assertIsNone(result)
-        self.assertIn("faults_unsupported", stderr)
+        self.assertEqual(code, plain_code)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["attempt_status"], plain["attempt_status"])
+        self.assertNotIn("invalid_input", stderr)
+        self.assertNotIn("faults_unsupported", stderr)
 
     def test_an_invalid_fault_file_is_an_invalid_input(self):
         code, _, stderr = run_cli("--faults", "@faults.json", files={"faults.json": {"no_such_fault": True}})
