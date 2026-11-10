@@ -24,6 +24,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 MODES = ("J0", "J1", "L")
+# M5-H (docs/research/V0.6-M5H-protocol-2026-11-10.md): J1R is J1 and LR is L, each asking the model again once after a
+# malformed reply (`format_retries` in the manifest). A manifest names its arms in `modes`; without it the three above.
+ALL_MODES = ("J0", "J1", "J1R", "L", "LR")
+ASSISTED = ("J1", "J1R")
+CHAT = ("L", "LR")
+RETRY_MODES = ("J1R", "LR")
 ASSIST_SYSTEM = ("You help a small browser model that stopped and asked for help. Choose one next step toward the goal "
                  "from `action_options`. Reply with one JSON object: {\"option_ref\": ..., \"slot_ref\": ...} (slot_ref only "
                  "to type a value, one of that option's slot_refs); for an option without a ref, {\"operation\": \"scroll\", "
@@ -142,7 +148,9 @@ def plan(manifest: dict) -> list[dict]:
     """Every planned run, in order. The modes rotate per repeat, so none always runs first or last."""
     runs = []
     for repeat in range(1, manifest["repeats"] + 1):
-        order = MODES[(repeat - 1) % 3:] + MODES[:(repeat - 1) % 3]
+        modes = tuple(manifest.get("modes") or MODES)
+        shift = (repeat - 1) % len(modes)
+        order = modes[shift:] + modes[:shift]
         for task in manifest["tasks"]:
             runs.extend({"task": task, "mode": mode, "repeat": repeat} for mode in order)
     return runs
@@ -171,7 +179,7 @@ def percentile(values: list[float], share: float) -> float | None:
 def summarize(rows: list[dict]) -> dict:
     """Per mode, over every planned run. Cost is None unless known for every run: unknown cost is no saving."""
     out = {}
-    for mode in MODES:
+    for mode in [m for m in ALL_MODES if any(r["mode"] == m for r in rows)] or list(MODES):
         mine = [r for r in rows if r["mode"] == mode]
         walls = [r["wall_seconds"] for r in mine if r.get("wall_seconds") is not None]
         costs = [r.get("cost") for r in mine]
@@ -232,8 +240,10 @@ def _site_state(port: int) -> dict | None:
 class Assistant:
     """J1's LLM, the caller's role: at most the steps a handoff allows, through the same gate."""
 
-    def __init__(self, client, goal: str):
+    def __init__(self, client, goal: str, format_retries: int = 0):
         self.client, self.goal = client, goal
+        self.format_retries = format_retries   # asks again after a reply that names nothing offered (M5-H)
+        self.retried = 0
         self.calls, self.input_tokens, self.output_tokens, self.steps = 0, 0, 0, 0
         self.cost: float | None = 0.0
 
@@ -251,21 +261,37 @@ class Assistant:
         while r.get("schema_version") == "browser-progress/0.1" and r["assistance_steps_remaining"] > 0 and refused < 2:
             # Section 12: in the comparison the assistant's requests go through the same model-call counter as Jev's,
             # reserved before sending (review of PR #15: in the M5 run of 2026-11-06 they were not counted).
-            if not core.reserve_assist_call(r["attempt_id"]):
+            # A reply that cannot be read or names nothing offered is asked again up to `format_retries` times; every
+            # request, the refused ones included, is reserved and paid for like the first.
+            proposal, stop, again = None, False, self.format_retries
+            while True:
+                if not core.reserve_assist_call(r["attempt_id"]):
+                    stop = True
+                    break
+                try:
+                    reply, usage, _, _, _ = self.client.ask(ASSIST_SYSTEM, {
+                        "goal": self.goal, "page": r["observation"]["page"], "text": r["observation"].get("text"),
+                        "action_options": r["action_options"], "last_proposal": r.get("last_proposal")})
+                except ProviderError as exc:
+                    if getattr(exc, "usage", None) is not None:   # a reply came and was refused: it was still paid for
+                        self._count(exc.usage)
+                        if again > 0 and str(exc).startswith("protocol:"):
+                            again -= 1
+                            self.retried += 1
+                            continue
+                    stop = True
+                    break
+                self._count(usage)
+                if reply.get("done"):
+                    stop = True
+                    break
+                proposal = assist_proposal(r, reply)
+                if proposal is None and again > 0:
+                    again -= 1
+                    self.retried += 1
+                    continue
                 break
-            try:
-                reply, usage, _, _, _ = self.client.ask(ASSIST_SYSTEM, {
-                    "goal": self.goal, "page": r["observation"]["page"], "text": r["observation"].get("text"),
-                    "action_options": r["action_options"], "last_proposal": r.get("last_proposal")})
-            except ProviderError as exc:
-                if getattr(exc, "usage", None) is not None:   # a reply came and was refused: it was still paid for
-                    self._count(exc.usage)
-                break
-            self._count(usage)
-            if reply.get("done"):
-                break
-            proposal = assist_proposal(r, reply)
-            if proposal is None:
+            if stop or proposal is None:
                 break
             r = core.resume({"token": r["continuation_token"], "parent_attempt_id": r["attempt_id"], "operation": "step", "proposal": proposal})
             if r.get("schema_version") == "browser-progress/0.1":
@@ -321,7 +347,7 @@ def execute(manifest: dict, run: dict, out: Path, chrome: str, sandbox: bool) ->
     attempt_dir = fresh_run_dir(out / f"{task_spec['id']}-{mode}-{run['repeat']}")
 
     def provider_factory():
-        if mode == "L":
+        if mode in CHAT:
             provider, config = chat_provider_from_env(manifest["llm_model"])
         else:
             provider, config = jev_provider_from_env(manifest["jev_model"])
@@ -329,7 +355,9 @@ def execute(manifest: dict, run: dict, out: Path, chrome: str, sandbox: bool) ->
 
     started = time.monotonic()
     site = core = None
-    assistant = Assistant(ChatClient(os.environ["OPENROUTER_API_KEY"], manifest["llm_model"]), data["goal"]) if mode == "J1" else None
+    retries = int(manifest.get("format_retries", 0)) if mode in RETRY_MODES else 0
+    assistant = (Assistant(ChatClient(os.environ["OPENROUTER_API_KEY"], manifest["llm_model"]), data["goal"], retries)
+                 if mode in ASSISTED else None)
     results = []
     try:
         if local:
@@ -340,14 +368,14 @@ def execute(manifest: dict, run: dict, out: Path, chrome: str, sandbox: bool) ->
                     break
                 time.sleep(0.1)
         checks = load_checks(ROOT / manifest["checks"]) if local else {EXTERNAL_CHECK: ExternalOracle()}
-        core = BrowserCore(chrome=chrome, provider_factory=provider_factory, action_provider="chat" if mode == "L" else "jev",
-                           out_dir=attempt_dir, sandbox=sandbox, checks=checks, headless=True,
+        core = BrowserCore(chrome=chrome, provider_factory=provider_factory, action_provider="chat" if mode in CHAT else "jev",
+                           out_dir=attempt_dir, sandbox=sandbox, checks=checks, headless=True, format_retries=retries,
                            final_probe=None if local else (lambda adapter: final_states.append(read_final_state(adapter))))
         r = core.execute(BrowserTask.from_dict(data))
         results.append(r)
         if r.get("attempt_status") == "completed":
             row["completed_before_assistance"] = True
-        while mode == "J1" and _resumable(r):
+        while mode in ASSISTED and _resumable(r):
             cont = r["handoff"]["continuation"]
             progress = core.resume({"token": cont["token"], "parent_attempt_id": r["attempt_id"], "operation": "start", "mode": "llm"})
             if progress.get("schema_version") != "browser-progress/0.1":
@@ -399,7 +427,7 @@ def execute(manifest: dict, run: dict, out: Path, chrome: str, sandbox: bool) ->
             site.wait(timeout=10)
         if assistant is not None:
             row.update(assist_calls=assistant.calls, assist_steps=assistant.steps, assist_input_tokens=assistant.input_tokens,
-                       assist_output_tokens=assistant.output_tokens, assist_cost=assistant.cost)
+                       assist_output_tokens=assistant.output_tokens, assist_cost=assistant.cost, assist_retried=assistant.retried)
             assistant.client.close()
     return row
 
@@ -437,7 +465,7 @@ def costs_of(out: Path, row: dict) -> float | None:
             if cost is None:
                 return None
             total += cost
-    if row["mode"] == "J1":
+    if row["mode"] in ASSISTED:
         return None if row.get("assist_cost") is None else total + row["assist_cost"]
     return total
 

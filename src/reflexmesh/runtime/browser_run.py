@@ -592,6 +592,34 @@ class JournalingProvider:
             self.inner.close()
 
 
+class FormatRetryProvider:
+    """After a model reply the validator refused as malformed (`protocol:`), asks the same question again, at most
+    `retries` times. Each request goes through the inner provider, so it is reserved against `max_model_calls`, journaled
+    (`decision_failed` with its request id and usage, then `decision_received`) and paid for like any other. Only
+    malformed answers are asked again: a transport failure, a timeout or a refusal of the budget ends the attempt as
+    before. Experiment M5-H (docs/research/V0.6-M5H-protocol-2026-11-10.md); the default of 0 changes nothing."""
+
+    def __init__(self, inner, retries: int):
+        self.inner, self.retries = inner, retries
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+    def decide(self, state, questions: dict):
+        from systemone_harness.provider import ProviderError
+
+        for left in range(self.retries, -1, -1):
+            try:
+                return self.inner.decide(state, questions)
+            except ProviderError as exc:
+                if left == 0 or not str(exc).startswith("protocol:"):
+                    raise
+
+    def close(self):
+        if hasattr(self.inner, "close"):
+            self.inner.close()
+
+
 def _pid_alive(pid: int) -> bool:
     # Not os.kill(pid, 0): on Windows that is TerminateProcess, not a probe.
     import psutil
@@ -679,8 +707,9 @@ class BrowserRun:
 
     def __init__(self, task: BrowserTask, *, chrome: str | None, provider_factory, action_provider: str,
                  out_dir: Path | None = None, sandbox: bool = True, headless: bool = True,
-                 attempt_id: str | None = None, checks: dict | None = None, chain=None):
+                 attempt_id: str | None = None, checks: dict | None = None, chain=None, format_retries: int = 0):
         self.task, self.chrome = task, chrome
+        self.format_retries = format_retries   # asking a model again after a malformed reply (mode chat only)
         self.chain = chain             # a TaskChain when run by BrowserCore (handoff in the same session)
         self.retained = False          # the session outlives this attempt, handed to the chain
         self.restart = False           # the continuation asked to begin again from start_url, in the same session
@@ -902,6 +931,8 @@ class BrowserRun:
             controlled = self._environment()
             space = browser_action_space(self.task.permissions)
             counting = CountingProvider(self.provider, self.gate, journal, model=self.action_provider in MODEL_PROVIDERS)
+            if self.format_retries and self.action_provider == "chat":
+                counting = FormatRetryProvider(counting, self.format_retries)
             try:
                 run = Controller(space, controlled, counting, gate=JournalGate(space.gate),
                                  max_steps=math.inf, timeout_seconds=None).run(self.task.goal)
