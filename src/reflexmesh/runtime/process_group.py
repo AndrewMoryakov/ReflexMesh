@@ -141,7 +141,11 @@ class OwnedWorker:
             state = self._group_state(deadline)
             if state is False:
                 return False
-            if state is None:
+            # A census cut short by this wait's own deadline proves nothing
+            # about ownership; on a host with many processes the last scan
+            # nearly always crosses it. Success still needs the post-reap
+            # absence probe, so only a census that failed with time left counts.
+            if state is None and time.monotonic() < deadline:
                 self._uncertain = True
             time.sleep(min(POLL_SECONDS, max(0, deadline - time.monotonic())))
         return None

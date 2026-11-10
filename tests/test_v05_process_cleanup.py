@@ -187,6 +187,31 @@ class CleanupUnitTests(unittest.TestCase):
                         patch.object(groups.time, "sleep", clock.sleep):
                     self.assertEqual(worker.cleanup(2), "unknown")
 
+    def test_scan_cut_short_by_its_own_deadline_is_not_uncertainty(self):
+        # A worker that ignores TERM keeps the wait running to its deadline, and
+        # on a busy host the last /proc scan crosses it and returns None. That
+        # alone must not turn a proven kill into unknown.
+        worker, clock, signals = fake_worker(), Clock(), []
+
+        def census(deadline):
+            clock.now += 0.07  # one scan takes real time
+            if signal.SIGKILL in signals:
+                return False
+            return None if clock.now >= deadline else True
+
+        def send(sig):
+            signals.append(sig)
+            return True
+
+        with patch.object(worker, "_group_state", side_effect=census), \
+                patch.object(worker, "_signal_group", side_effect=send), \
+                patch.object(worker, "_release", return_value=True), \
+                patch.object(worker, "_confirm_absent", return_value=True), \
+                patch.object(groups.time, "monotonic", clock.monotonic), \
+                patch.object(groups.time, "sleep", clock.sleep):
+            self.assertEqual(worker.cleanup(2), "forced")
+        self.assertEqual(signals, [signal.SIGTERM, signal.SIGKILL])
+
     def test_slow_leader_reaping_uses_remaining_budget(self):
         worker, clock = fake_worker(), Clock()
         with patch.object(worker, "_group_state", side_effect=[True, False, False]), \
